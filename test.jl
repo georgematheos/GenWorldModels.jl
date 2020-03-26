@@ -38,17 +38,22 @@ Gen.load_generated_functions()
 end
 
 @testset "UsingMemoized function" begin
-    diff_idx_tr, _ = generate(get_total_size, (), choicemap((:idx1, 1), (:idx2, 2), (:sizes => 1 => :size, 1.05)))
-    same_idx_tr, _ = generate(get_total_size, (), choicemap((:idx1, 1), (:idx2, 1), (:sizes => 1 => :size, 1.05)))
+    @testset "basic generate" begin
+        diff_idx_tr, _ = generate(get_total_size, (), choicemap((:idx1, 1), (:idx2, 2), (:sizes => 1 => :size, 1.05)))
+        same_idx_tr, _ = generate(get_total_size, (), choicemap((:idx1, 1), (:idx2, 1), (:sizes => 1 => :size, 1.05)))
 
-    @test length(get_submaps_shallow(get_submap(get_choices(diff_idx_tr), :sizes))) == 2
-    @test length(get_submaps_shallow(get_submap(get_choices(same_idx_tr), :sizes))) == 1
-    @test diff_idx_tr[:sizes => 1 => :size] == 1.05
-    @test diff_idx_tr[:sizes => 2 => :size] != 1.05 # this should be a 0 probability event
-    @test same_idx_tr[:sizes => 1 => :size] == 1.05
+        @test length(get_submaps_shallow(get_submap(get_choices(diff_idx_tr), :sizes))) == 2
+        @test length(get_submaps_shallow(get_submap(get_choices(same_idx_tr), :sizes))) == 1
+        @test diff_idx_tr[:sizes => 1 => :size] == 1.05
+        @test diff_idx_tr[:sizes => 2 => :size] != 1.05 # this should be a 0 probability event
+        @test same_idx_tr[:sizes => 1 => :size] == 1.05
 
-    @test get_score(same_idx_tr) ≈ log(1/10) + log(1/10) + logpdf(normal, 1.05, 1, 1)
-    @test get_score(diff_idx_tr) ≈ get_score(same_idx_tr) + logpdf(normal, diff_idx_tr[:sizes => 2 => :size], 2, 1)
+        @test get_score(same_idx_tr) ≈ log(1/10) + log(1/10) + logpdf(normal, 1.05, 1, 1)
+        @test get_score(diff_idx_tr) ≈ get_score(same_idx_tr) + logpdf(normal, diff_idx_tr[:sizes => 2 => :size], 2, 1)
+    end
+    @testset "erroring generate" begin
+        @test_throws Exception generate(get_total_size, (), choicemap((:idx1, 1), (:idx2, 2), (:sizes => 3 => :size, 3.05)))
+    end
 end
 
 end # module
