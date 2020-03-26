@@ -12,7 +12,7 @@ const lookup = Lookup()
 
 function Gen.generate(gen_fn::Lookup, args::Tuple, constraints::EmptyChoiceMap)
     lookup_table, idx = args
-    val = __getindex__(lookup_table, idx)
+    val = __lookup__!(lookup_table, idx)
     
     tr = LookupTrace(lookup_table, idx, val)
     
@@ -21,6 +21,43 @@ end
 
 function Gen.generate(gen_fn::Lookup, args::Tuple, constraints::ChoiceMap)
     error("generate(lookup, ...) should only be called with empty constraints, since the choices are entirely deterministic")
+end
+
+function Gen.update(tr::LookupTrace, args::Tuple, argdiffs::Tuple, constraints::ChoiceMap)
+    error("lookup may not be updated with constraints since it is a deterministic gen function")
+end
+
+function Gen.update(tr::LookupTrace, args::Tuple, argdiffs::Tuple{NoChange, NoChange}, constraints::EmptyChoiceMap)
+    (tr, 0., NoChange(), EmptyChoiceMap())
+end
+
+function Gen.update(tr::LookupTrace, args::Tuple, argdiffs::Tuple{<:Diff, NoChange}, constraints::EmptyChoiceMap)
+    lookup_table, idx = args
+    lt_diff = argdiffs[1]
+    if !in(idx, keys(lt_diff.updated_indices_to_retdiffs))
+        return (tr, 0., NoChange(), EmptyChoiceMap())
+    end
+    
+    new_tr = LookupTrace(lookup_table, idx, __lookup__!(lookup_table, idx))
+    
+    # above, we called __lookup__! in order to get what the value has been changed to,
+    # but this corresponds to a lookup which has already been counted in the lookup counts,
+    # so we need to subtract off this lookup from the counts
+    __decrease_count__!(new_tr.lookup_table, idx, 1)
+    
+    return (new_tr, 0., UnknownChange(), choicemap((:val, tr.val)))
+end
+
+function Gen.update(tr::LookupTrace, args::Tuple, argdiffs::Tuple{<:Diff, <:Diff}, constraints::EmptyChoiceMap)
+    lookup_table, idx = args
+    
+    # this will add 1 to the lookup counts; this is the correct behavior since this may correspond
+    # to looking up a new index
+    # the `UsingMemoized` update will handle decreasing the counts which are no longer made
+    # by scanning the discard choicemaps
+    new_tr = LookupTrace(lookup_table, idx, __lookup__!(lookup_table, idx))
+    
+    return (new_tr, 0., UnknownChange(), get_choices(tr))
 end
 
 Gen.get_args(tr::LookupTrace) = (tr.lookup_table, idx)

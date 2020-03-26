@@ -1,12 +1,10 @@
 abstract type LookupTable{K, V} end
 
 """
-    __getindex__(l::LookupTable, idx)
+    __lookup__!(l::LookupTable, idx)
 Returns the index `idx` from the LookupTable. For internal use only.
-
-For a `MemoizedGenFn`
 """
-function __getindex__(l::LookupTable)
+function __lookup__!(l::LookupTable)
     error("Not implemented")
 end
 
@@ -19,17 +17,19 @@ __idx_lookup_addr__(l::LookupTable) = :__LOOKED_UP_IDX__
 struct ConcreteLookupTable{K, V} <: LookupTable{K, V}
     table::Dict{K, V}
 end
-__getindex__(c::ConcreteLookupTable, idx) = getindex(c.table, idx)
+__lookup__!(c::ConcreteLookupTable, idx) = getindex(c.table, idx)
     
 mutable struct MemoizedGenFn{Tr <: Gen.Trace, K, V} <: LookupTable{K, V} 
     gen_fn::GenerativeFunction{V, Tr}
-    subtraces::Dict{K, Tr}
+    subtraces::PersistentHashMap{K, Tr}
+    lookup_counts::PersistentHashMap{K, Int}
     total_score::Float64
 end
 
 # empty memoized gen fn with no decisions yet
+# by default set K = Any
 function MemoizedGenFn(gen_fn::GenerativeFunction{V, Tr}) where {V, Tr}
-    MemoizedGenFn(gen_fn, Dict{Any, Tr}(), 0.)
+    MemoizedGenFn{Tr, Any, V}(gen_fn, PersistentHashMap{Any, Tr}(), PersistentHashMap{Any, Int}(), 0.)
 end
 
 """
@@ -50,16 +50,28 @@ function generate_memoized_gen_fn_with_prepopulated_indices(gen_fn::GenerativeFu
     mgf, total_weight
 end
 
-function __getindex__(mgf::MemoizedGenFn{Tr, K, V}, idx::L) where {Tr, K, V, L<:K}
+"""
+    __lookup__!(mgf::MemoizedGenFn{Tr, K, V}, idx::L) where {Tr, K, V, L<:K}
+    
+Looks up `idx` in `mgf`.  If no value exists for the index, generates one.
+Increments the lookup count for `idx` in `mgf`.
+"""
+function __lookup__!(mgf::MemoizedGenFn{Tr, K, V}, idx::L) where {Tr, K, V, L<:K}
     if !haskey(mgf.subtraces, idx)
+        # TODO: if there is nonaddressed randomness, we may need to track the weight from this
         __generate_value__!(mgf::MemoizedGenFn, idx)
     end
+    mgf.lookup_counts = assoc(mgf.lookup_counts, idx, mgf.lookup_counts[idx] + 1)
     return get_retval(mgf.subtraces[idx])
 end
 
 function __generate_value__!(mgf::MemoizedGenFn, idx, constraints::ChoiceMap)
+    @assert !haskey(mgf.subtraces, idx)
+    @assert !haskey(mgf.lookup_counts, idx)
+    
     tr, weight = generate(mgf.gen_fn, (idx,), constraints)
-    mgf.subtraces[idx] = tr
+    mgf.subtraces = assoc(mgf.subtraces, idx, tr)
+    mgf.lookup_counts = assoc(mgf.lookup_counts, idx, 0)
     mgf.total_score += get_score(tr)
     # TODO: noise?
     
@@ -67,6 +79,19 @@ function __generate_value__!(mgf::MemoizedGenFn, idx, constraints::ChoiceMap)
 end
 
 __generate_value__!(mgf::MemoizedGenFn, idx) = __generate_value__!(mgf::MemoizedGenFn, idx, EmptyChoiceMap())
+
+# similar to __generate_value__!, except nonmutating
+function __generate__(mgf::MemoizedGenFn, idx, constraints)
+    @assert !haskey(mgf.subtraces, idx)
+    @assert !haskey(mgf.lookup_counts, idx)
+    
+    tr, weight = generate(mgf.gen_fn, (idx,), constraints)
+    new_subtraces = assoc(mgf.subtraces, idx, tr)
+    new_lookup_counts = assoc(mgf.lookup_counts, idx, 0)
+    new_total_score = mgf.total_score + get_score(tr)
+    
+    MemoizedGenFn(mgf.gen_fn, new_subtraces, new_lookup_counts, new_total_score), weight
+end
 
 __total_score__(mgf::MemoizedGenFn) = mgf.total_score
 
@@ -76,4 +101,37 @@ function __get_choices__(mgf::MemoizedGenFn)
         set_submap!(cm, idx, get_choices(tr))
     end
     return cm
+end
+
+function __has_value__(mgf::MemoizedGenFn, idx)
+    haskey(mgf.subtraces, idx)
+end
+
+function __update__(mgf::MemoizedGenFn, idx, constraints::ChoiceMap)
+    new_subtrace, weight, retdiff, discard = update(mgf.subtraces[idx], (idx,), (NoChange(),), constraints)
+    new_mgf = MemoizedGenFn(
+        mgf.gen_fn,
+        assoc(mgf.subtraces, idx, new_subtrace),
+        mgf.lookup_counts,
+        mgf.total_score - get_score(mgf.subtraces[idx]) + get_score(new_subtrace)
+    )
+    
+    (new_mgf, weight, retdiff, discard)
+end
+
+function __decrease_count__!(mgf::MemoizedGenFn, idx, by_amount)
+    mgf.lookup_counts = assoc(mgf.lookup_counts, idx, mgf.lookup_counts[idx] - by_amount)
+    return mgf.lookup_counts[idx]
+end
+__decrease_count__!(_::ConcreteLookupTable, _, _) = nothing
+
+function __delete_idx__!(mgf, idx)
+    subtrace = mgf.subtraces[ids]
+    mgf.subtraces = dissoc(mgf.subtraces, idx)
+    return subtrace
+end
+
+struct MemoizedGenFnDiff{K} <: Gen.Diff
+    updated_indices_to_retdiffs::Dict{K, Diff}
+    new_indices::Set{K}
 end
