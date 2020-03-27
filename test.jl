@@ -32,7 +32,7 @@ Gen.load_generated_functions()
     sizes = ConcreteLookupTable(sizes)
     
     tr, weight = generate(kernel, (sizes,))
-    println(get_choices(tr))
+
     @test weight == 0.
     @test get_score(tr) ≈ log(1/10) + log(1/10)
     @test tr[:size1 => :val] == lookup(sizes, tr[:idx1])
@@ -61,100 +61,113 @@ end
         @test_throws Exception generate(get_total_size, (), choicemap((:kernel => :idx1, 1), (:kernel => :idx2, 2), (:sizes => 3 => :size, 3.05)))
     end
     
-    #=@testset "simple updates" begin
-        tr, weight = generate(get_total_size, (), choicemap((:idx1, 1), (:idx2, 2)))
+    @testset "simple updates" begin
+        tr, weight = generate(get_total_size, (), choicemap((:kernel => :idx1, 1), (:kernel => :idx2, 2)))
         @test weight ≈ 2*log(1/10)
         
         @testset "update memoized values without changing lookups" begin
             new_tr, weight, retdiff, discard = update(tr, (), (), choicemap((:sizes => 1 => :size, 1.000)))
             @test new_tr[:sizes => 1 => :size] == 1.000
-            @test new_tr[:size1 => :val] == 1.000
-            @test weight ≈ logpdf(normal, tr[:sizes => 1 => :size], 1, 1) - logpdf(normal, 1.000, 1, 1)
+            @test new_tr[:kernel => :size1 => :val] == 1.000
+            @test weight ≈ logpdf(normal, 1.000, 1, 1) - logpdf(normal, tr[:sizes => 1 => :size], 1, 1)
             @test get_score(new_tr) - get_score(tr) ≈ weight
             
-            expected_discard = choicemap((:sizes => 1 => :size, tr[:sizes => 1 => :size]), (:size1 => :val, tr[:sizes => 1 :size]))
+            expected_discard = choicemap(
+                (:sizes => 1 => :size, tr[:sizes => 1 => :size]),
+                (:kernel => :size1 => :val, tr[:sizes => 1 => :size])
+            )
+            
             @test discard == expected_discard
         end
         
         @testset "remove lookup" begin
-            new_tr, weight, retdiff, discard = update(tr, (), (), choicemap((:idx2, 1)))
+            new_tr, weight, retdiff, discard = update(tr, (), (), choicemap((:kernel => :idx2, 1)))
             
             # there should no longer be a choicemap for :sizes => 2
             @test get_submap(get_choices(new_tr), :sizes => 2) == EmptyChoiceMap()
             
-            @test new_tr[:size2 => :val] == tr[:size1 => :val]
-            @test new_tr[:size1 => :val] == tr[:size1 => :val]
+            @test new_tr[:kernel => :size2 => :val] == tr[:kernel => :size1 => :val]
+            @test new_tr[:kernel => :size1 => :val] == tr[:kernel => :size1 => :val]
             
             # `size2 ~ lookup` should expose `:val` and another address in the choicemap.
             # this address should give the index which was looked up to get `:val`.
             # check that this has updated to be `1`
-            looked_up_idx_addr, looked_up_idx2 = filter(((key, val),) -> key != :val, get_values_shallow(get_submap(get_choices(new_tr), :size2)))[1]
+            looked_up_idx_addr, looked_up_idx_2 = collect(filter(
+               ((key, val),) -> key != :val,
+               get_values_shallow(get_submap(get_choices(new_tr), :kernel => :size2))
+            ))[1]
             @test looked_up_idx_2 == 1
-            @test new_tr[:idx2] == 1
+            @test new_tr[:kernel => :idx2] == 1
             
             @test weight ≈ -logpdf(normal, tr[:sizes => 2 => :size], 2, 1)
             @test get_score(new_tr) - get_score(tr) ≈ weight
             
             expected_discard = choicemap(
-                (:idx2, 2),
-                (:sizes2 => :val, tr[:sizes => 2 => :size]),
-                (:sizes2 => looked_up_idx_addr, 2),
+                (:kernel => :idx2, 2),
+                (:kernel => :size2 => :val, tr[:sizes => 2 => :size]),
+                (:kernel => :size2 => looked_up_idx_addr, 2),
                 (:sizes => 2 => :size, tr[:sizes => 2 => :size])
             )
             @test discard == expected_discard
         end
         @testset "change lookup" begin
-            new_tr, weight, retdiff, discard = update(tr, (), (), choicemap((:idx2, 3)))
+            new_tr, weight, retdiff, discard = update(tr, (), (), choicemap((:kernel => :idx2, 3)))
             
             # there should no longer be a choicemap for :sizes => 2
             @test get_submap(get_choices(new_tr), :sizes => 2) == EmptyChoiceMap()
             
             # we should now have a `:sizes => 3` submap
-            @test new_tr[:sizes => 3 => :size] == new_tr[:size2 => :val]
+            @test new_tr[:sizes => 3 => :size] == new_tr[:kernel => :size2 => :val]
             
-            looked_up_idx_addr, looked_up_idx2 = filter(((key, val),) -> key != :val, get_values_shallow(get_submap(get_choices(new_tr), :size2)))[1]
+            looked_up_idx_addr, looked_up_idx_2 = collect(filter(((key, val),) -> key != :val, get_values_shallow(get_submap(get_choices(new_tr), :kernel => :size2))))[1]
             @test looked_up_idx_2 == 3
-            @test new_tr[:idx2] == 3
+            @test new_tr[:kernel => :idx2] == 3
+
+            # the weight should simply be the negative logpdf of the dropped value
+            # (we don't include the new value in the weight since the choices were totally unconstrained)
+            @test weight ≈ -logpdf(normal, tr[:sizes => 2 => :size], 2, 1)
             
-            @test weight ≈ logpdf(normal, new_tr[:sizes => 3 => :size], 3, 1) - logpdf(normal, tr[:sizes => 2 => :size], 2, 1)
-            @test get_score(new_tr) - get_score(tr) ≈ weight
-            
+            # another way to look at it is that since there is no untraced randomness,
+            # exp(weight) = P(new_trace) / (P(old_trace) * Q(generated values | constraints))
+            # here, q(generated vals | constraints) = q(:sizes => 3 is given the value it was given)
+            @test weight ≈ get_score(new_tr) - get_score(tr) - logpdf(normal, new_tr[:sizes => 3 => :size], 3, 1)
+                
             expected_discard = choicemap(
-                (:idx2, 2),
-                (:sizes2 => :val, tr[:sizes => 2 => :size]),
-                (:sizes2 => looked_up_idx_addr, 2),
+                (:kernel => :idx2, 2),
+                (:kernel => :size2 => :val, tr[:sizes => 2 => :size]),
+                (:kernel => :size2 => looked_up_idx_addr, 2),
                 (:sizes => 2 => :size, tr[:sizes => 2 => :size])
             )
             @test discard == expected_discard
         end
         @testset "add lookup" begin 
-            tr, weight = generate(get_total_size, (), choicemap((:idx1, 1), (:idx2, 1)))
+            tr, weight = generate(get_total_size, (), choicemap((:kernel => :idx1, 1), (:kernel => :idx2, 1)))
             @test weight ≈ 2*log(1/10)
             
-            new_tr, weight, retdiff, discard = update(tr, (), (), choicemap((:idx2, 2)))
+            new_tr, weight, retdiff, discard = update(tr, (), (), choicemap((:kernel => :idx2, 2)))
             
             # we should now have a `:sizes => 2` submap
-            @test new_tr[:sizes => 2 => :size] == new_tr[:size2 => :val]
+            @test new_tr[:sizes => 2 => :size] == new_tr[:kernel => :size2 => :val]
             
             # we should still have `:sizes => 1`
             @test new_tr[:sizes => 1 => :size] == tr[:sizes => 1 => :size]
-            @test new_tr[:size1 => :val] == new_tr[:sizes => 1 => :size]
+            @test new_tr[:kernel => :size1 => :val] == new_tr[:sizes => 1 => :size]
             
-            looked_up_idx_addr, looked_up_idx2 = filter(((key, val),) -> key != :val, get_values_shallow(get_submap(get_choices(new_tr), :size2)))[1]
+            looked_up_idx_addr, looked_up_idx_2 = collect(filter(((key, val),) -> key != :val, get_values_shallow(get_submap(get_choices(new_tr), :kernel => :size2))))[1]
             @test looked_up_idx_2 == 2
-            @test new_tr[:idx2] == 2
+            @test new_tr[:kernel => :idx2] == 2
             
-            @test weight ≈ logpdf(normal, new_tr[:sizes => 2 => :size], 2, 1)
-            @test get_score(new_tr) - get_score(tr) ≈ weight
+            @test weight ≈ 0.
+            @test ≈(weight, get_score(new_tr) - get_score(tr) - logpdf(normal, new_tr[:sizes => 2 => :size], 2, 1); atol=1e-10)
             
             expected_discard = choicemap(
-                (:idx2, 1),
-                (:sizes2 => :val, tr[:sizes => 1 => :size]),
-                (:sizes2 => looked_up_idx_addr, 1)
+                (:kernel => :idx2, 1),
+                (:kernel => :size2 => :val, tr[:sizes => 1 => :size]),
+                (:kernel => :size2 => looked_up_idx_addr, 1)
             )
             @test discard == expected_discard
         end
-    end=#
+    end
 end
 
 end # module

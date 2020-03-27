@@ -4,7 +4,7 @@
 
 struct UsingMemoizedTrace{V, Tr} <: Gen.Trace
     kernel_tr::Tr
-    memoized_gen_fns::PersistentVector{MemoizedGenFn}
+    memoized_gen_fns::Vector{<:MemoizedGenFn}
     score::Float64
     args::Tuple
     gen_fn::GenerativeFunction{V, UsingMemoizedTrace{V, Tr}}
@@ -111,7 +111,7 @@ function Gen.generate(gen_fn::UsingMemoized{V, Tr}, args::Tuple, constraints::Ch
     
     score = sum(__total_score__(mgf) for mgf in memoized_gen_fns) + get_score(kernel_tr)
     
-    tr = UsingMemoizedTrace{V, Tr}(kernel_tr, PersistentVector(memoized_gen_fns), score, args, gen_fn)
+    tr = UsingMemoizedTrace{V, Tr}(kernel_tr, memoized_gen_fns, score, args, gen_fn)
     
     if do_check_constraint_validity(gen_fn)
         check_constraint_validity(tr, constraints)
@@ -122,44 +122,57 @@ end
 
 ### UPDATE ###
 
+"""
+    update_lookup_table_values(tr, constraints)
+
+This creates a shallow copy of each memoized lookup table, and if `constraints` specifies values for some indices,
+modifies these indices in the new lookup tables.  Tracks the change in total score
+induced by this update, as well as the total weight for all these updates.  Tracks the `diffs` for
+the MGFs, and the `discard` for the overall `UsingMemoizedTrace` update coming from these updates.
+
+Returns `(score_delta, total_weight, new_memoized_gen_fns, mgf_diffs, discard)`.
+"""
 function update_lookup_table_values(tr, constraints)
-    new_memoized_gen_fns = tr.memoized_gen_fns
-    mgf_diffs = Vector{MemoizedGenFnDiff}(undef, length(new_memoized_gen_fns))
+    new_memoized_gen_fns = [copy(mgf) for mgf in tr.memoized_gen_fns]
+    mgf_diffs::Vector{Union{CopiedMemoizedGenFnDiff, UpdatedIndicesDiff}} = [CopiedMemoizedGenFnDiff() for _=1:length(new_memoized_gen_fns)]
+    
     discard = choicemap()
     total_weight = 0.
-    score_delta = 0.
     
     for (addr, i) in get_gen_fn(tr).addr_to_gen_fn_idx
+        mgf_discard = choicemap()
         if get_submap(constraints, addr) == EmptyChoiceMap()
-            mgf_diffs[i] = NoChange()
             continue
         end
         
-        updated_indices_to_retdiffs = Dict()
-        new_indices = Set()
+        updated_indices_to_retdiffs = Dict{Any, Diff}()
+        mgf = new_memoized_gen_fns[i]
         
-        for (idx, submap) in get_submap(constraints, addr)
-            if __hasvalue__(tr.memoized_gen_fns[i], idx)
-                new_memoized_gen_fns, weight, retdiff, dsc = assoc(new_memoized_gen_fns, i, __update__(new_memoized_gen_fns[i], idx, submap))
-                set_submap!(discard, idx, dsc)
+        for (idx, submap) in get_submaps_shallow(get_submap(constraints, addr))
+            if __has_value__(mgf, idx)
+                weight, retdiff, dsc = __update__!(mgf, idx, submap)
+                set_submap!(mgf_discard, idx, dsc)
                 updated_indices_to_retdiffs[idx] = retdiff
             else
-                new_memoized_gen_fns, weight = assoc(new_memoized_gen_fns, i, __generate__(new_memoized_gen_fns[i], idx, submap))
-                push!(new_indices, idx)
+                weight = __generate_value__!(mgf, idx, submap)
             end
             total_weight += weight
-            score_delta += __total_score__(new_memoized_gen_fns[i])
-            score_delta -= __total_score__(memoized_gen_fns[i])
         end
         
-        mgf_diffs[i] = Diffed(new_memoized_gen_fns[i], MemoizedGenFnDiff(updated_indices_to_retdiffs, new_indices))
+        if !isempty(mgf_discard)
+            set_submap!(discard, addr, mgf_discard)
+        end
+        
+        if length(updated_indices_to_retdiffs) > 0
+            mgf_diffs[i] = UpdatedIndicesDiff(updated_indices_to_retdiffs)
+        end
     end
     
-    (score_delta, total_weight, new_memoized_gen_fns, mgf_diffs, discard)
+    (total_weight, new_memoized_gen_fns, mgf_diffs, discard)
 end
 
 function update_lookup_counts!(mgf::MemoizedGenFn, kernel_discard::ChoiceMap)
-    counts = get_lookup_counts(mgf, kernel_discard)
+    counts = get_lookup_counts(kernel_discard, mgf)
     discarded_choicemap = choicemap()
     total_discarded_subtrace_score = 0.
     for (idx, count) in counts
@@ -174,13 +187,13 @@ function update_lookup_counts!(mgf::MemoizedGenFn, kernel_discard::ChoiceMap)
     return (discarded_choicemap, total_discarded_subtrace_score)
 end
 
-function update_lookup_counts!(memoized_gen_fns::AbstractVector{MemoizedGenFn}, discard_to_update::ChoiceMap, addr_to_idx::Dict{Symbol, Int}, kernel_discard::ChoiceMap)
+function update_lookup_counts!(memoized_gen_fns::AbstractVector{<:MemoizedGenFn}, discard_to_update::DynamicChoiceMap, addr_to_idx::Dict{Symbol, Int}, kernel_discard::ChoiceMap)
     discarded_indices = Dict{Symbol, Any}()
     total_discarded_subtrace_score = 0.
     for (addr, i) in addr_to_idx
         mgf = memoized_gen_fns[i]
         disc_choicemap, disc_score = update_lookup_counts!(mgf, kernel_discard)
-        set_submap!(discard, addr, disc_choicemap)
+        set_submap!(discard_to_update, addr, merge(disc_choicemap, get_submap(discard_to_update, addr)))
         total_discarded_subtrace_score += disc_score
     end
     return total_discarded_subtrace_score
@@ -188,29 +201,40 @@ end
 
 function Gen.update(tr::UsingMemoizedTrace{V, Tr}, args::Tuple, argdiffs::Tuple, constraints::ChoiceMap) where {V, Tr}
     # update values in lookup table given in `constraints`
-    (score_delta, total_weight, new_memoized_gen_fns, mgf_diffs, discard) = update_lookup_table_values(tr, constraints)
-    
+    # the return value `new_memoized_gen_fns` is a complete copy 
+    (total_weight, new_memoized_gen_fns, mgf_diffs, discard) = update_lookup_table_values(tr, constraints)
+
     # update kernel
     kernel_args = (new_memoized_gen_fns..., args...)
     kernel_argdiffs = (mgf_diffs..., argdiffs...)
     
+    # we want to track the total weight of all new values generated during
+    # the `kernel` update, so zero the weight trackers on the mgfs
+    for mgf in new_memoized_gen_fns
+        __zero_weight_tracker__!(mgf)
+    end
+    
     new_kernel_tr, weight, retdiff, kernel_discard = update(tr.kernel_tr, kernel_args, kernel_argdiffs, get_submap(constraints, :kernel))
-    total_weight += weight
-    score_delta += get_score(new_kernel_tr) - get_score(tr.kernel_tr)
     set_submap!(discard, :kernel, kernel_discard)
+
+    total_weight += weight
+    total_tracked_weight = sum(__get_tracked_weight__(mgf) for mgf in new_memoized_gen_fns)
+    total_weight += sum(__get_tracked_weight__(mgf) for mgf in new_memoized_gen_fns)
     
     # update the counts in the lookup tables; remove choices for indices which now have 0 lookups
-    # note that we _can_ update the `new_memoized_gen_fns` in place even though this is a PersistentVector
-    # since we are only updating fields in the individual `MemoizedGenFn`s at each index
     # this will also update the `discard` with the dropped subtrace choicemaps
-    discarded_total_score = update_counts!(new_memoized_gen_fns, discard, tr.gen_fn.addr_to_gen_fn_idx, new_memoized_gen_fns, kernel_discard)
-    score_delta -= discarded_total_score
+    discarded_total_score = update_lookup_counts!(new_memoized_gen_fns, discard, tr.gen_fn.addr_to_gen_fn_idx, kernel_discard)
+    total_weight -= discarded_total_score
     
-    new_tr = UsingMemoizedTrace(new_kernel_tr, new_memoized_gen_fns, get_score(tr) + score_delta, args, tr.gen_fn)
+    kernel_score = get_score(new_kernel_tr)
+    mgf_score = sum(__total_score__(mgf) for mgf in new_memoized_gen_fns)
+    score = kernel_score + mgf_score
+    
+    new_tr = UsingMemoizedTrace(new_kernel_tr, new_memoized_gen_fns, score, args, tr.gen_fn)
     
     # sanity check: did we remove any values which were also passed in in `constraints`?
     # TODO: could we make this faster using incremental computation?
-    if do_check_constraint_validity
+    if do_check_constraint_validity(get_gen_fn(tr))
         check_constraint_validity(new_tr, constraints)
     end
     

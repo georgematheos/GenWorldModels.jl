@@ -27,11 +27,11 @@ function Gen.update(tr::LookupTrace, args::Tuple, argdiffs::Tuple, constraints::
     error("lookup may not be updated with constraints since it is a deterministic gen function")
 end
 
-function Gen.update(tr::LookupTrace, args::Tuple, argdiffs::Tuple{NoChange, NoChange}, constraints::EmptyChoiceMap)
-    (tr, 0., NoChange(), EmptyChoiceMap())
-end
+# if the index hasn't changed, and the lookup table either hasn't changed or has simply
+# been copied, but without its internal values changing, then nothing has changed
+@inline Gen.update(tr::LookupTrace, args::Tuple, argdiffs::Tuple{Union{NoChange, CopiedMemoizedGenFnDiff}, NoChange}, constraints::EmptyChoiceMap) = (tr, 0., NoChange(), EmptyChoiceMap())
 
-function Gen.update(tr::LookupTrace, args::Tuple, argdiffs::Tuple{<:Diff, NoChange}, constraints::EmptyChoiceMap)
+function Gen.update(tr::LookupTrace, args::Tuple, argdiffs::Tuple{UpdatedIndicesDiff, NoChange}, constraints::EmptyChoiceMap)
     lookup_table, idx = args
     lt_diff = argdiffs[1]
     if !in(idx, keys(lt_diff.updated_indices_to_retdiffs))
@@ -45,7 +45,11 @@ function Gen.update(tr::LookupTrace, args::Tuple, argdiffs::Tuple{<:Diff, NoChan
     # so we need to subtract off this lookup from the counts
     __decrease_count__!(new_tr.lookup_table, idx, 1)
     
-    return (new_tr, 0., UnknownChange(), choicemap((:val, tr.val)))
+    # the argdiff should pass in information about how the value at this index has
+    # changed
+    retdiff = lt_diff.updated_indices_to_retdiffs[idx]
+    
+    return (new_tr, 0., retdiff, choicemap((:val, tr.val)))
 end
 
 function Gen.update(tr::LookupTrace, args::Tuple, argdiffs::Tuple{<:Diff, <:Diff}, constraints::EmptyChoiceMap)
