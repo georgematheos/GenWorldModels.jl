@@ -21,14 +21,15 @@ mutable struct MemoizedGenFn{Tr <: Gen.Trace, K, V} <: LookupTable{K, V}
     total_score::Float64
     unique_idx_lookup_addr::Symbol
     weight_tracker::Float64
+    dependencies::Vector{MemoizedGenFn}
 end
 
 function MemoizedGenFn{Tr, K, V}(gen_fn, subtraces, lookup_counts, total_score, unique_idx_lookup_addr) where {Tr, K, V}
-    MemoizedGenFn{Tr, K, V}(gen_fn, subtraces, lookup_counts, total_score, unique_idx_lookup_addr, 0.)
+    MemoizedGenFn{Tr, K, V}(gen_fn, subtraces, lookup_counts, total_score, unique_idx_lookup_addr, 0., [])
 end
 
 function Base.copy(mgf::MemoizedGenFn{Tr, K, V}) where {Tr, K, V}
-    MemoizedGenFn{Tr, K, V}(mgf.gen_fn, mgf.subtraces, mgf.lookup_counts, mgf.total_score, mgf.unique_idx_lookup_addr, mgf.weight_tracker)
+    MemoizedGenFn{Tr, K, V}(mgf.gen_fn, mgf.subtraces, mgf.lookup_counts, mgf.total_score, mgf.unique_idx_lookup_addr, mgf.weight_tracker, mgf.dependencies)
 end
 
 # constructor which decides it's own `unique_idx_lookup_addr`
@@ -49,21 +50,17 @@ __idx_lookup_addr__(l::ConcreteLookupTable) = :__CONCRETE_LT_LOOKED_UP_IDX__
 __idx_lookup_addr__(l::MemoizedGenFn) = l.unique_idx_lookup_addr
 
 """
-    generate_memoized_gen_fn_with_known_vals(gen_fn::GenerativeFunction, known_idx_vals::ChoiceMap)
+    __set_dependencies__!(mgf::MemoizedGenFn, deps::Vector{<:MemoizedGenFn})
+    
+Tells `mgf` which MGFs are it's dependencies.  This must be called
+before generating any values in the mgf since the dependencies
+are passed into the underyling generative function as arguments.
 
-Create a `MemoizedGenFn` for `gen_fn` with every `idx` in `keys(get_submaps(known_idx_vals))`
-pre-populated with a value obtained by `generate`ing `gen_fn` with constraint submap
-`get_submap(known_idx_vals, idx)`.
-Return `(mgf, weight)` where `mgf` is the `MemoizedGenFn`, and
-`weight` is the total weight from generating all the values.
+`__set_dependencies__!` may be called at anytime to overwrite the current
+dependencies with the new ones passed in.
 """
-function generate_memoized_gen_fn_with_prepopulated_indices(gen_fn::GenerativeFunction{V, Tr}, known_idx_vals::ChoiceMap) where {V, Tr}
-    mgf = MemoizedGenFn(gen_fn)
-    total_weight = 0.
-    for (idx, constraints) in get_submaps_shallow(known_idx_vals)
-        total_weight += __generate_value__!(mgf, idx, constraints)
-    end
-    mgf, total_weight
+function __set_dependencies__!(mgf::MemoizedGenFn, deps::Vector{<:MemoizedGenFn})
+    mgf.dependencies = deps
 end
 
 """
