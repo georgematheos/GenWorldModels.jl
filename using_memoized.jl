@@ -200,11 +200,11 @@ function update_lookup_counts!(memoized_gen_fns::AbstractVector{<:MemoizedGenFn}
 end
 
 function Gen.update(tr::UsingMemoizedTrace{V, Tr}, args::Tuple, argdiffs::Tuple, constraints::ChoiceMap) where {V, Tr}
-    # update values in lookup table given in `constraints`
+    ### update values in lookup table given in `constraints` ###
     # the return value `new_memoized_gen_fns` is a complete copy 
     (total_weight, new_memoized_gen_fns, mgf_diffs, discard) = update_lookup_table_values(tr, constraints)
 
-    # update kernel
+    ### update kernel ###
     kernel_args = (new_memoized_gen_fns..., args...)
     kernel_argdiffs = (mgf_diffs..., argdiffs...)
     
@@ -221,11 +221,12 @@ function Gen.update(tr::UsingMemoizedTrace{V, Tr}, args::Tuple, argdiffs::Tuple,
     total_tracked_weight = sum(__get_tracked_weight__(mgf) for mgf in new_memoized_gen_fns)
     total_weight += sum(__get_tracked_weight__(mgf) for mgf in new_memoized_gen_fns)
     
-    # update the counts in the lookup tables; remove choices for indices which now have 0 lookups
+    ### update the counts in the lookup tables and remove choices for indices which now have 0 lookups ###
     # this will also update the `discard` with the dropped subtrace choicemaps
     discarded_total_score = update_lookup_counts!(new_memoized_gen_fns, discard, tr.gen_fn.addr_to_gen_fn_idx, kernel_discard)
     total_weight -= discarded_total_score
     
+    ### create trace ###
     kernel_score = get_score(new_kernel_tr)
     mgf_score = sum(__total_score__(mgf) for mgf in new_memoized_gen_fns)
     score = kernel_score + mgf_score

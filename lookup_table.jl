@@ -121,7 +121,6 @@ function __generate_value__!(mgf::MemoizedGenFn, idx, constraints::ChoiceMap)
     mgf.total_score += get_score(tr)
     
     mgf.weight_tracker += weight
-    # TODO: noise?
     
     return weight
 end
