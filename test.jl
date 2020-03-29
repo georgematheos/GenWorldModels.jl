@@ -1,6 +1,7 @@
 module Memoization
 using Gen
 using FunctionalCollections
+using DataStructures
 using Test
 
 include("lookup_table.jl")
@@ -297,20 +298,20 @@ end
     if n == 0
         return {:val} ~ normal(1, 0.05)
     else
-        f_nminus1 ~ lookup(fact_lookup, n - 1)
+        f_nminus1 ~ lookup(approx_fact_lookup, n - 1)
         return {:val} ~ normal(n * f_nminus1, 0.05)
     end
 end
 
-@gen function approx_fact2_kern(n, approx_fact_lookup)
+@gen function approx_fact2_kern(approx_fact_lookup, n)
     val ~ lookup(approx_fact_lookup, n)
     return val
 end
 
-approx_fact_2 = UsingMemoized(approx_fact_2, :factorial => (approx_fact_lookup, :factorial))
+approx_fact_2 = UsingMemoized(approx_fact2_kern, :factorial => (approx_factorial2, :factorial))
 Gen.@load_generated_functions()
 
-@testset "simple recursion"
+@testset "simple recursion on dynamic gen fn" begin
     tr, weight = generate(approx_fact_2, (4,))
 
     fact_vals = [tr[:factorial => i => :val] for i=0:4]
@@ -324,7 +325,13 @@ Gen.@load_generated_functions()
     new_tr, weight, retdiff, discard = update(tr, (4,), (NoChange(),), choicemap((:factorial => 0 => :val, 1.00)))
     
     @test get_submap(discard, :factorial => 0) != EmptyChoiceMap()
-    @test length(get_submaps_shallow(get_submap(discard, :factorial))) == 1
+    
+    # since the dynamic memoized gen fn can't track retdiffs, it will end up discarding
+    # all 5 submaps of :factorial.  If it could track retdiffs, it would only discard 2:
+    # for index 0, whose value changes, and for index 1, which has in it's choicemap a lookup
+    # to index 0, whose value changed.  However, indices 2,3,4 will get a NoChange
+    # input retdiff and won't discard anything
+    @test length(get_submaps_shallow(get_submap(discard, :factorial))) == 5
     
     fact_vals = [new_tr[:factorial => i => :val] for i=0:4]
     fact_val_scores = [logpdf(normal, fact_vals[1], 1, 0.05)]
@@ -332,7 +339,7 @@ Gen.@load_generated_functions()
         push!(fact_val_scores, logpdf(normal, fact_vals[i + 1], i * fact_vals[i], 0.05))
     end
     @test get_score(new_tr) ≈ sum(fact_val_scores)
-    @test weight ≈ get_score(new_tr) - get_score(old_tr)
+    @test weight ≈ get_score(new_tr) - get_score(tr)
 end
 
 end # module
