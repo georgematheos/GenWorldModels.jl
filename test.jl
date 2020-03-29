@@ -342,5 +342,110 @@ Gen.@load_generated_functions()
     @test weight ≈ get_score(new_tr) - get_score(tr)
 end
 
+@gen function approx_fib_recursive(n, fib_lookup)
+    if n == 0 || n == 1
+        val ~ normal(1, 0.05)
+    else
+        prev1 ~ lookup(fib_lookup, n - 1)
+        prev2 ~ lookup(fib_lookup, n - 2)
+        sum = prev1 + prev2
+        val ~ normal(sum, 0.05)
+    end
+    return val
+end
+
+@gen (static, diffs) function calc_approx_fib_kernel(fib_lookup, n)
+    val ~ lookup(fib_lookup, n)
+    return val
+end
+Gen.@load_generated_functions()
+approx_fib = UsingMemoized(calc_approx_fib_kernel, :fib => (approx_fib_recursive, :fib))
+
+@testset "approximate fib recursively" begin
+    tr, weight = generate(approx_fib, (6,), choicemap((:fib => 2 => :val, 2.000)))
+    @test tr[:fib => 2 => :val] == 2.000
+    @test weight ≈ logpdf(normal, 2.000, tr[:fib => 0] + tr[:fib => 1], 0.05)
+    
+    # I'm putting these in a constraints weird order (idk if it effects what order `get_submaps_shallow` returns things in, though)
+    # but in any case update(::UsingMemoized) should topologically order the constraints so everything ends up being fine
+    new_tr, weight, _, discard = update(tr, (6,), (NoChange(),), choicemap(
+        (:fib => 0 => :val, 1.05), (:fib => 2 => :val, 2.01), (:fib => 1 => :val, 0.95)
+    ))
+    @test new_tr[:fib => 2] == 2.01
+    @test new_tr[:fib => 0] == 1.05
+    @test new_tr[:fib => 1] == 0.95
+    @test new_tr[:fib => 3] == tr[:fib => 3]
+    @test new_tr[:fib => 4] == tr[:fib => 4]
+    
+    # scores for indices 0 through 4 are effected by this update
+    expected_weight = (
+          logpdf(normal, new_tr[:fib => 0], 1, 0.05) - logpdf(normal, tr[:fib => 0], 1, 0.05)
+        + logpdf(normal, new_tr[:fib => 1], 1, 0.05) - logpdf(normal, tr[:fib => 1], 1, 0.05)
+        + logpdf(normal, new_tr[:fib => 2], new_tr[:fib => 0] + new_tr[:fib => 1], 0.05) - logpdf(normal, tr[:fib => 2], tr[:fib => 0] + tr[:fib => 1], 0.05)
+        + logpdf(normal, new_tr[:fib => 3], new_tr[:fib => 1] + new_tr[:fib => 2], 0.05) - logpdf(normal, tr[:fib => 3], tr[:fib => 1] + tr[:fib => 2], 0.05)
+        + logpdf(normal, new_tr[:fib => 4], new_tr[:fib => 2] + new_tr[:fib => 3], 0.05) - logpdf(normal, tr[:fib => 4], tr[:fib => 2] + tr[:fib => 3], 0.05)
+    )
+    @test weight ≈ expected_weight
+    @test weight ≈ get_score(new_tr) - get_score(tr)
+end
+
+@gen (static, diffs) function a(idx, b_lookup)
+    b_val ~ lookup(b_lookup, idx)
+    val ~ normal(b_val, 0.05)
+    return val
+end
+
+@gen function b(idx, a_lookup)
+    if idx == 1
+        val ~ normal(0, 1)
+    else
+        a_val ~ lookup(a_lookup, idx - 1)
+        val ~ normal(a_val, 1)
+    end
+    return val
+end
+
+@gen (static, diffs) function ab_kernel(a_lookup, b_lookup)
+    idx ~ uniform_discrete(1, 4)
+    a_val ~ lookup(a_lookup, idx)
+    b_val ~ lookup(b_lookup, idx)
+    sum = a_val + b_val
+    return sum
+end
+
+Gen.@load_generated_functions()
+
+ab = UsingMemoized(ab_kernel, :a => (a, :b), :b => (b, :a))
+
+@testset "interdependent memoized gen functions" begin
+    tr, weight = generate(ab, (), choicemap((:kernel => :idx, 4)))
+    @test weight ≈ log(1/4)
+    
+    new_tr, weight, retdiff, discard = update(tr, (), (), choicemap(
+        (:kernel => :idx, 3),
+        (:a => 1 => :val, 0.0),
+        (:b => 2 => :val, 1.0)
+    ))
+    
+    @test new_tr[:a => 1] == 0.0
+    @test new_tr[:b => 2] == 1.0
+    @test new_tr[:b => 1] == tr[:b => 1]
+    @test new_tr[:a => 3] == tr[:a => 3]
+
+    new_choices = get_choices(new_tr)
+    @test get_submap(new_choices, :a => 4) == EmptyChoiceMap()
+    @test get_submap(new_choices, :b => 4) == EmptyChoiceMap()
+    
+    # a1, b2 changed. a2 depends on b2 so it's weight must change. a4, b4 deleted. other lookups shouldn't change
+    expected_weight = (
+        logpdf(normal, new_tr[:a => 1], new_tr[:b => 1], 0.05) - logpdf(normal, tr[:a => 1], tr[:b => 1], 0.05)
+      + logpdf(normal, new_tr[:b => 2], new_tr[:a => 1], 1) - logpdf(normal, tr[:b => 2], tr[:a => 1], 1)
+      + logpdf(normal, new_tr[:a => 2], new_tr[:b => 2], 0.05) - logpdf(normal, tr[:a => 2], tr[:b => 2], 0.05)
+      - logpdf(normal, tr[:b => 4], tr[:a => 3], 1) - logpdf(normal, tr[:a => 4], tr[:b => 4], 0.05)
+    )
+    @test weight ≈ expected_weight
+    @test weight ≈ get_score(new_tr) - get_score(tr)
+end
+
 end # module
 

@@ -471,6 +471,28 @@ function Gen.get_choices(tr::UsingMemoizedTrace)
     end
     return cm
 end
+function Base.getindex(tr::UsingMemoizedTrace, addr::Symbol)
+    if addr == :kernel
+        return tr.kernel_tr[]
+    else
+        error("No value at address $addr")
+    end
+end
+function Base.getindex(tr::UsingMemoizedTrace, addr::Pair)
+    first, second = addr
+    if first == :kernel
+        return tr.kernel_tr[second]
+    end
+    
+    i = get_gen_fn(tr).addr_to_idx[first]
+    mgf = tr.memoized_gen_fns[i]
+    if second isa Pair
+        idx, query = second
+        return mgf.subtraces[idx][query]
+    else
+        return mgf.subtraces[second][]
+    end
+end
 
 # TODO: gradient tracking?
 Gen.has_argument_grads(tr::UsingMemoizedTrace) = map(_ -> false, get_args(tr))
