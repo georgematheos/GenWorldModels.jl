@@ -54,8 +54,39 @@ end
     
 A combinator which runs the `kernel` generative function in such a way that
 it can use generative functions specified in `memoized_gen_fn_specs` as if they are memoized.
+
+The `kernel` should be a generative function whose first `n` inputs are
+`LookupTable` objects, where `n = length(memoized_gen_fn_specs)`.
+We guarentee that when calling any GFI method of `kernel`, these lookup tables
+will behave identically to `ConcreteLookupTable` objects which are pre-populated
+with values for every index the `kernel` looks up in them via traced calls to
+the `lookup` gen function.  We make no guarantees about correctness if these
+lookup tables are used in ways other than looking up objects in traced `lookup`
+calls.
+
+The returned `UsingMemoized()` function will behave identically to if
+it first determined all values the `kernel` needs access to, then generates these
+values according to the `memoized_gen_fn_specs` and puts them in `ConcreteLookupTable`s,
+then calls the `kernel` on these. On updates,
+it will behave as if it first determines the new set of all values it needs to have in the lookup
+tables, then populates these and only these, keeping old values when possible,
+then calls update on `kernel` with these new lookup tables.
+
+To generate a value at index `idx` for the lookup table corresponding to
+`mgf_spec = memoized_gen_fn_specs[i]`, we call `mgf_spec.gen_fn(idx, deps...)`.
+Here, the first parameter is the index we are looking up, and `deps` is a list of lookup
+tables for every "dependency" specified in `mgf_spec.dependencies`.  `mgf_spec.gen_fn`
+may treat these as `ConcreteLookupTable`s which are pre-populated with every value needed
+to correctly generate the value for `idx`, so long as it only uses them in traced `lookup` calls,
+and so long as there are not cyclic dependencies among indices.
+(Eg. we cannot have `lookup(lookup_table, 1)` depend on the value of `lookup(lookup_table, 2)`
+and simultaneously have `lookup(lookup_table, 2)` depend on the value of `lookup(lookup_table, 1)`,
+since there is no way to calculate this!)
+
+The choicemap will have address `:kernel` for the choicemap of the `kernel` function.
+The choicemap for `mgf_spec.gen_fn` called on index `idx` will be at address
+`mgf_spec.address => idx` in the returned choicemap.
 """
-# TODO: document more fully, including invariants/contract with kernel.
 struct UsingMemoized{V, Tr} <: Gen.GenerativeFunction{V, UsingMemoizedTrace{V, Tr}}
     kernel::Gen.GenerativeFunction{V, Tr}
     gen_fn_specs::Vector{MemoizedGenFnSpec}
@@ -191,7 +222,7 @@ if CallTo1 must be calculated before CallTo2
 because CallTo2 looks up the value in CallTo1 to calculate it,
 then `sort[CallTo1] < sort[CallTo2]`.
 """
-# TODO: TEST THIS!!!
+# TODO: TEST THIS FUNCTION INDIVIDUALLY!!!
 function topologically_sort_lookups(mgfs::Vector{<:MemoizedGenFn})
     relevant_calls = union([Set(__get_all_calls__(mgf)) for mgf in mgfs]...)
     
@@ -380,7 +411,8 @@ function Gen.update(tr::UsingMemoizedTrace{V, Tr}, args::Tuple, argdiffs::Tuple,
     new_memoized_gen_fns = copy_mgfs_for_update(tr)
     
     ### update values in lookup table given in `constraints` ###
-    # the return value `new_memoized_gen_fns` is a complete copy 
+    # do these in topological order w.r.t. any recursive calls; update other lookups not in `constraints` if needed
+    # do to other recursive calls which have been made
     (total_weight, new_memoized_gen_fns, mgf_diffs, discard) = update_lookup_table_values!(new_memoized_gen_fns, tr, constraints)
     
     ### update kernel ###

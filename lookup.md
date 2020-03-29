@@ -114,16 +114,16 @@ mutation can occur is then when `lookup` mutates the lookup table, since this is
 guaranteed to the kernel will behave as though it does not mutate the lookup table.
 
 (We assume that the only way users lookup values
-from the lookup table is via the `lookup` generative function, as this is the only "public" interface via
+from the lookup table is via the traced calls to the `lookup` generative function, as this is the only "public" interface via
 which these objects may be indexed into.  However, unlike Java, which makes it possible to programmatically enforce
 such interfaces by throwing errors, it is impossible in Julia to programmatically prevent users from using
 the internal interface of the lookup-table.  Internally, there will have to be some way for `lookup`
 to get values out of the data structure, and presumably a user _could_ read the source code
-and figure this out.  But we make no guarantees to users about the behavior if they do this,
+and figure this out.  Or, they could call `lookup` without tracing it.
+But we make no guarantees to users about the behavior if they do this,
 so for the users to ensure that their `kernel` does not mutate state, since the only guarantee we make about the
-lookup tables is that they will behave as though `lookup(lookup_table, idx)` does not mutate them,
-to ensure they are obeying the GFI by not mutating external state, they cannot use `lookup_table`s via the private
-interface.)
+lookup tables is that they will behave as though `@trace(lookup(lookup_table, idx), addr)` does not mutate them,
+to ensure they are obeying the GFI by not mutating external state, they cannot use `lookup_table`s in any other way.)
 
 
 #### Kernel purity requirement
