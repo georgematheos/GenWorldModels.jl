@@ -255,6 +255,9 @@ Does not track the weight for `generate` calls; these should be tracked by the M
 Tracks the `diffs` for the MGFs, and the `discard` for the overall `UsingMemoizedTrace` update coming from these updates.
 
 Returns `(score_delta, total_weight_from_updates, new_memoized_gen_fns, mgf_diffs, discard)`.
+
+Algorithm involves loading all updates we will do into a PriorityQueue, so runtime is
+O(n*log(n) + runtime of update functions) where n=number of (mgf, idx) updates we need to do.
 """
 function update_lookup_table_values!(new_memoized_gen_fns, tr, constraints)    
     mgf_diffs::Vector{Union{CopiedMemoizedGenFnDiff, UpdatedIndicesDiff}} = [CopiedMemoizedGenFnDiff() for _=1:length(new_memoized_gen_fns)]
@@ -311,7 +314,7 @@ function update_lookup_table_values!(new_memoized_gen_fns, tr, constraints)
             end
         else
             # if this value hasn't been generated, all there is to do is generate it
-            # DO NOT ADD THE WEIGHT TO `total_weight`; this is being tracked by the weight tracker
+            # DO NOT ADD THE WEIGHT TO `updates_weight`; the generate weight is being tracked by the mgf's weight tracker
             __generate_value__!(new_memoized_gen_fns[call.mgf_idx], call.idx, constraints)
         end
     end
@@ -353,7 +356,12 @@ function update_lookup_counts!(memoized_gen_fns::AbstractVector{<:MemoizedGenFn}
     return total_discarded_subtrace_score
 end
 
-function Gen.update(tr::UsingMemoizedTrace{V, Tr}, args::Tuple, argdiffs::Tuple, constraints::ChoiceMap) where {V, Tr}
+"""
+Create a shallow copy of each memoized generative function,
+properly set dependencies, zero the weight trackers, and
+give a new call stack object to each new mgf.
+"""
+function copy_mgfs_for_update(tr)
     call_stack = Stack{CallTo}()
     new_memoized_gen_fns = [MemoizedGenFn(mgf, call_stack) for mgf in tr.memoized_gen_fns]
     set_mgf_dependencies!(new_memoized_gen_fns, get_gen_fn(tr))
@@ -364,7 +372,13 @@ function Gen.update(tr::UsingMemoizedTrace{V, Tr}, args::Tuple, argdiffs::Tuple,
     for mgf in new_memoized_gen_fns
         __zero_weight_tracker__!(mgf)
     end
+    
+    return new_memoized_gen_fns
+end
 
+function Gen.update(tr::UsingMemoizedTrace{V, Tr}, args::Tuple, argdiffs::Tuple, constraints::ChoiceMap) where {V, Tr}
+    new_memoized_gen_fns = copy_mgfs_for_update(tr)
+    
     ### update values in lookup table given in `constraints` ###
     # the return value `new_memoized_gen_fns` is a complete copy 
     (total_weight, new_memoized_gen_fns, mgf_diffs, discard) = update_lookup_table_values!(new_memoized_gen_fns, tr, constraints)
