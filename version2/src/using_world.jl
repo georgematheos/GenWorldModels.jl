@@ -7,7 +7,7 @@ struct UsingWorldTrace{V, Tr} <: Gen.Trace
     world::World
     score::Float64
     args::Tuple
-    gen_fn::GenerativeFunction{V, UsingMemoizedTrace{V, Tr}}
+    gen_fn::GenerativeFunction{V, UsingWorldTrace{V, Tr}}
 end
 
 Gen.get_args(tr::UsingWorldTrace) = tr.args
@@ -21,13 +21,14 @@ function Gen.get_choices(tr::UsingWorldTrace)
     StaticChoiceMap(leaf_nodes, internal_nodes)
 end
 
-struct UsingWorld{V, Tr, n} <: Gen.GenerativeFunction{V, UsingWorldTrace}
+struct UsingWorld{V, Tr, n} <: Gen.GenerativeFunction{V, UsingWorldTrace{V, Tr}}
     kernel::Gen.GenerativeFunction{V, Tr}
     addrs::NTuple{n, Symbol}
     memoized_gen_fns::NTuple{n, GenerativeFunction}
 end
-function UsingWorld(kernel::GenerativeFunction, addr_to_gen_fn...)
+function UsingWorld(kernel::GenerativeFunction, addr_to_gen_fn::Vararg{Pair{Symbol, <:GenerativeFunction}})
     addrs = Tuple([addr for (addr, gen_fn) in addr_to_gen_fn])
+    @assert all(addrs .!= :kernel) ":kernel may not be a memoized generative function address"
     gen_fns = Tuple([gen_fn for (addr, gen_fn) in addr_to_gen_fn])
     UsingWorld(kernel, addrs, gen_fns)
 end
@@ -45,8 +46,8 @@ function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap)
     kernel_tr, kernel_weight = generate(gen_fn.kernel, (world, args...), get_submap(constraints, :kernel))
     world_weight = end_generate!(world)
     
-    score = get_score(kernel_tr) + get_score(world)
-    tr = UsingWorldTrace(kernel_tr, weight, score, args, gen_fn)
+    score = get_score(kernel_tr) + total_score(world)
+    tr = UsingWorldTrace(kernel_tr, world, score, args, gen_fn)
     weight = kernel_weight + world_weight
     
     (tr, weight)

@@ -6,18 +6,22 @@
 struct MemoizedGenerativeFunction{WorldType, addr}
     world::WorldType
 end
-MemoizedGenerativeFunction(world::WorldType, addr::Symbol) where {WorldType} = MemoizedGenerativeFunction{WorldType, addr}()
+MemoizedGenerativeFunction(world::WorldType, addr::Symbol) where {WorldType} = MemoizedGenerativeFunction{WorldType, addr}(world)
+addr(mgf::MemoizedGenerativeFunction{<:Any, a}) where {a} = a
+world(mgf::MemoizedGenerativeFunction) = mgf.world
 
 struct MemoizedGenerativeFunctionCall{WorldType, addr}
     world::WorldType
     key
 end
-MemoizedGenerativeFunctionCall(world::WorldType, addr::Symbol, key) = MemoizedGenerativeFunctionCall{WorldType, addr}(world, key)
+MemoizedGenerativeFunctionCall(world::WorldType, addr::Symbol, key) where {WorldType} = MemoizedGenerativeFunctionCall{WorldType, addr}(world, key)
+addr(::MemoizedGenerativeFunctionCall{<:Any, a}) where {a} = a
+key(mgf::MemoizedGenerativeFunctionCall) = mgf.key
 
 # world[:addr] gives a memoized gen function
 # world[:addr][key] gives a memoized gen function call
-Base.getproperty(world::World, addr::Symbol) = MemoizedGenerativeFunction(world, addr)
-Base.getproperty(mgf::MemoizedGenerativeFunction, key) = MemoizedGenerativeFunctionCall(mgf.world, mgf.addr, key)
+Base.getindex(world::World, addr::Symbol) = MemoizedGenerativeFunction(world, addr)
+Base.getindex(mgf::MemoizedGenerativeFunction, key) = MemoizedGenerativeFunctionCall(world(mgf), addr(mgf), key)
 
 ####################
 # LookupOrGenerate #
@@ -39,7 +43,7 @@ function Gen.get_choices(tr::LookupOrGenerateTrace)
     # TODO: static choicemap for performance?
     choicemap(
         (:val, tr.val),
-        (metadata_addr(tr.call.world) => tr.call.addr, tr.call.key)
+        (metadata_addr(tr.call.world) => addr(tr.call), key(tr.call))
     )
 end
 
@@ -56,7 +60,7 @@ function Gen.generate(gen_fn::LookupOrGenerate, args::Tuple{MemoizedGenerativeFu
     (tr, 0.)
 end
 
-function Gen.generate(gen_fn::Lookup, args::Tuple, constraints::ChoiceMap)
+function Gen.generate(gen_fn::LookupOrGenerate, args::Tuple, constraints::ChoiceMap)
     error("generate(lookup_or_generate, ...) should only be called with empty constraints")
 end
 
