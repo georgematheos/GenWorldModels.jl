@@ -10,6 +10,7 @@ struct Call{addr}
     key
 end
 Call(addr, key) = Call{addr}(key)
+Call(p::Pair{Symbol, <:Any}) = Call(p[1], p[2])
 key(call::Call) = call.key
 addr(call::Call{a}) where {a} = a
 
@@ -67,6 +68,24 @@ function note_new_lookup!(lc::LookupCounts, call::Call, call_stack::Stack{Call})
             assoc(lc.dependency_counts[call], looked_up_in, new_count)
         )
     end
+end
+
+"""
+    get_number_of_expected_kernel_lookups(lc::LookupCounts, call::Call)
+
+Gives the number of traced lookups to `call` which must have occurred in the kernel
+for the lookup counts object to have the number of counts it has tracked,
+assuming all other calls have been properly tracked.
+"""
+function get_number_of_expected_kernel_lookups(lc::LookupCounts, call::Call)
+    count = lc.lookup_counts[call]
+    for (other_call, lookups_from_other_call) in lc.dependency_counts
+        count -= get(lookups_from_other_call, call, 0)
+    end
+    return count
+end
+function get_number_of_expected_kernel_lookups(lc::LookupCounts, p::Pair)
+    get_number_of_expected_kernel_lookups(lc, Call(p))
 end
 
 """

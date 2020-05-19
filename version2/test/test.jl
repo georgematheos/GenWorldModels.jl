@@ -22,6 +22,43 @@ end
 
 const get_total_size = UsingWorld(kernel, :sizes => generate_size)
 
+# some versions of this which should cause errors:
+@gen function broken_kernel1(world)
+    idx1 ~ uniform_discrete(1, 10)
+    idx2 ~ uniform_discrete(1, 10)
+    
+    size1 ~ lookup_or_generate(world[:sizes][idx1])
+    lookup_or_generate(world[:sizes][idx2]) # untraced call to `lookup_or_generate` is an ERROR!
+    size2 ~ lookup_or_generate(world[:sizes][idx2])
+
+    total = size1 + size2
+    return total
+end
+@gen function broken_kernel2(world)
+    idx1 ~ uniform_discrete(1, 10)
+    idx2 ~ uniform_discrete(1, 10)
+    
+    size1 ~ lookup_or_generate(world[:sizes][idx1])
+    size2 = lookup_or_generate(world[:sizes][idx2]) # untraced call to `lookup_or_generate` is an ERROR!
+
+    total = size1 + size2
+    return total
+end
+@gen function broken_kernel3(world)
+    idx1 ~ uniform_discrete(1, 10)
+    idx2 ~ uniform_discrete(1, 10)
+    
+    size1 ~ lookup_or_generate(world[:sizes][idx1])
+    size2 = world[:sizes][idx2] # lookups without `lookup_or_generate` should break things!
+
+    total = size1 + size2
+    return total
+end
+
+broken_get_total_size1 = UsingWorld(broken_kernel1, :sizes => generate_size)
+broken_get_total_size2 = UsingWorld(broken_kernel2, :sizes => generate_size)
+broken_get_total_size3 = UsingWorld(broken_kernel3, :sizes => generate_size)
+
 @load_generated_functions()
 
 @testset "simple UsingWorld function" begin
@@ -43,7 +80,14 @@ const get_total_size = UsingWorld(kernel, :sizes => generate_size)
         @test same_weight ≈ get_score(same_idx_tr) # this should have been fully constrained
         @test diff_weight ≈ same_weight
         
+        # we should throw an error if we don't use all the constraints we provide to generate
+        # TODO: mabe we should change this behavior
         @test_throws Exception generate(get_total_size, (), choicemap((:kernel => :idx1, 1), (:kernel => :idx2, 2), (:world => :sizes => 3 => :size, 3.05)))
+       
+        # test error throwing behavior when we don't trace world accesses properly
+        @test_throws Exception generate(broken_get_total_size1, ())
+        @test_throws Exception generate(broken_get_total_size2, ())
+        @test_throws Exception generate(broken_get_total_size3, ())
     end
 end
 

@@ -37,10 +37,60 @@ end
 # generate #
 ############
 
+function count_appearances_of_value_deep(choicemap::ChoiceMap, addr, value)
+    count = 0
+    if has_value(choicemap, addr) && choicemap[addr] == value
+        count += 1
+    end
+    for (_, submap) in get_submaps_shallow(choicemap)
+        count += count_appearances_of_value_deep(submap, addr, value)
+    end
+    return count
+end
+
+"""
+    check_world_counts_agree_with_generate_choicemaps(world, kernel_tr)
+
+Throws an error if the `world`'s tracking of how many times each address was looked up
+differs from the number of times each address would need to be looked up according to the kernel
+trace, and the traces for the decisions stored in `world` for the memoized generative functions
+invoked by the kernel.
+"""
+function check_world_counts_agree_with_generate_choicemaps(world, kernel_tr)
+    core_error_msg(addr, key, expected_count, actual_counts) = """
+    The world's tracking expected $(addr => key) to be looked up 
+    $expected_count times in the kernel, but the kernel's choicemap
+    states that it was only looked up $actual_counts times.
+    """
+    kernel_choices = get_choices(kernel_tr)
+    for (mgf_addr, mgf_submap) in get_submaps_shallow(get_choices(world))
+        for (lookup_key, submap) in get_submaps_shallow(mgf_submap)
+            num_expected_kernel_lookups = get_number_of_expected_kernel_lookups(world.lookup_counts, mgf_addr => lookup_key)
+            num_actual_kernel_lookups = count_appearances_of_value_deep(kernel_choices, 
+                metadata_addr(world) => mgf_addr, lookup_key
+            )
+
+            if num_expected_kernel_lookups < num_actual_kernel_lookups
+                # I don't see how this could ever occur, but might as well check for it
+                # but note to future users: if you are triggering this error you are doing something very whacky
+                error(core_error_msg(mgf_addr, lookup_key, num_expected_kernel_lookups, num_actual_kernel_lookups))
+            elseif num_expected_kernel_lookups > num_actual_kernel_lookups
+                error(core_error_msg(mgf_addr, lookup_key, num_expected_kernel_lookups, num_actual_kernel_lookups) * """
+                One possible explaination for this issue is that there are untraced
+                calls to `lookup_or_generate` in the kernel.  Another possible explaination is that for some reason
+                a traced call to `lookup_or_generate` is resulting in multiple calls to the `lookup_or_generate` function
+                even though it is only adding a single instance of this call to the choicemap.
+                """)
+            end
+
+        end
+    end
+end
+
 (gen_fn::UsingWorld)(args...) = get_retval(simulate(gen_fn, args))
 Gen.simulate(gen_fn::UsingWorld, args::Tuple) = generate(gen_fn, args)
 
-function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap)
+function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; check_proper_usage=true)
     world = World(gen_fn.addrs, gen_fn.memoized_gen_fns)
     begin_generate!(world, get_submap(constraints, :world))
     kernel_tr, kernel_weight = generate(gen_fn.kernel, (world, args...), get_submap(constraints, :kernel))
@@ -50,6 +100,10 @@ function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap)
     tr = UsingWorldTrace(kernel_tr, world, score, args, gen_fn)
     weight = kernel_weight + world_weight
     
+    if check_proper_usage
+        check_world_counts_agree_with_generate_choicemaps(world, kernel_tr)
+    end
+
     (tr, weight)
 end
 
