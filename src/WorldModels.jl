@@ -5,7 +5,7 @@ using FunctionalCollections
 using DataStructures
 
 
-include("world.jl")
+include("world/world.jl")
 include("lookup_or_generate.jl")
 include("using_world.jl")
 
