@@ -65,28 +65,29 @@ The implementation of `Gen.update` will be such that this diff will communicate 
 5. Initialize an empty queue `call_update_order` [to contain the new order an update cycle should now appear in]
 6. While `Q` is not empty:
    1. `u = pop!(Q)`
-   2. IF `sort[u] > fringe_top`:
-      _This means that we have just finished updating a full "update cycle", which we should now sort into the correct order._
-      1. Call procedure `reorder_update_cycle!`
-      2. `fringe_top = sort[u]`
-   3. `fringe_bottom = sort[u]`
-   4. `update(u)`
+   2. IF NOT `visited[u]`
+      1. IF `sort[u] > fringe_top`:
+         _This means that we have just finished updating a full "update cycle", which we should now sort into the correct order._
+         1. Call procedure `reorder_update_cycle!`
+         2. `fringe_top = sort[u]`
+      2. `fringe_bottom = sort[u]`
+      3. `update_or_generate(u)`
 7. Call procedure `reorder_update_cycle!`.
 
-Procedure `update(u)`:
+Procedure `update_or_generate(u)`:
 1. IF `u` is on the `update_stack`
    1. ERROR: cycle detected: this update would result in the calculation of call `u` requiring knowledge of the value for call `u`
 2. Add `sort[u]` to `updated_sort_indices`.
-3. IF there are constraints or is an argdiff for `u`:
+3. IF there are constraints or is an argdiff for `u`, or there is no value for `u` in the world:
    1. PUSH! `u` onto the `update_stack`
    2. Call `Gen.update(u, diff, constraints[u])` if there is a value for `u` in the world; else call `Gen.generate(u, constraints[u])`;
       this returns an `argdiff` which we add to `diff` and a weight which we accumulate.
    3. POP! `u` off of the `update_stack`
-   4. PUSH! `u` onto `call_update_order`.
-4. Set `visited[u] = true`.
-5. IF the `argdiff` is not `NoChange`, THEN add every call which depends on `u` to `Q`.
-6. ELSEIF the `argdiff` is `NoChange`, THEN add every call which depends on `u` and is before `fringe_top` to `Q`.
-7. RETURN the `argdiff` (possibly to be used in `Gen.update` or generate or something.)
+4. PUSH! `u` onto `call_update_order`.
+5. Set `visited[u] = true`.
+6. IF the `argdiff` is not `NoChange`, THEN add every call which depends on `u` to `Q`.
+7. ELSEIF the `argdiff` is `NoChange`, THEN add every call which depends on `u` and is before `fringe_top` to `Q`.
+8. RETURN the `argdiff` (possibly to be used in `Gen.update` or generate or something.)
 
 Procedure `Gen.update(u, diff, constraints[u])` / `Gen.generate(u, constraints[u])`
 This will run a regular Gen update or generate for call `u` where `diff` denotes
@@ -100,19 +101,14 @@ This can occur in a few ways:
 
 If either of these occur, adding the dependency that `v` must be generated before `u`, run the following procedure:
 
-Procedure `generate(lookup_or_generate, v)` OR `update(lookup_or_generate_trace, v)`:
+Procedure `Gen.generate(lookup_or_generate, v)` OR `Gen.update(lookup_or_generate_trace, v)`:
 1. Increment the `lookup_counts` for how many times `v` is looked up in `u`. (`u` is the top value on the `update_stack`).
-2. IF `sort[v] < fringe_bottom`
-   _In this case, we have already updated v if we need to, so no new dependency is added._
-   1. Set `df = NoChange()`.
-   ELSEIF `visited[v]`
-   _In this case, `v` is between `fringe_bottom` and `fringe_top`, and has already been updated, so we have a diff articulating what new value `v` will take._
-   1. Set `df = diff[v]`
-   ELSE
-   _In this case, `v` is after `fringe_bottom` and has not been updated! We need to run an update on it before the algorithm can continue._
-   1. Set `fringe_top = sort[v]`
-   2. Set `df = update(v)` (Ie. call procedure `update` on `v`.)
-3. This call to `update(lookup_or_generate_trace)` should RETURN the new trace implied by applying the diff `df` to the previous value for `v` in the world.
+2. If `v` has not yet had a value generated for it, add `v` to the end of the topological sort.
+3. IF `sort[v] >= fringe_bottom` AND NOT `visited[v]`
+   _In this case, call `v` has not been updated yet; we have to run this update before we can proceed._
+   _Also, note that this ALWAYS occurs if no value for `v` has been generated yet since then `v` is at the end of the topological sort._
+   1. Call `update_or_generate(v)`
+4. RETURN the lookup_or_generate trace containing the value stored for `v` in the world.
 
 Procedure `reorder_update_cycle!`:
 _This is called when we just completed the last update on the update stack, and have now moved past the `fringe_top` call, so we can reorder the updates between `fringe_bottom` and `fringe_top` as needed._

@@ -62,7 +62,7 @@ function end_generate!(world::World; check_all_constraints_used=true)
     end
         
     # save the topological sort for the calls in the world
-    world.call_sort = PersistentHashMap(([call => i for (i, call) in enumerate(world.state.call_sort)]::Vector{<:Pair{<:Call, Int}})...)
+    world.call_sort = CallSort(world.state.call_sort)
     weight = world.state.weight
     
     world.state = NoChangeWorldState()
@@ -70,31 +70,24 @@ function end_generate!(world::World; check_all_constraints_used=true)
     return weight
 end
 
-function lookup_or_generate_during_generation!(world, call)
+function lookup_or_generate_during_generate!(world, call)
     if !has_value_for_call(world, call)
-        generate_value!(world, call)
+        generate_value_during_generate!(world, call)
     end
 
-    note_new_lookup!(world.lookup_counts, call, world.stat.call_stack)
+    note_new_lookup!(world, call, world.state.call_stack)
 
     return get_retval(world.subtraces[call])
 end
 
-function generate_value!(world, call)
-    @assert world.state isa GenerateWorldState
-    @assert !has_value_for_call(world, call)
-    
-    gen_fn = get_gen_fn(world, call)
+function generate_value_during_generate!(world, call)
     constraints = get_submap(world.state.constraints, addr(call) => key(call))
     
     push!(world.state.call_stack, call)
-    tr, weight = generate(gen_fn, (world, key(call)), constraints)
+    weight = generate_value!(world, call, constraints)
     pop!(world.state.call_stack)
     
     push!(world.state.call_sort, call)
-    
-    world.subtraces = assoc(world.subtraces, call, tr)
-    note_new_call!(world.lookup_counts, call)
-    world.total_score += get_score(tr)
+
     world.state.weight += weight
 end

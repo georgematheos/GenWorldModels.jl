@@ -3,6 +3,7 @@
 ####################################
 
 # TODO: should I include more information in the type for these?
+# also TODO: have world[addr] syntax use `Val` dispatch so it happens at compile-time
 struct MemoizedGenerativeFunction{WorldType, addr}
     world::WorldType
 end
@@ -17,11 +18,60 @@ end
 MemoizedGenerativeFunctionCall(world::WorldType, addr::Symbol, key) where {WorldType} = MemoizedGenerativeFunctionCall{WorldType, addr}(world, key)
 addr(::MemoizedGenerativeFunctionCall{<:Any, a}) where {a} = a
 key(mgf::MemoizedGenerativeFunctionCall) = mgf.key
+call(mgf::MemoizedGenerativeFunctionCall) = Call(addr(mgf), key(mgf))
 
 # world[:addr] gives a memoized gen function
 # world[:addr][key] gives a memoized gen function call
 Base.getindex(world::World, addr::Symbol) = MemoizedGenerativeFunction(world, addr)
 Base.getindex(mgf::MemoizedGenerativeFunction, key) = MemoizedGenerativeFunctionCall(world(mgf), addr(mgf), key)
+
+### argdiff propagation ###
+struct MGFKeyChangeDiff <: Gen.Diff end
+struct MGFValChangeDiff <: Gen.Diff
+    diff::Diff
+end
+
+no_addr_change_error() = error("Changing the address of a `lookup_or_generate` in updates is not supported.")
+Base.getindex(world::World, addr::Diffed) = no_addr_change_error()
+Base.getindex(world::Diffed{World}, addr::Diffed) = no_addr_change_error()
+
+function Base.getindex(world::Diffed{<:World, WorldUpdateDiff}, addr::Symbol)
+    mgf = strip_diff(world)[addr]
+    diff = get_diff(world)[addr] # will be a WorldUpdateAddrDiff
+    Diffed(mgf, diff)
+end
+
+function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateAddrDiff}, key)
+    mgf_call = strip_diff(mgf)[key]
+    diff = get_diff(mgf)[key] # may be a nochange, if !has_diff_for_index(get_diff(mgf), key)
+
+    # unless this is either NoChange or ToBeUpdated, we want to make sure `update` knows that this is just
+    # a normal diff which comes from a value change, and doesn't need to trigger special update behavior
+    if diff != NoChange() && diff != ToBeUpdatedDiff()
+        diff = MGFValChangeDiff(diff)
+    end
+
+    Diffed(mgf_call, diff)
+end
+
+function Base.getindex(mgf::MemoizedGenerativeFunction, key::Diffed)
+    key = strip_diff(key)
+    mgf_call = mgf[key]
+    Diffed(mgf_call, MGFKeyChangeDiff())
+end
+
+# key diff supercedes a diff on the world because we ALWAYS need to run an update on the world
+# to communicate a dependency change when the key changes, while we sometimes don't run a dependency
+# change update when there's only a change to the world
+function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateAddrDiff}, key::Diffed)
+    key = strip_diff(key)
+    mgf_call = strip_diff(mgf)[key]
+    if get_diff(key) == NoChange()
+        Diffed(mgf_call, NoChange())
+    else
+        Diffed(mgf_call, MGFKeyChangeDiff())
+    end
+end
 
 ####################
 # LookupOrGenerate #
@@ -34,7 +84,7 @@ struct LookupOrGenerateTrace <: Gen.Trace
     val
 end
 
-Gen.get_args(tr::LookupOrGenerateTrace) = (tr.world,)
+Gen.get_args(tr::LookupOrGenerateTrace) = (tr.call,)
 Gen.get_retval(tr::LookupOrGenerateTrace) = tr.val
 Gen.get_score(tr::LookupOrGenerateTrace) = 0.
 Gen.get_gen_fn(tr::LookupOrGenerateTrace) = lookup_or_generate
@@ -42,7 +92,6 @@ Gen.project(tr::LookupOrGenerateTrace, selection::EmptySelection) = 0.
 function Gen.get_choices(tr::LookupOrGenerateTrace)
     # TODO: static choicemap for performance?
     choicemap(
-        (:val, tr.val),
         (metadata_addr(tr.call.world) => addr(tr.call), key(tr.call))
     )
 end
@@ -68,6 +117,57 @@ function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple, con
     error("lookup_or_generate may not be updated with constraints.")
 end
 
-# TODO: update, regenerate
+Gen.update(tr::LookupOrGenerateTrace, ::Tuple, ::Tuple{NoChange}, ::EmptyChoiceMap) = (tr, 0., NoChange(), EmptyChoiceMap())
+
+# key change
+function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{MGFKeyChangeDiff}, ::EmptyChoiceMap)
+    mgf_call = args[1]
+    
+    # run a full update/generate cycle in the world for this call
+    new_val = lookup_or_generate!(mgf_call.world, Call(addr(mgf_call), key(mgf_call)))
+    
+    # the key looked up is the only thing exposed in the choicemap; this has changed so the whole old choicemap is the discard
+    discard = get_choices(tr)
+    
+    new_tr = LookupOrGenerateTrace(mgf_call, new_val)
+    retdiff = new_val == get_retval(tr) ? NoChange() : UnknownChange()
+    (new_tr, 0., retdiff, discard)
+end
+
+# to-be-updated
+function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{ToBeUpdatedDiff}, ::EmptyChoiceMap)
+    mgf_call = args[1]
+    # run a full update/generate cycle in the world for this call
+    new_val = lookup_or_generate!(mgf_call.world, Call(addr(mgf_call), key(mgf_call)))
+    new_tr = LookupOrGenerateTrace(mgf_call, new_val)
+    retdiff = new_val == get_retval(tr) ? NoChange() : UnknownChange()
+    (new_tr, 0., retdiff, EmptyChoiceMap())
+end
+
+# value has changed, but we don't need to update, and haven't changed key
+function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{MGFValChangeDiff}, ::EmptyChoiceMap)
+    valdiff = argdiffs[1].diff
+    new_val = get_value_for_call(tr.call.world, call(tr.call))
+    new_tr = LookupOrGenerateTrace(tr.call, new_val)
+    (new_tr, 0., valdiff, EmptyChoiceMap())
+end
+
+# UnknownChange - this is likely caused by use of a dynamic generative function which doesn't propagate diffs
+# we need to figure out which of the other update functions we should dispatch to
+# this function just replicates the diff propagation behavior implemented above in the Base.getindex methods
+function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{UnknownChange}, ::EmptyChoiceMap)
+    new_call = args[1]
+    if key(tr.call) != key(new_call)
+        diff = MGFKeyChangeDiff()
+    else
+        diff = WorldUpdateDiff(new_call.world)[addr(tr.call)][key(tr.call)]
+        if diff != NoChange() && diff != ToBeUpdatedDiff()
+            diff = MGFValChangeDiff(diff)
+        end
+    end
+    return Gen.update(tr, args, (diff,), EmptyChoiceMap())
+end
+
+# TODO: regenerate
 
 # TODO: gradients

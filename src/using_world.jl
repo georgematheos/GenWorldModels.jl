@@ -33,6 +33,23 @@ function UsingWorld(kernel::GenerativeFunction, addr_to_gen_fn::Vararg{Pair{Symb
     UsingWorld(kernel, addrs, gen_fns)
 end
 
+function Base.getindex(tr::UsingWorldTrace, addr::Pair)
+    first, second = addr
+    if first == :kernel
+        return tr.kernel_tr[second]
+    elseif first == :world
+        mgf_addr, rest = second
+        if rest isa Pair
+            key, rest = rest
+            return get_trace(tr.world, Call(mgf_addr, key))[rest]
+        else
+            return get_trace(tr.world, Call(mgf_addr, rest))[]
+        end
+    else
+        error("Invalid address")
+    end
+end
+
 ############
 # generate #
 ############
@@ -87,8 +104,8 @@ function check_world_counts_agree_with_generate_choicemaps(world, kernel_tr)
     end
 end
 
-(gen_fn::UsingWorld)(args...) = get_retval(simulate(gen_fn, args))
-Gen.simulate(gen_fn::UsingWorld, args::Tuple) = generate(gen_fn, args)
+# (gen_fn::UsingWorld)(args...) = get_retval(simulate(gen_fn, args))
+# Gen.simulate(gen_fn::UsingWorld, args::Tuple) = generate(gen_fn, args)
 
 function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; check_proper_usage=true)
     world = World(gen_fn.addrs, gen_fn.memoized_gen_fns)
@@ -111,8 +128,28 @@ end
 # updates #
 ###########
 
-# TODO: update
-# TODO: regenerate
+# TODO: these kwargs won't usually propagate through multiple update calls as is
+function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple, constraints::ChoiceMap; check_no_constrained_calls_deleted=true)
+    world = World(tr.world) # shallow copy of the world object
 
+    # tell the world we are doing an update, and have it update all the values
+    # for the constraints for values it has already generated
+    world_diff = begin_update!(world, get_submap(constraints, :world))
+
+    (new_kernel_tr, kernel_weight, kernel_retdiff, kernel_discard) = update(
+        tr.kernel_tr, (world, args...), (world_diff, argdiffs...), get_submap(constraints, :kernel)
+    )
+
+    world_weight, world_discard = end_update!(world, kernel_discard, check_no_constrained_calls_deleted)
+
+    new_score = get_score(new_kernel_tr) + total_score(world)
+    new_tr = UsingWorldTrace(new_kernel_tr, world, new_score, args, tr.gen_fn)
+    weight = kernel_weight + world_weight
+    discard = StaticChoiceMap(NamedTuple(), (world=world_discard, kernel=kernel_discard))
+
+    (new_tr, weight, kernel_retdiff, discard)
+end
+
+# TODO: regenerate
 
 # TODO: gradients?
