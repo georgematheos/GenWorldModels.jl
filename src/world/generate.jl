@@ -1,6 +1,6 @@
-##############
-# Generation #
-##############
+############
+# Generate #
+############
 
 mutable struct GenerateWorldState <: WorldState
     constraints::ChoiceMap

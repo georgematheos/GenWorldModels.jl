@@ -1,4 +1,9 @@
-### UpdateWorldState ###
+# NOTE: The algorithm for updating the world is described and explained in pseudocode
+# and in english in `update_algorithm.md`.
+
+####################
+# UpdateWorldState #
+####################
 mutable struct UpdateWorldState <: WorldState
     constraints::ChoiceMap # constraints for updates
     weight::Float64 # total weight of all updates
@@ -12,7 +17,7 @@ mutable struct UpdateWorldState <: WorldState
     call_stack::Stack{Call} # stack of calls we are currently running updates for
     updated_sort_indices::PriorityQueue{Int} # indices the current update cycle will be relaxed into
     call_update_order::Queue{Call} # queue of the new topological order for the current update cycle
-    world_call_updates_complete::Bool # once we have finished updating all the calls and move to update the kernel, this goes from false to true
+    world_update_complete::Bool # once we have finished updating all the calls and move to update the kernel, this goes from false to true
 end
 function UpdateWorldState(constraints::ChoiceMap)
     UpdateWorldState(
@@ -29,10 +34,20 @@ function UpdateWorldState(constraints::ChoiceMap)
     )
 end
 
-### Diffs for world update ###
+##########################
+# Diffs for world update #
+##########################
 
-# denotes that this call in a world needs to be updated
+"""
+    ToBeUpdatedDiff
+
+This diff indicates that a call for the world _may_ have a diff,
+since it is yet to be updated.  An update _must_ be called on this call
+(via calling `lookup_or_generate!(world, call)`) before the value of this call
+after the update can be known.
+"""
 struct ToBeUpdatedDiff <: Gen.Diff end
+
 """
     WorldUpdateDiff <: IndexDiff
 
@@ -63,7 +78,7 @@ function get_diff_for_index(diff::WorldUpdateAddrDiff, key)
         return world.state.diffs[call]
     end
 
-    already_updated = world.state.world_call_updates_complete || (world.call_sort[call] < world.state.fringe_bottom || call in world.state.visited)
+    already_updated = world.state.world_update_complete || (world.call_sort[call] < world.state.fringe_bottom || call in world.state.visited)
     if already_updated # diff is a nochange since nothing was in world.state.diffs
         return NoChange()
     end
@@ -72,8 +87,18 @@ function get_diff_for_index(diff::WorldUpdateAddrDiff, key)
     return ToBeUpdatedDiff()
 end
 
-### Count and dependency tracking ###
+#################################
+# Count and dependency tracking #
+#################################
 
+"""
+    remove_lookup!(world::World, call::Call, called_from...)
+
+Decrease the count for the number of lookups for `call` in the world.
+If another call `called_from` is provided, also decrease
+the count for the number of times `call` is looked up by `call_from`.
+If decreasing the count brings it to zero, remove the call from the world.
+"""
 function remove_lookup!(world::World, call::Call, called_from...)
     new_num_lookups_for_call = note_lookup_removed!(world, call, called_from...)
     if new_num_lookups_for_call == 0
@@ -81,6 +106,13 @@ function remove_lookup!(world::World, call::Call, called_from...)
     end
 end
 
+"""
+    remove_call!(world, call)
+
+Remove the call from the world (ie. remove its subtrace).
+Update the world score accordingly, and subtract the removed subtrace's
+score from the world.state weight.
+"""
 function remove_call!(world, call)
     tr = world.subtraces[call]
     world.subtraces = dissoc(world.subtraces, call)
@@ -89,9 +121,16 @@ function remove_call!(world, call)
     world.state.weight -= score
 end
 
-### Update algorithm ###
+##########################
+# World update algorithm #
+##########################
 
-function run_updates_from_constraints_or_selections!(world)
+"""
+    run_world_update!(world)
+
+Entry-point/top level for the world update algorithm.
+"""
+function run_world_update!(world)
     enquque_all_constrained_calls!(world)
     while !isempty(world.state.update_queue)
         call = dequeue!(world.state.update_queue)
@@ -106,6 +145,12 @@ function run_updates_from_constraints_or_selections!(world)
     end
 end
 
+"""
+    enquque_all_constrained_calls!(world)
+
+Add all the calls for which constraints are provided in `world.state.constraints`
+to the `world.state.update_queue`.
+"""
 function enquque_all_constrained_calls!(world)
     for (mgf_addr, mgf_submap) in get_submaps_shallow(world.state.constraints)
         for (lookup_key, _) in get_submaps_shallow(mgf_submap)
@@ -115,10 +160,19 @@ function enquque_all_constrained_calls!(world)
     end
 end
 
+"""
+    update_or_generate!(world, call)
+
+"Visit" the given `call` in the update algorithm by running any necessary
+`update` or `generate` call for it.
+This function also performs the needed bookkeeping for the update algorithm
+to update the dependency structure.
+"""
 function update_or_generate!(world, call)
     if call in world.state.call_stack
         error("This update will induce a cycle in the topological ordering of the calls in the world!  Call $call will need to have been generated in order to generate itself.")
     end
+    
     call_topological_position = world.call_sort[call]
     constraints = get_submap(world.state.constraints, addr(call) => key(call))
     there_are_constraints_for_call = !isempty(constraints) 
@@ -148,6 +202,12 @@ function update_or_generate!(world, call)
     return retdiff
 end
 
+"""
+    run_gen_update!(world, call, constraints)
+
+Run `Gen.update` for the given call, and update the world
+and worldstate accordingly.
+"""
 function run_gen_update!(world, call, constraints)
     old_tr = world.subtraces[call]
     new_tr, weight, retdiff, discard = Gen.update(
@@ -165,11 +225,24 @@ function run_gen_update!(world, call, constraints)
     set_submap!(world.state.discard, addr(call) => key(call), discard)
 end
 
+"""
+    run_gen_generate!(world, call, constraints)
+
+Run `Gen.generate` for the given call, and update the world
+and worldstate accordingly.
+"""
 function run_gen_generate!(world, call, constraints)
     weight = generate_value!(world, call, constraints)
     world.state.weight += weight
 end
 
+"""
+    enqueue_downstream_calls_before_fringe_top!(world, call)
+
+Add every call `v` such that `v` looks up the value to `call`
+and such that `v` has topological position < `world.state.fringe_top`
+to the `world.state.update_queue`.
+"""
 function enqueue_downstream_calls_before_fringe_top!(world, call)
     for c in get_calls_looked_up_in(world, call)
         if world.call_sort[c] < world.state.fringe_top
@@ -178,12 +251,28 @@ function enqueue_downstream_calls_before_fringe_top!(world, call)
     end
 end
 
+"""
+    enqueue_all_downstream_calls!(world, call)
+
+Add every call `v` such that `v` looks up the value to `call`
+to the `world.state.update_queue`.
+"""
 function enqueue_all_downstream_calls!(world, call)
     for c in get_calls_looked_up_in(world, call)
         enqueue!(world.state.update_queue, c)
     end
 end
 
+"""
+    reorder_update_cycle!(world)
+
+Change the topological indices of the calls which have been visited
+which currently have topological position between `fringe_bottom`
+and `fringe_top`.
+Do this by filling reassigning the indices in `world.state.updated_sort_indices`
+to the calls in `world.state.call_update_order` so that the order
+given by `world.state.call_update_order` is preserved in the new index assignment.
+"""
 function reorder_update_cycle!(world)
     while !isempty(world.state.call_update_order)
         call = dequeue!(world.state.call_update_order)
@@ -192,6 +281,10 @@ function reorder_update_cycle!(world)
     end
     @assert isempty(world.state.updated_sort_indices)
 end
+
+##################
+# Count updating #
+##################
 
 function update_lookup_counts_according_to_world_discard!(world, discard)
     for (mgf_addr, mgf_submap) in get_values_shallow(discard)
@@ -217,6 +310,12 @@ function update_lookup_counts_according_to_discard!(world, discard, call_discard
     end
 end
 
+"""
+    check_no_constrained_calls_deleted(world::World)
+
+Ensure that every call which an update constraint was provided for is still instantiated
+in the world after the update.  (Throw an error if this is not the case.)
+"""
 function check_no_constrained_calls_deleted(world::World)
     for (mgf_addr, mgf_submap) in get_submaps_shallow(world.state.constraints)
         for (key, _) in get_submaps_shallow(mgf_submap)
@@ -228,8 +327,17 @@ function check_no_constrained_calls_deleted(world::World)
     end
 end
 
-### Interface to `using_world` and `lookup_or_generate` ###
+#######################################################
+# Interface to `using_world` and `lookup_or_generate` #
+#######################################################
 
+"""
+    begin_update!(world::World, constraints::ChoiceMap)
+
+Initiate an update for the `UsingWorld` generative function by updating
+the calls in the world as specified by `constraints`.
+This should be called _before_ updating the `UsingWorld` kernel trace.
+"""
 function begin_update!(world::World, constraints::ChoiceMap)
     @assert (world.state isa NoChangeWorldState) "cannot initiate an update from a $(typeof(world.state))"
     world.state = UpdateWorldState(constraints)
@@ -237,12 +345,25 @@ function begin_update!(world::World, constraints::ChoiceMap)
     # update the world as needed to make it consistent
     # with the `constraints` for the calls we have already generated
     # this will reorder modify topological sort of calls in the world if needed
-    run_updates_from_constraints_or_selections!(world)
-    world.state.world_call_updates_complete = true
+    run_world_update!(world)
+
+    # note that we are done updating the world, and are
+    # now in the process of updating the kernel
+    world.state.world_update_complete = true
 
     return WorldUpdateDiff(world)
 end
 
+"""
+    end_update!(world::World, kernel_discard::ChoiceMap, check_constrained_calls_not_deleted)
+
+End the update process for the world by updating the lookup counts in the world
+to remain consistent with the updated world and updated kernel trace.
+
+`check_constrained_calls_not_deleted` is a boolean denoting whether to run a check to confirm
+that every call in the world which a constraint was provided for
+is still instantiated in the world after this update.
+"""
 function end_update!(world::World, kernel_discard::ChoiceMap, check_constrained_calls_not_deleted)
     update_lookup_counts_according_to_world_discard!(world, world.state.discard)
     update_lookup_counts_according_to_kernel_discard!(world, kernel_discard)
@@ -265,11 +386,6 @@ function end_update!(world::World, kernel_discard::ChoiceMap, check_constrained_
     return retval
 end
 
-# during an update, this should be called if there was a call to `update(lookup_or_generate_tr, call)`
-# where `lookup_or_generate_tr` was previously looking up a different key,
-# or where `lookup_or_generate_tr` has not had its key change, but has a key which
-# appears topologically AFTER fringe_bottom and so is part of the current "update cycle",
-# or if there was a call to `generate(lookup_or_generate_tr, call)`
 """
     lookup_or_generate_during_update!(world, call)
 
@@ -278,7 +394,7 @@ This should be called when the world is in an update state, and either:
 - There is a call to `Gen.update` for what used to be a different key,
 but is being updated so it is now a lookup for `call`
 """
-function lookup_or_generate_during_world_call_updates!(world, call)
+function lookup_or_generate_during_world_update!(world, call)
     if !has_value_for_call(world, call)
         # add this call to the sort, at the end for now
         world.call_sort = add_call_to_end(world.call_sort, call)
@@ -294,7 +410,14 @@ function lookup_or_generate_during_world_call_updates!(world, call)
     return get_value_for_call(world, call)
 end
 
-# this should only ever be called during a generate call
+"""
+    lookup_or_generate_during_kernel_update!(world, call)
+
+This should be called if, while updating the `UsingWorld` kernel,
+there is either a call to `generate` on `lookup_or_generate` for `call`,
+or there is an `update` for a `lookup_or_generate` subtrace which changes
+the key value so that the new call is `call`.
+"""
 function lookup_or_generate_during_kernel_update!(world, call)
     if !has_value_for_call(world, call)
         constraints = get_submap(world.state.constraints, addr(call) => key(call))
@@ -305,13 +428,13 @@ function lookup_or_generate_during_kernel_update!(world, call)
         world.state.weight += weight
     end
     note_new_lookup!(world, call, world.state.call_stack)
-    return get_retval(world.subtraces[call])
+    return get_value_for_call(world, call)
 end
 
 function lookup_or_generate_during_update!(world, call)
-    if world.state.world_call_updates_complete
+    if world.state.world_update_complete
         lookup_or_generate_during_kernel_update!(world, call)
     else
-        lookup_or_generate_during_world_call_updates!(world, call) 
+        lookup_or_generate_during_world_update!(world, call) 
     end
 end

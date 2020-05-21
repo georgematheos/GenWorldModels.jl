@@ -4,6 +4,18 @@
 
 # TODO: should I include more information in the type for these?
 # also TODO: have world[addr] syntax use `Val` dispatch so it happens at compile-time
+
+"""
+    MemoizedGenerativeFunction
+
+Represents a memoized generative function along with the world
+the generative function is memoized in the context of.
+
+# Eg.
+```julia
+memoized_generative_function = world[:mgf_address]
+```
+"""
 struct MemoizedGenerativeFunction{WorldType, addr}
     world::WorldType
 end
@@ -11,6 +23,19 @@ MemoizedGenerativeFunction(world::WorldType, addr::Symbol) where {WorldType} = M
 addr(mgf::MemoizedGenerativeFunction{<:Any, a}) where {a} = a
 world(mgf::MemoizedGenerativeFunction) = mgf.world
 
+"""
+    MemoizedGenerativeFunctionCall
+
+Represents a call to a memoized generative function in a world,
+along with the world the generative function is memoized in the context of.
+
+# Eg.
+```julia
+memoized_generative_function = world[:mgf_address]
+memoized_generative_function_call = memoized_generative_function[argument_to_memoized_generative_function]
+```
+
+"""
 struct MemoizedGenerativeFunctionCall{WorldType, addr}
     world::WorldType
     key
@@ -25,9 +50,26 @@ call(mgf::MemoizedGenerativeFunctionCall) = Call(addr(mgf), key(mgf))
 Base.getindex(world::World, addr::Symbol) = MemoizedGenerativeFunction(world, addr)
 Base.getindex(mgf::MemoizedGenerativeFunction, key) = MemoizedGenerativeFunctionCall(world(mgf), addr(mgf), key)
 
-### argdiff propagation ###
-struct MGFKeyChangeDiff <: Gen.Diff end
-struct MGFValChangeDiff <: Gen.Diff
+###########################################
+# Argdiff propagation for MGF and MGFCall #
+###########################################
+
+"""
+    MGFCallKeyChangeDiff
+
+Denotes that a memoized gen function call has had its key changed.
+(The MGF call may or may not have also have had its value changed.)
+"""
+struct MGFCallKeyChangeDiff <: Gen.Diff end
+
+"""
+    MGFCallValChangeDiff
+
+Denotes that a memoized gen function call which has not had its key change
+has had its value change (due to a change in the value for this call in the world
+associated with the MGFCall).
+"""
+struct MGFCallValChangeDiff <: Gen.Diff
     diff::Diff
 end
 
@@ -48,7 +90,7 @@ function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateAddr
     # unless this is either NoChange or ToBeUpdated, we want to make sure `update` knows that this is just
     # a normal diff which comes from a value change, and doesn't need to trigger special update behavior
     if diff != NoChange() && diff != ToBeUpdatedDiff()
-        diff = MGFValChangeDiff(diff)
+        diff = MGFCallValChangeDiff(diff)
     end
 
     Diffed(mgf_call, diff)
@@ -57,7 +99,7 @@ end
 function Base.getindex(mgf::MemoizedGenerativeFunction, key::Diffed)
     key = strip_diff(key)
     mgf_call = mgf[key]
-    Diffed(mgf_call, MGFKeyChangeDiff())
+    Diffed(mgf_call, MGFCallKeyChangeDiff())
 end
 
 # key diff supercedes a diff on the world because we ALWAYS need to run an update on the world
@@ -69,7 +111,7 @@ function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateAddr
     if get_diff(key) == NoChange()
         Diffed(mgf_call, NoChange())
     else
-        Diffed(mgf_call, MGFKeyChangeDiff())
+        Diffed(mgf_call, MGFCallKeyChangeDiff())
     end
 end
 
@@ -120,7 +162,7 @@ end
 Gen.update(tr::LookupOrGenerateTrace, ::Tuple, ::Tuple{NoChange}, ::EmptyChoiceMap) = (tr, 0., NoChange(), EmptyChoiceMap())
 
 # key change
-function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{MGFKeyChangeDiff}, ::EmptyChoiceMap)
+function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{MGFCallKeyChangeDiff}, ::EmptyChoiceMap)
     mgf_call = args[1]
     
     # run a full update/generate cycle in the world for this call
@@ -145,7 +187,7 @@ function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{ToBe
 end
 
 # value has changed, but we don't need to update, and haven't changed key
-function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{MGFValChangeDiff}, ::EmptyChoiceMap)
+function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{MGFCallValChangeDiff}, ::EmptyChoiceMap)
     valdiff = argdiffs[1].diff
     new_val = get_value_for_call(tr.call.world, call(tr.call))
     new_tr = LookupOrGenerateTrace(tr.call, new_val)
@@ -158,11 +200,11 @@ end
 function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{UnknownChange}, ::EmptyChoiceMap)
     new_call = args[1]
     if key(tr.call) != key(new_call)
-        diff = MGFKeyChangeDiff()
+        diff = MGFCallKeyChangeDiff()
     else
         diff = WorldUpdateDiff(new_call.world)[addr(tr.call)][key(tr.call)]
         if diff != NoChange() && diff != ToBeUpdatedDiff()
-            diff = MGFValChangeDiff(diff)
+            diff = MGFCallValChangeDiff(diff)
         end
     end
     return Gen.update(tr, args, (diff,), EmptyChoiceMap())

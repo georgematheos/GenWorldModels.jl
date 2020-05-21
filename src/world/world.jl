@@ -32,6 +32,11 @@ abstract type WorldState end
 # denotes no update or generation is currently being performed
 struct NoChangeWorldState <: WorldState end
 
+"""
+    LookupCounts
+
+An immutable datatype to track the dependencies in the world and the number of times each lookup has occurred.
+"""
 struct LookupCounts
     lookup_counts::PersistentHashMap{Call, Int} # counts[call] is the number of times this was looked up
     dependency_counts::PersistentHashMap{Call, PersistentHashMap{Call, Int}} # dependency_counts[call1][call2] = # times call2 looked up in call1
@@ -113,6 +118,15 @@ function get_number_of_expected_kernel_lookups(lc::LookupCounts, p::Pair)
     get_number_of_expected_kernel_lookups(lc, Call(p))
 end
 
+"""
+    CallSort
+
+A data structure to store a topological sort for all the calls in the world.
+If the algorithms work properly, at the end of every update, the call sort
+and the lookup counts should be consistent in that the call sort should
+have a valid topological ordering for the dependencies between the calls tracked
+in lookup counts.
+"""
 struct CallSort
     call_to_idx::PersistentHashMap
     max_index::Int
@@ -172,6 +186,7 @@ end
 
 metadata_addr(world::World) = world.metadata_addr
 
+# functions for tracking counts and dependency structure
 function note_new_call!(world, args...)
     world.lookup_counts = note_new_call(world.lookup_counts, args...)
 end
@@ -204,18 +219,6 @@ get_value_for_call(world::World, call::Call) = get_retval(world.subtraces[call])
 get_trace(world::World, call::Call) = world.subtraces[call]
 total_score(world::World) = world.total_score
 
-function lookup_or_generate!(world::World, call::Call)    
-    # if somehow we called a `generate` while running updates,
-    # we need to handle it differently
-    if world.state isa UpdateWorldState
-        lookup_or_generate_during_update!(world, call)
-    elseif world.state isa GenerateWorldState
-        lookup_or_generate_during_generate!(world, call)
-    else
-        error("World must be in a Generate, Update, or Regenerate state if `lookup_or_generate!` is called.")
-    end
-end
-
 """
     generate_value!(world, call, constraints)
 
@@ -237,6 +240,28 @@ function generate_value!(world, call, constraints)
     world.total_score += get_score(tr)
 
     return weight
+end
+
+"""
+    lookup_or_generate!
+
+This is the "interface" with the `lookup_or_generate` generative function;
+whenever a new call to `generate` is made for `lookup_or_generate`,
+or whenever `update` is called on `lookup_or_generate` in such a way that
+it could alter the dependency structure/lookup counts of the world, `lookup_or_generate!`
+should be called.
+Will return the value that the given `call` returns after the generation/execution.
+"""
+function lookup_or_generate!(world::World, call::Call)    
+    # if somehow we called a `generate` while running updates,
+    # we need to handle it differently
+    if world.state isa UpdateWorldState
+        lookup_or_generate_during_update!(world, call)
+    elseif world.state isa GenerateWorldState
+        lookup_or_generate_during_generate!(world, call)
+    else
+        error("World must be in a Generate or Update state if `lookup_or_generate!` is called.")
+    end
 end
 
 include("generate.jl")
