@@ -106,8 +106,7 @@ end
 # to communicate a dependency change when the key changes, while we sometimes don't run a dependency
 # change update when there's only a change to the world
 function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateAddrDiff}, key::Diffed)
-    key = strip_diff(key)
-    mgf_call = strip_diff(mgf)[key]
+    mgf_call = strip_diff(mgf)[strip_diff(key)]
     if get_diff(key) == NoChange()
         Diffed(mgf_call, NoChange())
     else
@@ -164,7 +163,7 @@ Gen.update(tr::LookupOrGenerateTrace, ::Tuple, ::Tuple{NoChange}, ::EmptyChoiceM
 # key change
 function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{MGFCallKeyChangeDiff}, ::EmptyChoiceMap)
     mgf_call = args[1]
-    
+
     # run a full update/generate cycle in the world for this call
     new_val = lookup_or_generate!(mgf_call.world, Call(addr(mgf_call), key(mgf_call)))
     
