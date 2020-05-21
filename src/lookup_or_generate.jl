@@ -75,18 +75,19 @@ end
 
 no_addr_change_error() = error("Changing the address of a `lookup_or_generate` in updates is not supported.")
 Base.getindex(world::World, addr::Diffed) = no_addr_change_error()
-Base.getindex(world::Diffed{World}, addr::Diffed) = no_addr_change_error()
+Base.getindex(world::Diffed{<:World}, addr::Diffed) = no_addr_change_error()
 
 function Base.getindex(world::Diffed{<:World, WorldUpdateDiff}, addr::Symbol)
     mgf = strip_diff(world)[addr]
     diff = get_diff(world)[addr] # will be a WorldUpdateAddrDiff
     Diffed(mgf, diff)
 end
+Base.getindex(world::Diffed{<:World, UnknownChange}, addr::Symbol) = Diffed(strip_diff(world)[addr], UnknownChange())
+Base.getindex(world::Diffed{<:World, NoChange}, addr::Symbol) = Diffed(strip_diff(world)[addr], NoChange())
 
 function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateAddrDiff}, key)
     mgf_call = strip_diff(mgf)[key]
     diff = get_diff(mgf)[key] # may be a nochange, if !has_diff_for_index(get_diff(mgf), key)
-
     # unless this is either NoChange or ToBeUpdated, we want to make sure `update` knows that this is just
     # a normal diff which comes from a value change, and doesn't need to trigger special update behavior
     if diff != NoChange() && diff != ToBeUpdatedDiff()
@@ -108,11 +109,14 @@ end
 function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateAddrDiff}, key::Diffed)
     mgf_call = strip_diff(mgf)[strip_diff(key)]
     if get_diff(key) == NoChange()
-        Diffed(mgf_call, NoChange())
+        # if there's no diff on the key, resort to our getindex for undiffed keys
+        mgf[strip_diff(key)]
     else
         Diffed(mgf_call, MGFCallKeyChangeDiff())
     end
 end
+Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, UnknownChange}, key) = Diffed(strip_diff(mgf)[strip_diff(key)], UnknownChange())
+Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, NoChange}, key) = strip_diff(mgf)[key]
 
 ####################
 # LookupOrGenerate #
@@ -188,8 +192,9 @@ end
 # value has changed, but we don't need to update, and haven't changed key
 function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{MGFCallValChangeDiff}, ::EmptyChoiceMap)
     valdiff = argdiffs[1].diff
-    new_val = get_value_for_call(tr.call.world, call(tr.call))
-    new_tr = LookupOrGenerateTrace(tr.call, new_val)
+    new_call = args[1]
+    new_val = get_value_for_call(new_call.world, call(new_call))
+    new_tr = LookupOrGenerateTrace(new_call, new_val)
     (new_tr, 0., valdiff, EmptyChoiceMap())
 end
 
@@ -201,7 +206,7 @@ function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{Unkn
     if key(tr.call) != key(new_call)
         diff = MGFCallKeyChangeDiff()
     else
-        diff = WorldUpdateDiff(new_call.world)[addr(tr.call)][key(tr.call)]
+        diff = WorldUpdateDiff(new_call.world)[addr(new_call)][key(new_call)]
         if diff != NoChange() && diff != ToBeUpdatedDiff()
             diff = MGFCallValChangeDiff(diff)
         end

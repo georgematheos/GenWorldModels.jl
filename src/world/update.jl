@@ -352,7 +352,12 @@ function begin_update!(world::World, constraints::ChoiceMap)
     # now in the process of updating the kernel
     world.state.world_update_complete = true
 
-    return WorldUpdateDiff(world)
+    if isempty(world.state.visited)
+        # if we didn't visit any calls, we didn't even try to update anything!
+        return NoChange()
+    else
+        return WorldUpdateDiff(world)
+    end
 end
 
 """

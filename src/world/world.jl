@@ -13,6 +13,7 @@ Call(addr, key) = Call{addr}(key)
 Call(p::Pair{Symbol, <:Any}) = Call(p[1], p[2])
 key(call::Call) = call.key
 addr(call::Call{a}) where {a} = a
+Base.show(io::IO, c::Call) = print(io, "Call($(addr(c) => key(c)))")
 
 """
     WorldState
@@ -184,6 +185,9 @@ function World(addrs::NTuple{n, Symbol}, gen_fns::NTuple{n, Gen.GenerativeFuncti
     World{addrs, typeof(gen_fns)}(gen_fns)
 end
 
+# TODO: Could make this more informative by showing what calls it has in it
+Base.show(io::IO, world::World{addrs, <:Any}) where {addrs} = print(io, "world{$addrs}")
+
 metadata_addr(world::World) = world.metadata_addr
 
 # functions for tracking counts and dependency structure
@@ -213,7 +217,7 @@ end
 @inline get_gen_fn(world::World, addr::Symbol) = get_gen_fn(world, Val(addr))
 @inline get_gen_fn(world::World, ::Call{addr}) where {addr} = get_gen_fn(world, addr)
 
-get_calls_looked_up_in(world::World, call) = get_calls_looked_up_in(world.lookup_counts, call)
+get_all_calls_which_look_up(world::World, call) = get_all_calls_which_look_up(world.lookup_counts, call)
 has_value_for_call(world::World, call::Call) = haskey(world.subtraces, call)
 get_value_for_call(world::World, call::Call) = get_retval(world.subtraces[call])
 get_trace(world::World, call::Call) = world.subtraces[call]

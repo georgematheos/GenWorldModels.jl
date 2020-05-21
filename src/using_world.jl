@@ -39,11 +39,16 @@ function Base.getindex(tr::UsingWorldTrace, addr::Pair)
         return tr.kernel_tr[second]
     elseif first == :world
         mgf_addr, rest = second
-        if rest isa Pair
-            key, rest = rest
-            return get_trace(tr.world, Call(mgf_addr, key))[rest]
-        else
-            return get_trace(tr.world, Call(mgf_addr, rest))[]
+        try 
+            if rest isa Pair
+                key, remaining = rest
+                return get_trace(tr.world, Call(mgf_addr, key))[remaining]
+            else
+                return get_trace(tr.world, Call(mgf_addr, rest))[]
+            end
+        catch
+            key = rest isa Pair ? rest[1] : rest
+            error("No lookup for $(mgf_addr => key) found in the world.")
         end
     else
         error("Invalid address")
@@ -135,7 +140,7 @@ function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple, constrain
     # tell the world we are doing an update, and have it update all the values
     # for the constraints for values it has already generated
     world_diff = begin_update!(world, get_submap(constraints, :world))
-
+    
     (new_kernel_tr, kernel_weight, kernel_retdiff, kernel_discard) = update(
         tr.kernel_tr, (world, args...), (world_diff, argdiffs...), get_submap(constraints, :kernel)
     )
