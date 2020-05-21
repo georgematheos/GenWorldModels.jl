@@ -13,6 +13,7 @@ mutable struct UpdateWorldState <: WorldState
     fringe_bottom::Int # INVARIANT: every call with topological index < fringe_bottom has been updated if it needs to be
     fringe_top::Int # INVARIANT: no call with topological index > fringe_top has been updated
     visited::Set{Call} # all vertices which we have visited
+    calls_whose_dependencies_have_diffs::Set{Call} # any call in this set has had a parent updated without a NoChange diff
     diffs::Dict{Call, Diff} # the diff returned by the update to each call
     call_stack::Stack{Call} # stack of calls we are currently running updates for
     updated_sort_indices::PriorityQueue{Int} # indices the current update cycle will be relaxed into
@@ -26,7 +27,7 @@ function UpdateWorldState(constraints::ChoiceMap)
         choicemap(), # discard
         PriorityQueue{Call, Int}(), # update_queue
         0, 0, # fringe_bottom, fringe_top
-        Set{Call}(), Dict{Call, Diff}(), # visited, diffs
+        Set{Call}(), Set{Call}(), Dict{Call, Diff}(), # visited, calls_whose_dependencies_have_diffs, diffs
         Stack{Call}(), # call_stack
         PriorityQueue{Int, Int}(), # updated_sort_indices
         Queue{Call}(), # call_update_order
@@ -111,7 +112,7 @@ end
 
 Remove the call from the world (ie. remove its subtrace).
 Update the world score accordingly, and subtract the removed subtrace's
-score from the world.state weight.
+score from the world.state weight, and add the choices to the state's discard.
 """
 function remove_call!(world, call)
     tr = world.subtraces[call]
@@ -119,6 +120,7 @@ function remove_call!(world, call)
     score = get_score(tr)
     world.total_score -= score
     world.state.weight -= score
+    set_submap!(world.state.discard, addr(call) => key(call), get_choices(tr))
 end
 
 ##########################
@@ -155,7 +157,12 @@ function enquque_all_constrained_calls!(world)
     for (mgf_addr, mgf_submap) in get_submaps_shallow(world.state.constraints)
         for (lookup_key, _) in get_submaps_shallow(mgf_submap)
             call = Call(mgf_addr, lookup_key)
-            enqueue!(world.state.update_queue, call, world.call_sort[call])
+            # if there is no value for this call, we'll have to generate it later,
+            # so no need to add it to the update queue; generate will get called by the algorithm
+            # when it is needed
+            if has_value_for_call(world, call)
+                enqueue!(world.state.update_queue, call, world.call_sort[call])
+            end
         end
     end
 end
@@ -176,7 +183,7 @@ function update_or_generate!(world, call)
     call_topological_position = world.call_sort[call]
     constraints = get_submap(world.state.constraints, addr(call) => key(call))
     there_are_constraints_for_call = !isempty(constraints) 
-    there_is_argdiff_for_call = haskey(world.state.diffs, call)
+    dependency_has_argdiffs = call in world.state.calls_whose_dependencies_have_diffs
 
     enqueue!(world.state.updated_sort_indices, call_topological_position, call_topological_position)
     world.state.fringe_top = max(world.state.fringe_top, call_topological_position)
@@ -186,7 +193,7 @@ function update_or_generate!(world, call)
         run_gen_generate!(world, call, constraints)
         pop!(world.state.call_stack)
         retdiff = UnknownChange()
-    elseif there_are_constraints_for_call || there_is_argdiff_for_call
+    elseif there_are_constraints_for_call || dependency_has_argdiffs
         push!(world.state.call_stack, call)
         retdiff = run_gen_update!(world, call, constraints)
         pop!(world.state.call_stack)
@@ -198,7 +205,7 @@ function update_or_generate!(world, call)
     if retdiff == NoChange()
         enqueue_downstream_calls_before_fringe_top!(world, call)
     else
-        enqueue_all_downstream_calls!(world, call)
+        enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, call)
     end
     return retdiff
 end
@@ -257,10 +264,13 @@ end
 
 Add every call `v` such that `v` looks up the value to `call`
 to the `world.state.update_queue`.
+Note in the world state that each of these calls has a dependency
+which has an argdiff that is not nochange.
 """
-function enqueue_all_downstream_calls!(world, call)
+function enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, call)
     for c in get_all_calls_which_look_up(world, call)
-        enqueue!(world.state.update_queue, c)
+        push!(world.state.calls_whose_dependencies_have_diffs, c)
+        enqueue!(world.state.update_queue, c, world.call_sort[call])
     end
 end
 
@@ -322,7 +332,7 @@ function check_no_constrained_calls_deleted(world::World)
         for (key, _) in get_submaps_shallow(mgf_submap)
             call = Call(mgf_addr, key)
             if !has_value_for_call(world, call)
-                error("Constraint was provided for $(mgf_addr => key) but this call was deleted from the world!")
+                error("Constraint was provided for $(mgf_addr => key) but this call is not in the world at end of update!")
             end
         end
     end

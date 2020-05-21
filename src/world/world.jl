@@ -40,7 +40,9 @@ An immutable datatype to track the dependencies in the world and the number of t
 """
 struct LookupCounts
     lookup_counts::PersistentHashMap{Call, Int} # counts[call] is the number of times this was looked up
-    dependency_counts::PersistentHashMap{Call, PersistentHashMap{Call, Int}} # dependency_counts[call1][call2] = # times call1 looked up in call2
+    # dependency_counts[call1][call2] = # times call1 looked up in call2
+    # ie. indexing is dependency_counts[looked_up, looker_upper]
+    dependency_counts::PersistentHashMap{Call, PersistentHashMap{Call, Int}}
 end
 LookupCounts() = LookupCounts(PersistentHashMap{Call, Int}(), PersistentHashMap{Call, PersistentHashMap{Call, Int}}())
 
@@ -110,13 +112,10 @@ assuming all other calls have been properly tracked.
 """
 function get_number_of_expected_kernel_lookups(lc::LookupCounts, call::Call)
     count = lc.lookup_counts[call]
-    for (other_call, lookups_from_other_call) in lc.dependency_counts
-        count -= get(lookups_from_other_call, call, 0)
+    for (looker_upper, dependency_lookup_count) in lc.dependency_counts[call]
+        count -= dependency_lookup_count
     end
     return count
-end
-function get_number_of_expected_kernel_lookups(lc::LookupCounts, p::Pair)
-    get_number_of_expected_kernel_lookups(lc, Call(p))
 end
 
 """

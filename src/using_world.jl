@@ -82,12 +82,12 @@ function check_world_counts_agree_with_generate_choicemaps(world, kernel_tr)
     core_error_msg(addr, key, expected_count, actual_counts) = """
     The world's tracking expected $(addr => key) to be looked up 
     $expected_count times in the kernel, but the kernel's choicemap
-    states that it was only looked up $actual_counts times.
+    states that it was looked up $actual_counts times.
     """
     kernel_choices = get_choices(kernel_tr)
     for (mgf_addr, mgf_submap) in get_submaps_shallow(get_choices(world))
         for (lookup_key, submap) in get_submaps_shallow(mgf_submap)
-            num_expected_kernel_lookups = get_number_of_expected_kernel_lookups(world.lookup_counts, mgf_addr => lookup_key)
+            num_expected_kernel_lookups = get_number_of_expected_kernel_lookups(world.lookup_counts, Call(mgf_addr, lookup_key))
             num_actual_kernel_lookups = count_appearances_of_value_deep(kernel_choices, 
                 metadata_addr(world) => mgf_addr, lookup_key
             )
@@ -135,6 +135,9 @@ end
 
 # TODO: these kwargs won't usually propagate through multiple update calls as is
 function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple, constraints::ChoiceMap; check_no_constrained_calls_deleted=true)
+    @assert length(collect(get_values_shallow(constraints))) == 0 "constraints should with address :world or :kernel"
+    @assert all(addr -> addr == :world || addr == :kernel, (addr for (addr, submap) in get_submaps_shallow(constraints))) "constraints should with address :world or :kernel"
+
     world = World(tr.world) # shallow copy of the world object
 
     # tell the world we are doing an update, and have it update all the values

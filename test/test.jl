@@ -6,6 +6,7 @@ using .WorldModels
 
 include("simple.jl")
 include("scene_decoration.jl")
+include("factorial.jl")
 
 #= TODOs:
 - test recursion
