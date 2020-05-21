@@ -179,6 +179,7 @@ function update_or_generate!(world, call)
     there_is_argdiff_for_call = haskey(world.state.diffs, call)
 
     enqueue!(world.state.updated_sort_indices, call_topological_position, call_topological_position)
+    world.state.fringe_top = max(world.state.fringe_top, call_topological_position)
 
     if !has_value_for_call(world, call)
         push!(world.state.call_stack, call)
@@ -244,7 +245,7 @@ and such that `v` has topological position < `world.state.fringe_top`
 to the `world.state.update_queue`.
 """
 function enqueue_downstream_calls_before_fringe_top!(world, call)
-    for c in get_calls_looked_up_in(world, call)
+    for c in get_all_calls_which_look_up(world, call)
         if world.call_sort[c] < world.state.fringe_top
             enqueue!(world.state.update_queue, c)
         end
@@ -258,7 +259,7 @@ Add every call `v` such that `v` looks up the value to `call`
 to the `world.state.update_queue`.
 """
 function enqueue_all_downstream_calls!(world, call)
-    for c in get_calls_looked_up_in(world, call)
+    for c in get_all_calls_which_look_up(world, call)
         enqueue!(world.state.update_queue, c)
     end
 end
