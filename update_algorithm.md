@@ -349,3 +349,59 @@ Else, the `update_or_generate(v)` will run an update for `v` as needed,
 then place `v` on `call_update_order`, before finishing the update
 for `u` and placing `u` on `call_update_order`.  Thus by invariant 3 we will
 again end up with `sort[v] < sort[u]`.
+
+## Runtime analysis
+While we are updating, we encounter "update cycles". A pre-update-cycle
+is a set of vertices all of which are visited by the update algorithm,
+and all of which are at some point during the algorithm
+between `fringe_bottom` and `fringe_top`.  An update-cycle
+is a pre-update-cycle which further has the property that
+no pre-update-cycle containing all vertices therein has any
+other vertices in it.  Ie. an update-cycle is
+a pre-update-cycle which cannot have any vertices added to it
+and still be a pre-update-cycle.
+
+Say that an update encounters `C` update cycles, the largest of which
+has size `S`.  Say we visit a total of `U` vertices
+during the algorithm.  (This includes both vertices we run
+an update for, and those whose positions are changed.)
+(Then `U <= SC`.)  Say that running a single call to `Gen.update`
+or `Gen.generate` has runtime `G` (not including
+calls to `update_or_generate` these trigger)
+
+At most, we end up loading all `U` vertices onto the priority queue.
+Thus in the worst case our runtime is at least `O(U * log(U))`.
+For each update cycle, we run a call to `update_or_generate`
+for each one (in a sort of depth-first-search recursive
+fashion).  At each `update_or_generate` call,
+the expensive operations are
+1. adding `sort[u]` to `updated_sort_indices` (which is a PQ
+containing all the elements so far encountered in the update
+cycle, and thus takes `O(log(S))`)
+2. Calling `Gen.update` (which may trigger more calls to 
+   `update_or_generate`); other than these additional calls,
+   this takes time `G`
+3. Adding all downstream calls in the cycle to 
+   the PQ (but this is counted in our `O(U * log(U))` above)
+
+Thus we spend `S * (log(S) + G)` time in `update_or_generate`
+for an update cycle.  For each update cycle, we also
+have a call to `reorder_update_cycle!` which
+requires popping all the elements off the heap,
+and thus takes `S * log(S)` time.  So each update cycle
+is `O(S * (log(S) + G))`.
+
+Thus our total runtime is
+`O(U * log(U) + C * S * (log(S) + G))` where
+- U = total number of calls to update or change the position of
+- C = total number of update cycles
+- S = max size of an update cycle
+- G = time to run a `Gen.update`
+
+We can simplify this to `O(U * (log(U) + G))`.
+
+I remark that this is not a 100% clear runtime, since `U`
+depends on how many vertices we must change the topological position for,
+which depends on the particular topological sort updating strategy.
+I use the algorithm presented by Pearce and Kelly for this;
+I refer to their work for the details.
