@@ -209,7 +209,13 @@ Returns the generative function with address `addr` in the given world.
 @generated function get_gen_fn(world::World, addr_val_type::Union{Val})
     addrs, GenFnTypes = world.parameters
     addr = addr_val_type.parameters[1]
-    idx = findall(addrs .== addr)[1]
+    all_inds = findall(addrs .== addr)
+    if length(all_inds) == 0
+        throw(KeyError(addr))
+    elseif length(all_inds) > 1
+        error("Multiple memoized generative functions detected for address $addr")
+    end
+    idx = all_inds[1]
 
     quote world.gen_fns[$idx] end
 end

@@ -319,8 +319,8 @@ function update_lookup_counts_according_to_world_discard!(world, discard)
     # at the time we call this function; if we discard other traces, we will have a seperate
     # call to `update_lookup_counts_according_to_discard!` for this, so if the iterator here
     # also has this call added to it, we will double-count
-    for (mgf_addr, mgf_submap) in collect(get_values_shallow(discard))
-        for (key, submap) in collect(get_values_shallow(mgf_submap))
+    for (mgf_addr, mgf_submap) in collect(get_submaps_shallow(discard))
+        for (key, submap) in collect(get_submaps_shallow(mgf_submap))
             call_submap_discard_is_for = Call(mgf_addr, key)
             update_lookup_counts_according_to_discard!(world, submap, call_submap_discard_is_for)
         end
