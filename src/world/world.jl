@@ -132,7 +132,7 @@ struct CallSort
     max_index::Int
 end
 function CallSort(idx_to_call::Vector{Call})
-    call_to_idx = PersistentHashMap(([call => i for (i, call) in enumerate(idx_to_call)]))
+    call_to_idx = PersistentHashMap([call => i for (i, call) in enumerate(idx_to_call)]...)
     CallSort(call_to_idx, length(idx_to_call))
 end
 Base.getindex(srt::CallSort, call::Call) = srt.call_to_idx[call]

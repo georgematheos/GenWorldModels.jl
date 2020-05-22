@@ -99,11 +99,17 @@ Decrease the count for the number of lookups for `call` in the world.
 If another call `called_from` is provided, also decrease
 the count for the number of times `call` is looked up by `call_from`.
 If decreasing the count brings it to zero, remove the call from the world.
+
+Returns the "discard" due to removals of calls from the world
+caused by removing this lookup.  If no call is removed, this is an `EmptyChoiceMap`,
+otherwise it is the choicemap for the removed trace.
 """
 function remove_lookup!(world::World, call::Call, called_from...)
     new_num_lookups_for_call = note_lookup_removed!(world, call, called_from...)
     if new_num_lookups_for_call == 0
-        remove_call!(world, call)
+        return remove_call!(world, call)
+    else
+        return EmptyChoiceMap()
     end
 end
 
@@ -113,6 +119,7 @@ end
 Remove the call from the world (ie. remove its subtrace).
 Update the world score accordingly, and subtract the removed subtrace's
 score from the world.state weight, and add the choices to the state's discard.
+Returns the choicemap of the removed trace.
 """
 function remove_call!(world, call)
     tr = world.subtraces[call]
@@ -120,7 +127,9 @@ function remove_call!(world, call)
     score = get_score(tr)
     world.total_score -= score
     world.state.weight -= score
-    set_submap!(world.state.discard, addr(call) => key(call), get_choices(tr))
+    choices = get_choices(tr)
+    set_submap!(world.state.discard, addr(call) => key(call), choices)
+    return choices
 end
 
 ##########################
@@ -254,13 +263,15 @@ to the `world.state.update_queue`.
 function enqueue_downstream_calls_before_fringe_top!(world, call)
     for c in get_all_calls_which_look_up(world, call)
         if world.call_sort[c] < world.state.fringe_top
-            enqueue!(world.state.update_queue, c)
+            if !(c in keys(world.state.update_queue))
+                enqueue!(world.state.update_queue, c, world.call_sort[call])
+            end
         end
     end
 end
 
 """
-    enqueue_all_downstream_calls!(world, call)
+    enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, call)
 
 Add every call `v` such that `v` looks up the value to `call`
 to the `world.state.update_queue`.
@@ -270,7 +281,9 @@ which has an argdiff that is not nochange.
 function enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, call)
     for c in get_all_calls_which_look_up(world, call)
         push!(world.state.calls_whose_dependencies_have_diffs, c)
-        enqueue!(world.state.update_queue, c, world.call_sort[call])
+        if !(c in keys(world.state.update_queue))
+            enqueue!(world.state.update_queue, c, world.call_sort[call])
+        end
     end
 end
 
@@ -298,8 +311,16 @@ end
 ##################
 
 function update_lookup_counts_according_to_world_discard!(world, discard)
-    for (mgf_addr, mgf_submap) in get_values_shallow(discard)
-        for (key, submap) in get_values_shallow(mgf_submap)
+    # Note: these calls to `collect` may be important for correctness,
+    # because as we remove calls during this function, we call `set_submap!`
+    # on the world discard, and so if we have not run `collect`, the lazy iterators
+    # returned by get_values_shallow may change!
+    # the code is structured so we want this loop to only be over calls in the discard
+    # at the time we call this function; if we discard other traces, we will have a seperate
+    # call to `update_lookup_counts_according_to_discard!` for this, so if the iterator here
+    # also has this call added to it, we will double-count
+    for (mgf_addr, mgf_submap) in collect(get_values_shallow(discard))
+        for (key, submap) in collect(get_values_shallow(mgf_submap))
             call_submap_discard_is_for = Call(mgf_addr, key)
             update_lookup_counts_according_to_discard!(world, submap, call_submap_discard_is_for)
         end
@@ -314,7 +335,9 @@ function update_lookup_counts_according_to_discard!(world, discard, call_discard
     for (address, submap) in get_submaps_shallow(discard)
         if address == metadata_addr(world)
             (mgf_addr, key) = first(get_values_shallow(submap))
-            remove_lookup!(world, Call(mgf_addr, key), call_discard_comes_from...)
+            call = Call(mgf_addr, key)
+            removed_trace_choicemap = remove_lookup!(world, call, call_discard_comes_from...)
+            update_lookup_counts_according_to_discard!(world, removed_trace_choicemap, call)
         else
             update_lookup_counts_according_to_discard!(world, submap, call_discard_comes_from...)
         end
