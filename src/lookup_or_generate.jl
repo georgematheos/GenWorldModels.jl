@@ -149,7 +149,7 @@ const lookup_or_generate = LookupOrGenerate()
 
 function Gen.generate(gen_fn::LookupOrGenerate, args::Tuple{MemoizedGenerativeFunctionCall{WorldType, addr}}, constraints::EmptyChoiceMap) where {WorldType, addr}
     mgf_call, = args
-    val = lookup_or_generate!(mgf_call.world, Call(addr, mgf_call.key))
+    val = lookup_or_generate!(mgf_call.world, Call(addr, mgf_call.key); reason_for_call=:generate)
     tr = LookupOrGenerateTrace(mgf_call, val)
     (tr, 0.)
 end
@@ -169,7 +169,7 @@ function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{MGFC
     mgf_call = args[1]
 
     # run a full update/generate cycle in the world for this call
-    new_val = lookup_or_generate!(mgf_call.world, Call(addr(mgf_call), key(mgf_call)))
+    new_val = lookup_or_generate!(mgf_call.world, Call(addr(mgf_call), key(mgf_call)); reason_for_call=:key_change)
     
     # the key looked up is the only thing exposed in the choicemap; this has changed so the whole old choicemap is the discard
     discard = get_choices(tr)
@@ -183,7 +183,7 @@ end
 function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{ToBeUpdatedDiff}, ::EmptyChoiceMap)
     mgf_call = args[1]
     # run a full update/generate cycle in the world for this call
-    new_val = lookup_or_generate!(mgf_call.world, Call(addr(mgf_call), key(mgf_call)))
+    new_val = lookup_or_generate!(mgf_call.world, Call(addr(mgf_call), key(mgf_call)); reason_for_call=:to_be_updated)
     new_tr = LookupOrGenerateTrace(mgf_call, new_val)
     retdiff = new_val == get_retval(tr) ? NoChange() : UnknownChange()
     (new_tr, 0., retdiff, EmptyChoiceMap())

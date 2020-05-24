@@ -56,7 +56,13 @@ function note_new_lookup(lc::LookupCounts, call::Call, call_stack::Stack{Call})
     new_lookup_counts = assoc(lc.lookup_counts, call, lc.lookup_counts[call] + 1)    
     if !isempty(call_stack)
         looked_up_in = first(call_stack)
-        new_count = get(lc.dependency_counts[call], looked_up_in, 0) + 1
+
+        if haskey(lc.dependency_counts[call], looked_up_in)
+            new_count = lc.dependency_counts[call][looked_up_in] + 1
+        else
+            new_count = 1
+        end
+
         new_dependency_counts = assoc(lc.dependency_counts, call,
             assoc(lc.dependency_counts[call], looked_up_in, new_count)
         )
@@ -241,7 +247,7 @@ Returns the `weight` returned by the call to `Gen.generate`
 function generate_value!(world, call, constraints)
     @assert !(world.state isa NoChangeWorldState)
     @assert !has_value_for_call(world, call)
-    
+
     gen_fn = get_gen_fn(world, call)
     tr, weight = generate(gen_fn, (world, key(call)), constraints)
     world.subtraces = assoc(world.subtraces, call, tr)
@@ -261,11 +267,11 @@ it could alter the dependency structure/lookup counts of the world, `lookup_or_g
 should be called.
 Will return the value that the given `call` returns after the generation/execution.
 """
-function lookup_or_generate!(world::World, call::Call)    
+function lookup_or_generate!(world::World, call::Call; reason_for_call=:generate)    
     # if somehow we called a `generate` while running updates,
     # we need to handle it differently
     if world.state isa UpdateWorldState
-        lookup_or_generate_during_update!(world, call)
+        lookup_or_generate_during_update!(world, call, reason_for_call)
     elseif world.state isa GenerateWorldState
         lookup_or_generate_during_generate!(world, call)
     else

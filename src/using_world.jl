@@ -112,11 +112,11 @@ end
 # (gen_fn::UsingWorld)(args...) = get_retval(simulate(gen_fn, args))
 # Gen.simulate(gen_fn::UsingWorld, args::Tuple) = generate(gen_fn, args)
 
-function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; check_proper_usage=true)
+function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; check_proper_usage=true, check_all_constraints_used=true)
     world = World(gen_fn.addrs, gen_fn.memoized_gen_fns)
     begin_generate!(world, get_submap(constraints, :world))
     kernel_tr, kernel_weight = generate(gen_fn.kernel, (world, args...), get_submap(constraints, :kernel))
-    world_weight = end_generate!(world)
+    world_weight = end_generate!(world, check_all_constraints_used)
     
     score = get_score(kernel_tr) + total_score(world)
     tr = UsingWorldTrace(kernel_tr, world, score, args, gen_fn)

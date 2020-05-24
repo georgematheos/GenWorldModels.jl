@@ -51,7 +51,7 @@ Tell the world that we are done running generate. If `check_all_constraints_used
 is true (as it is by default), but some of the constraints provided in `begin_generate!`
 were for a call which never had a value generated for it, an error will be thrown.
 """
-function end_generate!(world::World; check_all_constraints_used=true)
+function end_generate!(world::World, check_all_constraints_used)
     @assert world.state isa GenerateWorldState
     
     if check_all_constraints_used

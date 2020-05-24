@@ -18,6 +18,10 @@ mutable struct UpdateWorldState <: WorldState
     call_stack::Stack{Call} # stack of calls we are currently running updates for
     updated_sort_indices::PriorityQueue{Int} # indices the current update cycle will be relaxed into
     call_update_order::Queue{Call} # queue of the new topological order for the current update cycle
+    # a collection of all the calls which, after being updated, have score=-Inf (ie. probability is 0, so the trace is not in the support)
+    # these calls must all be deleted at the end of the update for this update to be valid
+    calls_updated_to_unsupported_trace::Set{Call}
+    calls_generated_during_update::Set{Call} # calls which had a value generated for them during this update
     world_update_complete::Bool # once we have finished updating all the calls and move to update the kernel, this goes from false to true
 end
 function UpdateWorldState(constraints::ChoiceMap)
@@ -31,6 +35,8 @@ function UpdateWorldState(constraints::ChoiceMap)
         Stack{Call}(), # call_stack
         PriorityQueue{Int, Int}(), # updated_sort_indices
         Queue{Call}(), # call_update_order
+        Set{Call}(), # calls_which_must_be_deleted
+        Set{Call}(), # calls_generated_during_update
         false # world is up to date
     )
 end
@@ -125,10 +131,24 @@ function remove_call!(world, call)
     tr = world.subtraces[call]
     world.subtraces = dissoc(world.subtraces, call)
     score = get_score(tr)
-    world.total_score -= score
-    world.state.weight -= score
+
+    if score != -Inf
+        world.total_score -= score
+        world.state.weight -= score
+    else
+        # if we are removing a trace with score -Inf, note that we are deleting it
+        delete!(world.state.calls_updated_to_unsupported_trace, call)
+    end
+
     choices = get_choices(tr)
-    set_submap!(world.state.discard, addr(call) => key(call), choices)
+
+    # if we generated this call during the update, and are now deleting it, we should not
+    # have the removed choices in the discard.  (I think this can only happen if constraints are
+    # provided for a choice which ended up being deleted.)
+    if !(call in world.state.calls_generated_during_update)
+        set_submap!(world.state.discard, addr(call) => key(call), choices)
+    end
+
     return choices
 end
 
@@ -234,8 +254,25 @@ function run_gen_update!(world, call, constraints)
         constraints
     )
     world.subtraces = assoc(world.subtraces, call, new_tr)
-    world.state.weight += weight
-    world.total_score += get_score(new_tr) - get_score(old_tr)
+
+    if get_score(new_tr) == -Inf
+        # if this trace has score -Inf, either the whole world has score -Inf,
+        # or it just means that this call has been removed and we're going
+        # to delete it at the end of the update. note that we must delete this so we can
+        # throw an error if it is not deleted
+        push!(world.state.calls_updated_to_unsupported_trace, call)
+
+        # we are going to require this call to be removed later, but later
+        # we won't have access to the old trace and the non-infinity score,
+        # so we need to update the total_score and weight here to remove this trace
+        old_score = get_score(old_tr)
+        world.total_score -= old_score
+        world.state.weight -= old_score
+    else
+        world.state.weight += weight
+        world.total_score += get_score(new_tr) - get_score(old_tr)
+    end
+
     if retdiff != NoChange()
         world.state.diffs[call] = retdiff
     end
@@ -251,6 +288,7 @@ and worldstate accordingly.
 function run_gen_generate!(world, call, constraints)
     weight = generate_value!(world, call, constraints)
     world.state.weight += weight
+    push!(world.state.calls_generated_during_update, call)
 end
 
 """
@@ -412,6 +450,14 @@ function end_update!(world::World, kernel_discard::ChoiceMap, check_constrained_
         check_no_constrained_calls_deleted(world)
     end
 
+    if !isempty(world.state.calls_updated_to_unsupported_trace)
+        invalid_calls = collect(world.state.calls_updated_to_unsupported_trace)
+        error("""This update appears to have caused the world to have score -Inf!
+        In particular, the update caused the scores for the traces for calls $invalid_calls
+        to have score -Inf, and these calls were not deleted from the world.
+        """)
+    end
+
     # I thought about running a check that there are no cycles in the world after the update,
     # in case a memoized generative function has a faulty update function which
     # doesn't run `update` on all `lookup_or_generate` calls in it,
@@ -428,12 +474,15 @@ end
 """
     lookup_or_generate_during_update!(world, call)
 
-This should be called when the world is in an update state, and either:
-- There is a call to `Gen.generate` for `call`
+This should be called when the world is in an update state, and one of the following occurs:
+- There is a call to `Gen.generate` for `call`; in this case we should have `reason_for_call = :generate`
 - There is a call to `Gen.update` for what used to be a different key,
-but is being updated so it is now a lookup for `call`
+but is being updated so it is now a lookup for `call`.  In this case we should have
+`reason_for_call = :key_change`
+- There is a call to `Gen.update` for a lookup for a key which is diffed with a `ToBeUpdatedDiff`
+in the world.  In this case we should have `reason_for_call = :to_be_updated`
 """
-function lookup_or_generate_during_world_update!(world, call)
+function lookup_or_generate_during_world_update!(world, call, reason_for_call)
     if !has_value_for_call(world, call)
         # add this call to the sort, at the end for now
         world.call_sort = add_call_to_end(world.call_sort, call)
@@ -444,7 +493,11 @@ function lookup_or_generate_during_world_update!(world, call)
         update_or_generate!(world, call)
     end
 
-    note_new_lookup!(world, call, world.state.call_stack)    
+    # if we `generate`d, or did a key change update, this is a new lookup
+    # (if on the other hand this update occurred due to a `ToBeUpdatedDiff`, it is not a new lookup)
+    if reason_for_call == :generate || reason_for_call == :key_change
+        note_new_lookup!(world, call, world.state.call_stack)    
+    end
 
     return get_value_for_call(world, call)
 end
@@ -470,10 +523,10 @@ function lookup_or_generate_during_kernel_update!(world, call)
     return get_value_for_call(world, call)
 end
 
-function lookup_or_generate_during_update!(world, call)
+function lookup_or_generate_during_update!(world, call, reason_for_call)
     if world.state.world_update_complete
         lookup_or_generate_during_kernel_update!(world, call)
     else
-        lookup_or_generate_during_world_update!(world, call) 
+        lookup_or_generate_during_world_update!(world, call, reason_for_call) 
     end
 end
