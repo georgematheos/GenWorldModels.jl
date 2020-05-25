@@ -14,11 +14,18 @@ Gen.get_args(tr::UsingWorldTrace) = tr.args
 Gen.get_retval(tr::UsingWorldTrace) = get_retval(tr.kernel_tr)
 Gen.get_score(tr::UsingWorldTrace) = tr.score
 Gen.get_gen_fn(tr::UsingWorldTrace) = tr.gen_fn
-Gen.project(tr::UsingWorldTrace, sel::Selection) = error("Not implemented")
+
 function Gen.get_choices(tr::UsingWorldTrace)
     leaf_nodes = NamedTuple()
     internal_nodes = (kernel=get_choices(tr.kernel_tr), world=get_choices(tr.world))
-    StaticChoiceMap(leaf_nodes, internal_nodes)
+    full_choices = StaticChoiceMap(leaf_nodes, internal_nodes)
+    
+    # return a choicemap which filters out all the choices addressed with `metadata_addr`,
+    # since these are just used for internal tracking and should not be exposed
+    AddressFilterChoicemap(
+        full_choices,
+        addr -> addr != metadata_addr(tr.world)
+    )
 end
 
 struct UsingWorld{V, Tr, n} <: Gen.GenerativeFunction{V, UsingWorldTrace{V, Tr}}
@@ -38,6 +45,9 @@ function Base.getindex(tr::UsingWorldTrace, addr::Pair)
     if first == :kernel
         return tr.kernel_tr[second]
     elseif first == :world
+
+        # TODO: if there is only one call for a MGF, we should be able to just look up that address
+
         mgf_addr, rest = second
         try 
             if rest isa Pair
@@ -109,8 +119,10 @@ function check_world_counts_agree_with_generate_choicemaps(world, kernel_tr)
     end
 end
 
-# (gen_fn::UsingWorld)(args...) = get_retval(simulate(gen_fn, args))
-# Gen.simulate(gen_fn::UsingWorld, args::Tuple) = generate(gen_fn, args)
+function (gen_fn::UsingWorld)(args...)
+    (_, _, retval) = propose(gen_fn, args)
+    retval
+end
 
 function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; check_proper_usage=true, check_all_constraints_used=true)
     world = World(gen_fn.addrs, gen_fn.memoized_gen_fns)
@@ -127,6 +139,53 @@ function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; c
     end
 
     (tr, weight)
+end
+
+function Gen.simulate(gen_fn::UsingWorld, args::Tuple; check_proper_usage=true, check_all_constraints_used=true)
+    world = World(gen_fn.addrs, gen_fn.memoized_gen_fns)
+    begin_simulate!(world)
+    kernel_tr = simulate(gen_fn.kernel, (world, args...))
+    end_simulate!(world, check_all_constraints_used)
+
+    score = get_score(kernel_tr) + total_score(world)
+    tr = UsingWorldTrace(kernel_tr, world, score, args, gen_fn)
+    
+    if check_proper_usage
+        check_world_counts_agree_with_generate_choicemaps(world, kernel_tr)
+    end
+
+    tr
+end
+
+function Gen.propose(gen_fn::UsingWorld, args::Tuple)
+    world = World(gen_fn.addrs, gen_fn.memoized_gen_fns)
+    begin_propose!(world)
+    kernel_choices, kernel_weight, retval = propose(gen_fn.kernel, (world, args...))
+    world_choices, world_weight = end_propose!(world)
+
+    weight = kernel_weight + world_weight
+    choices = StaticChoiceMap(
+        NamedTuple(), (kernel=kernel_choices, world=world_choices)
+    )
+
+    # no need to address filter since we shouldn't be populating with the mgf_address on a propose call
+
+    return (choices, weight, retval)
+end
+
+function Gen.assess(gen_fn::UsingWorld, args::Tuple, choices::ChoiceMap)
+    world = World(gen_fn.addrs, gen_fn.memoized_gen_fns)
+    begin_assess!(world, get_submap(choices, :world))
+    kernel_weight, retval = assess(gen_fn.kernel, (world, args...), get_submap(choices, :kernel))
+    world_weight = end_assess!(world)
+
+    (kernel_weight + world_weight, retval)
+end
+
+function Gen.project(trace::UsingWorldTrace, selection::Selection)
+    kernel_weight = project(trace.kernel_tr, selection[:kernel])
+    world_weight = project_(trace.world, selection[:world])
+    return kernel_weight + world_weight
 end
 
 ###########
@@ -154,6 +213,7 @@ function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple, constrain
     new_tr = UsingWorldTrace(new_kernel_tr, world, new_score, args, tr.gen_fn)
     weight = kernel_weight + world_weight
     discard = StaticChoiceMap(NamedTuple(), (world=world_discard, kernel=kernel_discard))
+    discard = AddressFilterChoicemap(discard, addr -> addr != metadata_addr(world))
 
     (new_tr, weight, kernel_retdiff, discard)
 end

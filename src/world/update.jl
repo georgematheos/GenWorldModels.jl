@@ -21,7 +21,8 @@ mutable struct UpdateWorldState <: WorldState
     # a collection of all the calls which, after being updated, have score=-Inf (ie. probability is 0, so the trace is not in the support)
     # these calls must all be deleted at the end of the update for this update to be valid
     calls_updated_to_unsupported_trace::Set{Call}
-    calls_generated_during_update::Set{Call} # calls which had a value generated for them during this update
+    # the choicemap each call which was updated/generated had before the update/generate (if generated, is EmptyChoiceMap)
+    original_choicemaps::Dict{Call, ChoiceMap}
     world_update_complete::Bool # once we have finished updating all the calls and move to update the kernel, this goes from false to true
 end
 function UpdateWorldState(constraints::ChoiceMap)
@@ -36,10 +37,12 @@ function UpdateWorldState(constraints::ChoiceMap)
         PriorityQueue{Int, Int}(), # updated_sort_indices
         Queue{Call}(), # call_update_order
         Set{Call}(), # calls_which_must_be_deleted
-        Set{Call}(), # calls_generated_during_update
+        Dict{Call, ChoiceMap}(), # original_choicemaps
         false # world is up to date
     )
 end
+
+generate_fn(::UpdateWorldState) = Gen.generate
 
 ##########################
 # Diffs for world update #
@@ -132,24 +135,31 @@ function remove_call!(world, call)
     world.subtraces = dissoc(world.subtraces, call)
     score = get_score(tr)
 
+    remove_call_from_sort!(world, call)
+
     if score != -Inf
         world.total_score -= score
         world.state.weight -= score
     else
         # if we are removing a trace with score -Inf, note that we are deleting it
+        # no need to update worldscore or weight, since we would have done this in run_gen_update
+        # (which should be the only place where 0 probability traces can arise, if UsingWorld is used correctly)
         delete!(world.state.calls_updated_to_unsupported_trace, call)
     end
 
-    choices = get_choices(tr)
-
-    # if we generated this call during the update, and are now deleting it, we should not
-    # have the removed choices in the discard.  (I think this can only happen if constraints are
-    # provided for a choice which ended up being deleted.)
-    if !(call in world.state.calls_generated_during_update)
-        set_submap!(world.state.discard, addr(call) => key(call), choices)
+    if call in keys(world.state.original_choicemaps)
+        # if we have updated or generated this call, we have added the original choicemap to `original_choicemaps`
+        # so we can discard it
+        og_choicemap = world.state.original_choicemaps[call]
+    else
+        # if there is no map in `original_choicemaps`, it means we haven't changed the trace and are just removing it,
+        # so the choicemap is simply that for the currently stored trace
+        og_choicemap = get_choices(tr)
     end
+    set_submap!(world.state.discard, addr(call) => key(call), og_choicemap)
 
-    return choices
+    # return the choices currently in the deleted trace so we can update counts based on their removal
+    return get_choices(tr)
 end
 
 ##########################
@@ -209,6 +219,8 @@ function update_or_generate!(world, call)
         error("This update will induce a cycle in the topological ordering of the calls in the world!  Call $call will need to have been generated in order to generate itself.")
     end
     
+   # println("update_or_generate!($call)")
+
     call_topological_position = world.call_sort[call]
     constraints = get_submap(world.state.constraints, addr(call) => key(call))
     there_are_constraints_for_call = !isempty(constraints) 
@@ -219,12 +231,16 @@ function update_or_generate!(world, call)
 
     if !has_value_for_call(world, call)
         push!(world.state.call_stack, call)
+       # println("initiate run_gen_generate!($call)")
         run_gen_generate!(world, call, constraints)
+       # println("complete run_gen_generate!($call)")
         pop!(world.state.call_stack)
         retdiff = UnknownChange()
     elseif there_are_constraints_for_call || dependency_has_argdiffs
         push!(world.state.call_stack, call)
+       # println("initiate run_gen_update!($call)")
         retdiff = run_gen_update!(world, call, constraints)
+       # println("retdiff = run_gen_update!($call)")
         pop!(world.state.call_stack)
     else
         retdiff = NoChange()
@@ -253,7 +269,6 @@ function run_gen_update!(world, call, constraints)
         (WorldUpdateDiff(world), NoChange()),
         constraints
     )
-    world.subtraces = assoc(world.subtraces, call, new_tr)
 
     if get_score(new_tr) == -Inf
         # if this trace has score -Inf, either the whole world has score -Inf,
@@ -261,22 +276,24 @@ function run_gen_update!(world, call, constraints)
         # to delete it at the end of the update. note that we must delete this so we can
         # throw an error if it is not deleted
         push!(world.state.calls_updated_to_unsupported_trace, call)
-
-        # we are going to require this call to be removed later, but later
-        # we won't have access to the old trace and the non-infinity score,
-        # so we need to update the total_score and weight here to remove this trace
-        old_score = get_score(old_tr)
-        world.total_score -= old_score
-        world.state.weight -= old_score
+        
+        # we need to subtract off the score for removing this trace here
+        # since we won't have access to the old trace later
+        score = get_score(old_tr)
+        world.state.weight -= score
+        world.total_score -= score
     else
         world.state.weight += weight
         world.total_score += get_score(new_tr) - get_score(old_tr)
     end
 
+    world.subtraces = assoc(world.subtraces, call, new_tr)
+    world.state.original_choicemaps[call] = get_choices(old_tr)
+    set_submap!(world.state.discard, addr(call) => key(call), discard)
+
     if retdiff != NoChange()
         world.state.diffs[call] = retdiff
     end
-    set_submap!(world.state.discard, addr(call) => key(call), discard)
 end
 
 """
@@ -288,7 +305,15 @@ and worldstate accordingly.
 function run_gen_generate!(world, call, constraints)
     weight = generate_value!(world, call, constraints)
     world.state.weight += weight
-    push!(world.state.calls_generated_during_update, call)
+
+    # since we're generating this call, there were no choices for it before this generate
+    world.state.original_choicemaps[call] = EmptyChoiceMap()
+end
+
+function enqueue_call_for_update!(world::World, call::Call)
+    if !(call in keys(world.state.update_queue))
+        enqueue!(world.state.update_queue, call, world.call_sort[call])
+    end
 end
 
 """
@@ -301,9 +326,7 @@ to the `world.state.update_queue`.
 function enqueue_downstream_calls_before_fringe_top!(world, call)
     for c in get_all_calls_which_look_up(world, call)
         if world.call_sort[c] < world.state.fringe_top
-            if !(c in keys(world.state.update_queue))
-                enqueue!(world.state.update_queue, c, world.call_sort[call])
-            end
+            enqueue_call_for_update!(world, c)
         end
     end
 end
@@ -319,9 +342,7 @@ which has an argdiff that is not nochange.
 function enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, call)
     for c in get_all_calls_which_look_up(world, call)
         push!(world.state.calls_whose_dependencies_have_diffs, c)
-        if !(c in keys(world.state.update_queue))
-            enqueue!(world.state.update_queue, c, world.call_sort[call])
-        end
+        enqueue_call_for_update!(world, c)
     end
 end
 

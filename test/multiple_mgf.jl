@@ -37,7 +37,7 @@ ab = UsingWorld(ab_kernel, :a => a, :b => b)
     @test new_tr[:world => :b => 1] == tr[:world => :b => 1]
     @test new_tr[:world => :a => 3] == tr[:world => :a => 3]
 
-    new_choices = get_choices(tr)
+    new_choices = get_choices(new_tr)
     @test isempty(get_submap(new_choices, :world => :a => :4))
     @test isempty(get_submap(new_choices, :world => :b => :4))
 

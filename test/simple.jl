@@ -20,8 +20,8 @@ const get_total_size = UsingWorld(kernel, :sizes => generate_size)
     diff_idx_tr, diff_weight = generate(get_total_size, (), choicemap((:kernel => :idx1, 1), (:kernel => :idx2, 2), (:world => :sizes => 1 => :size, 1.05)))
     same_idx_tr, same_weight = generate(get_total_size, (), choicemap((:kernel => :idx1, 1), (:kernel => :idx2, 1), (:world => :sizes => 1 => :size, 1.05)))
 
-    @test length(get_submaps_shallow(get_submap(get_choices(diff_idx_tr), :world => :sizes))) == 2
-    @test length(get_submaps_shallow(get_submap(get_choices(same_idx_tr), :world => :sizes))) == 1
+    @test length(collect(get_submaps_shallow(get_submap(get_choices(diff_idx_tr), :world => :sizes)))) == 2
+    @test length(collect(get_submaps_shallow(get_submap(get_choices(same_idx_tr), :world => :sizes)))) == 1
     @test diff_idx_tr[:world => :sizes => 1 => :size] == 1.05
     @test diff_idx_tr[:world => :sizes => 2 => :size] != 1.05 # this should be a 0 probability event
     @test same_idx_tr[:world => :sizes => 1 => :size] == 1.05
@@ -115,7 +115,7 @@ function simple_update_tests(get_total_size)
             (:world => :sizes => 1 => :size, tr[:world => :sizes => 1 => :size])
         )
         
-       # @test discard == expected_discard
+        @test discard == expected_discard
     end
     
     @testset "remove lookup" begin
@@ -136,7 +136,7 @@ function simple_update_tests(get_total_size)
             (:kernel => :idx2, 2),
             (:world => :sizes => 2 => :size, tr[:world => :sizes => 2 => :size])
         )
-       # @test discard == expected_discard
+        @test discard == expected_discard
     end
     @testset "change lookup" begin
         new_tr, weight, retdiff, discard = update(tr, (), (), choicemap((:kernel => :idx2, 3)))
@@ -159,7 +159,8 @@ function simple_update_tests(get_total_size)
             (:kernel => :idx2, 2),
             (:world => :sizes => 2 => :size, tr[:world => :sizes => 2 => :size])
         )
-      #  @test discard == expected_discard
+
+        @test discard == expected_discard
     end
     @testset "add lookup" begin 
         tr, weight = generate(get_total_size, (), choicemap((:kernel => :idx1, 1), (:kernel => :idx2, 1)))
@@ -177,7 +178,8 @@ function simple_update_tests(get_total_size)
         expected_discard = choicemap(
             (:kernel => :idx2, 1)
         )
-       # @test discard == expected_discard
+
+        @test discard == expected_discard
     end
 end
 

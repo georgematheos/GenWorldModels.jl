@@ -1,16 +1,22 @@
-############
-# Generate #
-############
+#######################
+# Generate / Simulate #
+#######################
 
+"""
+    GenerateWorldState
+
+World state for a call to `generate` or `simulate`.
+"""
 mutable struct GenerateWorldState <: WorldState
     constraints::ChoiceMap
     call_stack::Stack{Call} # stack of calls we are currently performing a lookup for
     call_sort::Vector{Call} # a topological order of the calls
     weight::Float64
+    generate_fn::Function # will determine whether we use `generate` or `simulate`
 end
-GenerateWorldState(constraints) = GenerateWorldState(constraints, Stack{Call}(), [], 0.)
+GenerateWorldState(constraints, generate_fn) = GenerateWorldState(constraints, Stack{Call}(), [], 0., generate_fn)
 
-# TODO: simulate
+generate_fn(s::GenerateWorldState) = s.generate_fn
 
 """
     get_ungenerated_constraints(world, constraints)
@@ -42,7 +48,12 @@ before generation finishes (as denoted by calling `end_generate!`).
 """
 function begin_generate!(world::World, constraints::ChoiceMap)
     @assert (world.state isa NoChangeWorldState) "World is currently in a $(typeof(world.state)); cannot begin a generate."
-    world.state = GenerateWorldState(constraints)
+    world.state = GenerateWorldState(constraints, Gen.generate)
+end
+
+function begin_simulate!(world::World)
+    @assert (world.state isa NoChangeWorldState) "World is currently in a $(typeof(world.state)); cannot begin a simulate."
+    world.state = GenerateWorldState(EmptyChoiceMap(), (gen_fn, args, constraints) -> (Gen.simulate(gen_fn, args), 0.))
 end
 
 """
@@ -69,6 +80,7 @@ function end_generate!(world::World, check_all_constraints_used)
     
     return weight
 end
+end_simulate!(args...) = end_generate!(args...)
 
 function lookup_or_generate_during_generate!(world, call)
     if !has_value_for_call(world, call)

@@ -235,7 +235,11 @@ function update_world_trace(old_world_trace, new_deps, new_vals, new_indices_to_
     old_num_indices_sampled = length(get_retval(old_world_trace))
     old_num_vals = old_num_indices_sampled == 0 ? 0 : old_choices[:world => :num_vals => () => :num]
     constraints = choicemap()
-    constraints[:world => :num_vals => () => :num] = length(new_vals)
+
+    if !has_value(old_choices, :world => :num_vals => () => :num) ||  old_choices[:world => :num_vals => () => :num] != length(new_vals)
+        constraints[:world => :num_vals => () => :num] = length(new_vals)
+    end
+
     for i in 1:length(new_vals)
         dep = new_deps[i]
         old_val_map = get_submap(old_choices, :world => :vals => i)
@@ -244,7 +248,7 @@ function update_world_trace(old_world_trace, new_deps, new_vals, new_indices_to_
                 constraints[:world => :vals => i => :num_lookups] = length(dep)
             end
             for (j, idx_to_lookup) in enumerate(dep)
-                if j > old_val_map[:num_lookups] || old_val_map[:vals => :j => :lookup] != idx_to_lookup
+                if j > old_val_map[:num_lookups] || old_val_map[:vals => j => :lookup] != idx_to_lookup
                     constraints[:world => :vals => i => :vals => j => :lookup] = idx_to_lookup
                 end
             end
@@ -278,6 +282,66 @@ function perform_random_update_and_run_tests(dep_struct_trace, using_world_trace
     # change when we change the dependency structure, so we have to constrain more choices
     # here than we do for the world model.  so for simplicity I just generate a new trace
     (new_dynamic_trace, dynamic_weight) = generate_dynamic_trace(new_indices_to_sample, new_deps, new_vals, new_num_vals)
+
+    if !isapprox(get_score(new_using_world_trace), get_score(new_dynamic_trace); atol=1e-10)
+        println("SCORES UNEQUAL")
+        println("world trace score:", get_score(new_using_world_trace))
+        println("dynamic trace score: ", get_score(new_dynamic_trace))
+
+        println("old indices to sample:")
+        println(get_args(using_world_trace)[1])
+        println("new indices to sample:")
+        println(new_indices_to_sample)
+        println("old dep structure: ", get_retval(dep_struct_trace))
+        println("new dep structure: ", get_retval(new_dep_struct_trace))
+        changed_vals = [i for i=1:new_num_vals if i > length(old_vals) || old_vals[i] != new_vals[i]]
+        println("Changed vals: $changed_vals")
+
+        dep_struct = [
+            i => [
+                new_using_world_trace[:world => :vals => i => :vals => j => :lookup]
+                for j=1:new_using_world_trace[:world => :vals => i => :num_lookups]
+            ] for i=1:new_num_vals if !isempty(get_submap(get_choices(new_using_world_trace), :world => :vals => i))
+        ]
+        println("observed dep struct:")
+        println(dep_struct)
+
+        ord_new = Vector(undef, new_using_world_trace.world.call_sort.max_index)
+        for (call, i) in new_using_world_trace.world.call_sort.call_to_idx
+            ord_new[i] = call
+        end
+        println("new call sort: ")
+        println(ord_new)
+
+        ord_old = Vector(undef, using_world_trace.world.call_sort.max_index)
+        for (call, i) in using_world_trace.world.call_sort.call_to_idx
+            ord_old[i] = call
+        end
+        println("old call sort: ")
+        println(ord_old)
+
+        println("OLD TRACE SCORES:")
+        for (call, tr) in using_world_trace.world.subtraces
+            println("$call score: ", get_score(tr))
+        end
+
+        println("CURRENT TRACE SCORES:")
+        for (call, tr) in new_using_world_trace.world.subtraces
+            println("$call score: ", get_score(tr))
+        end
+
+        gend_world_trace, _ = generate_world_trace(new_indices_to_sample, new_deps, new_vals, new_num_vals)
+        println("GENERATED WORLD TRACE SCORES:")
+        for (call, tr) in gend_world_trace.world.subtraces
+            println("$call score: ", get_score(tr))
+        end
+
+        # println("new world trace:")
+        # display(get_choices(new_using_world_trace))
+        # println("new dynamic trace:")
+        # display(get_choices(new_dynamic_trace))
+        error()
+    end
 
     @test isapprox(get_score(new_using_world_trace), get_score(new_dynamic_trace); atol=1e-10)
     @test get_retval(new_using_world_trace) == get_retval(new_dynamic_trace)

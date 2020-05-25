@@ -145,7 +145,6 @@ struct LookupOrGenerate <: GenerativeFunction{Any, LookupOrGenerateTrace} end
 const lookup_or_generate = LookupOrGenerate()
 
 @inline (gen_fn::LookupOrGenerate)(args...) = get_retval(simulate(gen_fn, args))
-@inline Gen.simulate(gen_fn::LookupOrGenerate, args::Tuple) = Gen.generate(gen_fn, args)[1]
 
 function Gen.generate(gen_fn::LookupOrGenerate, args::Tuple{MemoizedGenerativeFunctionCall{WorldType, addr}}, constraints::EmptyChoiceMap) where {WorldType, addr}
     mgf_call, = args
@@ -154,9 +153,41 @@ function Gen.generate(gen_fn::LookupOrGenerate, args::Tuple{MemoizedGenerativeFu
     (tr, 0.)
 end
 
+# since this is a "delta dirac" to just lookup the value in the world, the simulate and generate
+# distributions are the same. (however, the world may be in a simulate state, in which case
+# the underlying calls to generate values in the world will be `simulate`; we don't need to 
+# worry about that here, though)
+@inline Gen.simulate(gen_fn::LookupOrGenerate, args::Tuple) = Gen.generate(gen_fn, args, EmptyChoiceMap())[1]
+
 function Gen.generate(gen_fn::LookupOrGenerate, args::Tuple, constraints::ChoiceMap)
-    error("generate(lookup_or_generate, ...) should only be called with empty constraints")
+    if isempty(constraints)
+        generate(gen_fn, args)
+    else
+        error("generate(lookup_or_generate, ...) should only be called with empty constraints")
+    end
 end
+
+function Gen.propose(gen_fn::LookupOrGenerate, args::Tuple)
+    mgf_call, = args
+    retval = lookup_or_propose!(mgf_call.world, Call(addr(mgf_call), mgf_call.key))
+    
+    # we can return an EmptyChoiceMap for choices since we don't need to track
+    # dependencies for a propose value, since the generated world is discarded afterwards.
+    (EmptyChoiceMap(), 0., retval)
+end
+
+function Gen.assess(gen_fn::LookupOrGenerate, args::Tuple, ::EmptyChoiceMap)
+    mgf_call, = args
+    retval = lookup_or_assess!(mgf_call.world, Call(addr(mgf_call), mgf_call.key))
+
+    (0., retval)
+end
+
+Gen.project(::LookupOrGenerateTrace, ::Selection) = 0.
+
+##########
+# Update #
+##########
 
 function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple, constraints::ChoiceMap)
     error("lookup_or_generate may not be updated with constraints.")

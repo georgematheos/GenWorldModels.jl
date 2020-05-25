@@ -87,6 +87,7 @@ function note_lookup_removed(lc::LookupCounts, call::Call, called_from::Call)
     new_count = lc.lookup_counts[call] - 1
     if new_count == 0
         new_lookup_counts = dissoc(lc.lookup_counts, call)
+        new_dependency_counts = dissoc(new_dependency_counts, call)
     else
         new_lookup_counts = assoc(lc.lookup_counts, call, new_count)
     end
@@ -98,11 +99,13 @@ function note_lookup_removed(lc::LookupCounts, call::Call)
     new_count = lc.lookup_counts[call] - 1
     if new_count == 0
         new_lookup_counts = dissoc(lc.lookup_counts, call)
+        new_dependency_counts = dissoc(lc.dependency_counts, call)
     else
         new_lookup_counts = assoc(lc.lookup_counts, call, new_count)
+        new_dependency_counts = lc.dependency_counts
     end
 
-    (LookupCounts(new_lookup_counts, lc.dependency_counts), new_count)
+    (LookupCounts(new_lookup_counts, new_dependency_counts), new_count)
 end
 
 function get_all_calls_which_look_up(lc::LookupCounts, call)
@@ -148,6 +151,17 @@ function change_index_to(srt::CallSort, call::Call, idx::Int)
     CallSort(new_map, new_max_idx)
 end
 add_call_to_end(srt::CallSort, call::Call) = change_index_to(srt, call, srt.max_index + 1)
+function remove_call(srt::CallSort, call::Call)
+    # note that for performance, we do not go through the calls with index higher than `call`
+    # and decrement these indices to make sure the sort's max index stays as small
+    # as possible.  Since these are stored as Int64s, we have ~ 2^63
+    # updates before we overflow, which practically speaking should be fine
+    # for almost any usecase.
+    CallSort(
+        dissoc(srt.call_to_idx, call),
+        srt.max_index
+    )
+end
 
 """
     World
@@ -206,6 +220,9 @@ function note_lookup_removed!(world, args...)
     (world.lookup_counts, new_num) = note_lookup_removed(world.lookup_counts, args...)
     new_num
 end
+function remove_call_from_sort!(world, call)
+    world.call_sort = remove_call(world.call_sort, call)
+end
 
 """
     get_gen_fn(world::World, addr::Symbol)
@@ -237,19 +254,24 @@ total_score(world::World) = world.total_score
 """
     generate_value!(world, call, constraints)
 
-This will call `Gen.generate` for the given call with the given constraints,
+This will call generate for the given call with the given constraints,
 and add the resulting trace to the world.
 This function handles tracking all world-level tracking, but does not
 handle tracking relating to the specific `world.state` (eg. it does not
 increase the world update state weight.)
-Returns the `weight` returned by the call to `Gen.generate`
+
+Generation will occur via the function specified by `generate_fn(world.state)`;
+this function should have the same signature as `Gen.generate`.
+(For `simulate`, one can set `generate_fn = (gen_fn, args, constraints) -> (Gen.simulate(gen_fn, args), 0.)`)
+
+Returns the `weight` returned by the call to the `generate` (or whatever function was called instead).
 """
 function generate_value!(world, call, constraints)
     @assert !(world.state isa NoChangeWorldState)
     @assert !has_value_for_call(world, call)
 
     gen_fn = get_gen_fn(world, call)
-    tr, weight = generate(gen_fn, (world, key(call)), constraints)
+    tr, weight = generate_fn(world.state)(gen_fn, (world, key(call)), constraints)
     world.subtraces = assoc(world.subtraces, call, tr)
     note_new_call!(world, call)
     world.total_score += get_score(tr)
@@ -280,5 +302,8 @@ function lookup_or_generate!(world::World, call::Call; reason_for_call=:generate
 end
 
 include("generate.jl")
+include("assess.jl")
+include("propose.jl")
+include("project.jl")
 include("choicemap.jl")
 include("update.jl")
