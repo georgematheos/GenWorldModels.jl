@@ -87,7 +87,6 @@ sub-choicemaps with some metadata needed for `UsingWorld`.
 
 ```julia
 world::World # passed into the kernel, into the MGFs, etc.; constructed when calling `generate(::UsingMemoized)`; contains pointer to a world_spec
-world_spec::WorldSpec # specifies all the MGFs, etc; created in the `UsingMemoized` constructor
 
 world[:addr]::MemoizedGenerativeFunction
 world[:addr][key]::MemoizedGenerativeFunctionCall
@@ -95,6 +94,7 @@ world[:addr][key]::MemoizedGenerativeFunctionCall
 # looks up the given key for the mgf in the world; generates the value if doen't yet exist
 function lookup_or_generate(::MemoizedGenerativeFunctionCall) end
 
+# for syntax improvements, we could implement syntax like:
 function lookup_or_generate(::MemoizedGenerativeFunction, key::Any) end
 ⋉ = lookup_or_generate
 # enables the syntax
@@ -120,42 +120,7 @@ it will throw an error.
 ### Update / Regenerate
 1. Create a shallow copy of the world object
 2. Give the world object the `constraints[:world]` choicemap and tell it to run the specified updates.
-The world object will
-- Create a dictionary from lookup -> constraint
-- For every lookup constrained in `constraints[:world]`, load the lookup into a heap, with priorities given by the topological sort on lookups
-- Create an empty `IndexDiff`, `diff`
-- Create a set/list of all the new "forward-edges" for the dependency graph, ie. new dependencies which will exist
-after this update, but did not beforehand, and a list for all deleted edges.
-- WHILE the heap is not empty:
-  - Pull the highest-priority lookup off the heap.  Call this `l1`, with position `i` in the topological ordering.
-  - Get the constraints for `l1` from the dict
-  - Note in the world state that we are running an update on `l1`
-  - Call `update` on the trace for lookup `l1`, passing in the `diff` for the world, and the constraints for this lookup
-  - IF, during this update, a `lookup_or_generate` generate is triggered:
-    - Note that this generate was called from `l1` in our "new forward-edge list", and generate as usual.
-  - IF, during this update, a `lookup_or_generate` update is triggered for lookup `l2` is triggered:
-    - If `l2` is not in the topological ordering, or is index `j` in the topological ordering
-    with `j < i`, note that this lookup was called from `l1` in our "new forward-edge list", and update as usual.
-    - If instead `j > i`, it means that this update is altering our dependency graph in such a way that our current topological order
-    will become invalid.  Either this update causes a cycle, in which case it is invalid, or we will be able to create a new topological
-    ordering.  We will proceed as though it will eventually work out.
-      - Halt this update.  Pull the next item off the heap, and proceed with updating it, and so on, until we either reach an item
-      with topological index `>= j` or we reach an item with `l1` as an ancestor in the dependency graph.
-        - If we have reached index `>= j`, resume our update for `l2`, then for `l1`.  Since the `diff` object is being mutated as we
-        proceed, these updates will complete with the `diff` passed into them having information from all the updates with indices between `i` and `j`.
-        Note in our "new forward-edge list" that we now have dependency that `l2` is looked up in `l1`.
-        - If we did not reach index `j`, but instead reached an update for `l3` which has `l2` as an ancestor in the dependency graph,
-        proceed with updating `l1`, then `l2`.  Note in our "new forward-edge list" that we now have dependency that `l2` is looked up in `l1`.
-  - Once the update for `l1` is complete, scan the discard for this update to see what lookups are no longer performed for `l1`.
-  Update our dependency graph by subtracting these lookup counts from those in the graph.  If we "delete an edge" in this graph,
-  add the deleted edge to our list.
-
-- Once the heap is empty, all these updates have been performed.  Update the topological sort using the new and deleted edges
-in our lists.  (There are known algorithms for how to efficiently update a topological sort.)  If this sort is impossible,
-it means the update is invalid, so return an error.  Note that all this work involving topological sorting is somewhat computationally expensive,
-but in practice most updates will not induce structural changes.
-- Note that while these updates are occurring, the world object should be accumulating the total weight of all the updates,
-updating the "score" of the world, and putting together a discard.
+The world object will run the algorithm described in `update_algorithm.md` to update the calls in the world.
 3. Tell the world we are going to run a kernel update, then update the kernel using the updated world object and the `diff`.
 - If new lookups are `generate`d, the world will update the dependency graph accordingly, and add these new lookups to the end of the topological ordering.
 4. Scan the discard for the kernel update, and decrease counts in the world for the lookups which were dropped.  Delete lookups if needed,
@@ -207,11 +172,3 @@ The reason for these restrictions is that the `UsingWorld` combinator uses the o
 to understand which lookups in the world depend on which other lookups, but look at the `discard` choicemaps from updates
 to understand when these dependencies are removed.  Therefore if there is any mismatch between the calls to these functions,
 and the choicemaps, `UsingWorld` will be unable to keep track of everything precisely, and errors will occur.
-
-I think it *would* be possible to implement `UsingWorld` so that we don't have restriction 2, by building our dependency
-graph by looking at the choicemaps from generating instead of tracking calls to `generate`, `update`, and `regenerate`.
-However, this would add a bit of complexity, and would reduce performance.  (For example, when running updates,
-if we had to scan the new choicemaps and detect differences from the old ones to see how the dependency graph has updated,
-this would be very slow, compared to just observing what new `update` and `generate` calls occur!)
-However, at some point I could add support for this "safe" mode, and make it some sort of
-kwarg option to turn off the safe mode and do these performant updates which rely on restriction 2.
