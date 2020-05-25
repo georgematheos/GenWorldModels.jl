@@ -1,6 +1,6 @@
 # Gen UsingWorld combinator
 
-This repository implements a `UsingWorld` combinator for [Gen](gen.dev).
+This repository implements a `UsingWorld` combinator for [Gen](https://gen.dev).
 This combinator makes it easier to write open-universe Gen models with
 memoization and lazy evaluation in a way which supports asymptotically efficient
 MCMC.
