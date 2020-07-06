@@ -12,4 +12,7 @@ include("using_world.jl")
 
 export lookup_or_generate, UsingWorld, AddressFilterChoicemap
 
+# don't export the macros; users can import them if needed
+include("macros.jl")
+
 end
