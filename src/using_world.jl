@@ -162,9 +162,7 @@ function Gen.propose(gen_fn::UsingWorld, args::Tuple)
     world_choices, world_weight = end_propose!(world)
 
     weight = kernel_weight + world_weight
-    choices = StaticChoiceMap(
-        NamedTuple(), (kernel=kernel_choices, world=world_choices)
-    )
+    choices = StaticChoiceMap((kernel=kernel_choices, world=world_choices))
 
     # no need to address filter since we shouldn't be populating with the mgf_address on a propose call
 

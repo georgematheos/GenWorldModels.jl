@@ -51,13 +51,5 @@ function add_diff!(idxdiff::MutableIndexDiff, idx, diff::Diff)
     idxdiff.diffs[idx] = diff
 end
 
-"""
-    get_diff_for_index(idxdiff::MutableIndexDiff{T}, idx::T) where {T}
-Get the diff for `idx`.
-"""
-function get_diff_for_index(idxdiff::MutableIndexDiff, idx)
-    idxdiff.diffs[idx]
-end
-
 has_diff_for_index(diff::MutableIndexDiff, idx) = haskey(diff.diffs, idx) && diff.diffs[idx] != NoChange()
 get_diff_for_index(diff::MutableIndexDiff, idx) = get(diff.diffs, idx, NoChange())
