@@ -1,5 +1,5 @@
 """
-    AddressFilterChoicemap(choicemap::ChoiceMap, f::Function)
+    AddressFilterChoiceMap(choicemap::ChoiceMap, f::Function)
 
 Wraps `choicemap` and filters out branches with a top-level address such that
 `f(address)` is false.

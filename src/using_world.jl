@@ -16,13 +16,11 @@ Gen.get_score(tr::UsingWorldTrace) = tr.score
 Gen.get_gen_fn(tr::UsingWorldTrace) = tr.gen_fn
 
 function Gen.get_choices(tr::UsingWorldTrace)
-    leaf_nodes = NamedTuple()
-    internal_nodes = (kernel=get_choices(tr.kernel_tr), world=get_choices(tr.world))
-    full_choices = StaticChoiceMap(leaf_nodes, internal_nodes)
+    full_choices = StaticChoiceMap((kernel=get_choices(tr.kernel_tr), world=get_choices(tr.world)))
     
     # return a choicemap which filters out all the choices addressed with `metadata_addr`,
     # since these are just used for internal tracking and should not be exposed
-    AddressFilterChoicemap(
+    AddressFilterChoiceMap(
         full_choices,
         addr -> addr != metadata_addr(tr.world)
     )
@@ -193,18 +191,15 @@ end
 ###########
 
 # TODO: these kwargs won't usually propagate through multiple update calls as is
-function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple, constraints::ChoiceMap; check_no_constrained_calls_deleted=true)
-    @assert length(collect(get_values_shallow(constraints))) == 0 "constraints should with address :world or :kernel"
-    @assert all(addr -> addr == :world || addr == :kernel, (addr for (addr, submap) in get_submaps_shallow(constraints))) "constraints should with address :world or :kernel"
-
+function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple, spec::Gen.UpdateSpec, externally_constrained_addrs::Selection; check_no_constrained_calls_deleted=true)
     world = World(tr.world) # shallow copy of the world object
 
     # tell the world we are doing an update, and have it update all the values
     # for the constraints for values it has already generated
-    world_diff = begin_update!(world, get_submap(constraints, :world))
+    world_diff = begin_update!(world, get_subtree(spec, :world), get_subtree(externally_constrained_addrs, :world))
     
     (new_kernel_tr, kernel_weight, kernel_retdiff, kernel_discard) = update(
-        tr.kernel_tr, (world, args...), (world_diff, argdiffs...), get_submap(constraints, :kernel)
+        tr.kernel_tr, (world, args...), (world_diff, argdiffs...), get_subtree(spec, :kernel), get_subtree(externally_constrained_addrs, :kernel)
     )
 
     world_weight, world_discard = end_update!(world, kernel_discard, check_no_constrained_calls_deleted)
@@ -212,8 +207,8 @@ function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple, constrain
     new_score = get_score(new_kernel_tr) + total_score(world)
     new_tr = UsingWorldTrace(new_kernel_tr, world, new_score, args, tr.gen_fn)
     weight = kernel_weight + world_weight
-    discard = StaticChoiceMap(NamedTuple(), (world=world_discard, kernel=kernel_discard))
-    discard = AddressFilterChoicemap(discard, addr -> addr != metadata_addr(world))
+    discard = StaticChoiceMap((world=world_discard, kernel=kernel_discard))
+    discard = AddressFilterChoiceMap(discard, addr -> addr != metadata_addr(world))
 
     (new_tr, weight, kernel_retdiff, discard)
 end

@@ -189,14 +189,14 @@ Gen.project(::LookupOrGenerateTrace, ::Selection) = 0.
 # Update #
 ##########
 
-function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple, constraints::ChoiceMap)
+function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple, constraints::ChoiceMap, ::Selection)
     error("lookup_or_generate may not be updated with constraints.")
 end
 
-Gen.update(tr::LookupOrGenerateTrace, ::Tuple, ::Tuple{NoChange}, ::EmptyChoiceMap) = (tr, 0., NoChange(), EmptyChoiceMap())
+Gen.update(tr::LookupOrGenerateTrace, ::Tuple, ::Tuple{NoChange}, ::EmptyChoiceMap, ::Selection) = (tr, 0., NoChange(), EmptyChoiceMap())
 
 # key change
-function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{MGFCallKeyChangeDiff}, ::EmptyChoiceMap)
+function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{MGFCallKeyChangeDiff}, ::EmptyChoiceMap, ::Selection)
     mgf_call = args[1]
 
     # run a full update/generate cycle in the world for this call
@@ -211,7 +211,7 @@ function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{MGFC
 end
 
 # to-be-updated
-function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{ToBeUpdatedDiff}, ::EmptyChoiceMap)
+function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{ToBeUpdatedDiff}, ::EmptyChoiceMap, ::Selection)
     mgf_call = args[1]
     # run a full update/generate cycle in the world for this call
     new_val = lookup_or_generate!(mgf_call.world, Call(addr(mgf_call), key(mgf_call)); reason_for_call=:to_be_updated)
@@ -221,7 +221,7 @@ function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{ToBe
 end
 
 # value has changed, but we don't need to update, and haven't changed key
-function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{MGFCallValChangeDiff}, ::EmptyChoiceMap)
+function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{MGFCallValChangeDiff}, ::EmptyChoiceMap, ::Selection)
     valdiff = argdiffs[1].diff
     new_call = args[1]
     new_val = get_value_for_call(new_call.world, call(new_call))
@@ -232,7 +232,7 @@ end
 # UnknownChange - this is likely caused by use of a dynamic generative function which doesn't propagate diffs
 # we need to figure out which of the other update functions we should dispatch to
 # this function just replicates the diff propagation behavior implemented above in the Base.getindex methods
-function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{UnknownChange}, ::EmptyChoiceMap)
+function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{UnknownChange}, ::EmptyChoiceMap, s::Selection)
     new_call = args[1]
     if key(tr.call) != key(new_call)
         diff = MGFCallKeyChangeDiff()
@@ -242,7 +242,7 @@ function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{Unkn
             diff = MGFCallValChangeDiff(diff)
         end
     end
-    return Gen.update(tr, args, (diff,), EmptyChoiceMap())
+    return Gen.update(tr, args, (diff,), EmptyChoiceMap(), s)
 end
 
 # TODO: regenerate

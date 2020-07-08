@@ -5,7 +5,8 @@
 # UpdateWorldState #
 ####################
 mutable struct UpdateWorldState <: WorldState
-    constraints::ChoiceMap # constraints for updates
+    spec::Gen.UpdateSpec
+    externally_constrained_addrs::Selection
     weight::Float64 # total weight of all updates
     discard::DynamicChoiceMap # discard for all world calls
     # the following fields are used for the update algorithm as described in `update_algorithm.md`
@@ -25,9 +26,10 @@ mutable struct UpdateWorldState <: WorldState
     original_choicemaps::Dict{Call, ChoiceMap}
     world_update_complete::Bool # once we have finished updating all the calls and move to update the kernel, this goes from false to true
 end
-function UpdateWorldState(constraints::ChoiceMap)
+function UpdateWorldState(spec::Gen.UpdateSpec, externally_constrained_addrs::Selection)
     UpdateWorldState(
-        constraints,
+        spec,
+        externally_constrained_addrs,
         0., # weight
         choicemap(), # discard
         PriorityQueue{Call, Int}(), # update_queue
@@ -139,7 +141,13 @@ function remove_call!(world, call)
 
     if score != -Inf
         world.total_score -= score
-        world.state.weight -= score
+
+        ext_const_addrs = get_subtree(world.state.externally_constrained_addrs, addr(call) => key(call))
+        if ext_const_addrs === AllSelection()
+            world.state.weight -= score
+        else
+            world.state.weight -= project(tr, ext_const_addrs)
+        end
     else
         # if we are removing a trace with score -Inf, note that we are deleting it
         # no need to update worldscore or weight, since we would have done this in run_gen_update
@@ -172,7 +180,7 @@ end
 Entry-point/top level for the world update algorithm.
 """
 function run_world_update!(world)
-    enquque_all_constrained_calls!(world)
+    enquque_all_specd_calls!(world)
     while !isempty(world.state.update_queue)
         call = dequeue!(world.state.update_queue)
         if !(call in world.state.visited)
@@ -187,14 +195,17 @@ function run_world_update!(world)
 end
 
 """
-    enquque_all_constrained_calls!(world)
+    enquque_all_specd_calls!(world)
 
-Add all the calls for which constraints are provided in `world.state.constraints`
+Add all the calls for which an update spec is provided in `world.state.spec`
 to the `world.state.update_queue`.
 """
-function enquque_all_constrained_calls!(world)
-    for (mgf_addr, mgf_submap) in get_submaps_shallow(world.state.constraints)
-        for (lookup_key, _) in get_submaps_shallow(mgf_submap)
+function enquque_all_specd_calls!(world)
+    for (mgf_addr, mgf_subspec) in get_subtrees_shallow(world.state.spec)
+        if mgf_subspec isa AllSelection
+            error("Update specs selecting all calls for a memoized generative function are not currently supported -- this is an implementation TODO!")
+        end
+        for (lookup_key, _) in get_subtrees_shallow(mgf_subspec)
             call = Call(mgf_addr, lookup_key)
             # if there is no value for this call, we'll have to generate it later,
             # so no need to add it to the update queue; generate will get called by the algorithm
@@ -218,12 +229,10 @@ function update_or_generate!(world, call)
     if call in world.state.call_stack
         error("This update will induce a cycle in the topological ordering of the calls in the world!  Call $call will need to have been generated in order to generate itself.")
     end
-    
-   # println("update_or_generate!($call)")
 
     call_topological_position = world.call_sort[call]
-    constraints = get_submap(world.state.constraints, addr(call) => key(call))
-    there_are_constraints_for_call = !isempty(constraints) 
+    spec = get_subtree(world.state.spec, addr(call) => key(call))
+    there_is_spec_for_call = !isempty(spec)
     dependency_has_argdiffs = call in world.state.calls_whose_dependencies_have_diffs
 
     enqueue!(world.state.updated_sort_indices, call_topological_position, call_topological_position)
@@ -231,16 +240,13 @@ function update_or_generate!(world, call)
 
     if !has_value_for_call(world, call)
         push!(world.state.call_stack, call)
-       # println("initiate run_gen_generate!($call)")
-        run_gen_generate!(world, call, constraints)
-       # println("complete run_gen_generate!($call)")
+        run_gen_generate!(world, call, spec)
         pop!(world.state.call_stack)
         retdiff = UnknownChange()
-    elseif there_are_constraints_for_call || dependency_has_argdiffs
+    elseif there_is_spec_for_call || dependency_has_argdiffs
         push!(world.state.call_stack, call)
-       # println("initiate run_gen_update!($call)")
-        retdiff = run_gen_update!(world, call, constraints)
-       # println("retdiff = run_gen_update!($call)")
+        ext_const_addrs = get_subtree(world.state.externally_constrained_addrs, addr(call) => key(call))
+        retdiff = run_gen_update!(world, call, spec, ext_const_addrs)
         pop!(world.state.call_stack)
     else
         retdiff = NoChange()
@@ -256,18 +262,19 @@ function update_or_generate!(world, call)
 end
 
 """
-    run_gen_update!(world, call, constraints)
+    run_gen_update!(world, call, spec, externally_constrained_addrs)
 
 Run `Gen.update` for the given call, and update the world
 and worldstate accordingly.
 """
-function run_gen_update!(world, call, constraints)
+function run_gen_update!(world, call, spec, ext_const_addrs)
     old_tr = world.subtraces[call]
     new_tr, weight, retdiff, discard = Gen.update(
         old_tr,
         (world, key(call)),
         (WorldUpdateDiff(world), NoChange()),
-        constraints
+        spec,
+        ext_const_addrs
     )
 
     if get_score(new_tr) == -Inf
@@ -406,12 +413,16 @@ end
 """
     check_no_constrained_calls_deleted(world::World)
 
-Ensure that every call which an update constraint was provided for is still instantiated
-in the world after the update.  (Throw an error if this is not the case.)
+Ensure that every call which an update constraint (ie. an update spec which is not a `Selection`)
+was provided for is still instantiated in the world after the update.
+(Throw an error if this is not the case.)
 """
 function check_no_constrained_calls_deleted(world::World)
-    for (mgf_addr, mgf_submap) in get_submaps_shallow(world.state.constraints)
-        for (key, _) in get_submaps_shallow(mgf_submap)
+    for (mgf_addr, mgf_subspec) in get_subtrees_shallow(world.state.spec)
+        for (key, subspec) in get_subtrees_shallow(mgf_subspec)
+            if subspec isa Selection
+                continue;
+            end
             call = Call(mgf_addr, key)
             if !has_value_for_call(world, call)
                 error("Constraint was provided for $(mgf_addr => key) but this call is not in the world at end of update!")
@@ -425,18 +436,20 @@ end
 #######################################################
 
 """
-    begin_update!(world::World, constraints::ChoiceMap)
+    begin_update!(world::World, specs::UpdateSpec, externally_constrained_addrs::Selection)
 
 Initiate an update for the `UsingWorld` generative function by updating
-the calls in the world as specified by `constraints`.
+the calls in the world as specified by `specs`.
+Initialize the given `externally_constrained_addrs` for calculating
+the weight of this update.
 This should be called _before_ updating the `UsingWorld` kernel trace.
 """
-function begin_update!(world::World, constraints::ChoiceMap)
+function begin_update!(world::World, specs::Gen.UpdateSpec, externally_constrained_addrs::Selection)
     @assert (world.state isa NoChangeWorldState) "cannot initiate an update from a $(typeof(world.state))"
-    world.state = UpdateWorldState(constraints)
+    world.state = UpdateWorldState(specs, externally_constrained_addrs)
 
     # update the world as needed to make it consistent
-    # with the `constraints` for the calls we have already generated
+    # with the `specs` for the calls we have already generated
     # this will reorder modify topological sort of calls in the world if needed
     run_world_update!(world)
 
@@ -528,9 +541,9 @@ the key value so that the new call is `call`.
 """
 function lookup_or_generate_during_kernel_update!(world, call)
     if !has_value_for_call(world, call)
-        constraints = get_submap(world.state.constraints, addr(call) => key(call))
+        spec = get_subtree(world.state.spec, addr(call) => key(call))
         push!(world.state.call_stack, call)
-        weight = generate_value!(world, call, constraints)
+        weight = generate_value!(world, call, spec)
         pop!(world.state.call_stack)
         world.call_sort = add_call_to_end(world.call_sort, call)
         world.state.weight += weight
