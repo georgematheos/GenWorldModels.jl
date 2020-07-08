@@ -3,8 +3,8 @@
 module Aircrafts
 using Gen
 
-include("../src/WorldModels.jl")
-using .WorldModels
+include("../src/GenWorldModels.jl")
+using .GenWorldModels
 
 @gen function position_prior()
     return 0

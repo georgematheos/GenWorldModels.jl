@@ -1,9 +1,7 @@
 module BallsModel
 using Gen
-
-include("../../src/WorldModels.jl")
-using .WorldModels
-import .WorldModels: @w, @WorldMap, @UsingWorld
+using GenWorldModels
+import GenWorldModels: @w, @WorldMap, @UsingWorld
 
 function getarg(world, symbol)
     return 5

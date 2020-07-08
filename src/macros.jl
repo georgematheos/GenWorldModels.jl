@@ -1,5 +1,3 @@
-const MODULENAME = :WorldModels
-
 """
     @w memoized_gen_fn[lookup_key]
 
@@ -24,7 +22,7 @@ called on `[world[memoized_gen_fn_addr][key] for key in lookup_key_iterable]`.
 Assumes `world` exists in the current scope and `Map` is defined at the global scope.
 """
 macro WorldMap(mgf_addr, args)
-    lookup_or_generate = esc(:($(MODULENAME).lookup_or_generate))
+    lookup_or_generate = esc(:($(@__MODULE__).lookup_or_generate))
     quote
         Map($lookup_or_generate)([
             $(esc(:world))[$mgf_addr][arg] for arg in $args
@@ -85,7 +83,7 @@ macro UsingWorld(exprs...)
     push!(using_world_args, kernel_expr)
     push!(using_world_args, mgf_exprs...)
 
-    using_world = esc(:($(MODULENAME).UsingWorld))
+    using_world = esc(:($(@__MODULE__).UsingWorld))
 
     quote $using_world($(using_world_args...)) end
 end

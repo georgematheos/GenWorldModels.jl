@@ -1,4 +1,4 @@
-module WorldModels
+module GenWorldModels
 
 using Gen
 using FunctionalCollections

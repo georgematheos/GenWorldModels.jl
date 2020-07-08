@@ -1,8 +1,7 @@
-module WorldModelsTests
+module GenWorldModelsTests
 using Gen
+using GenWorldModels
 using Test
-include("../src/WorldModels.jl")
-using .WorldModels
 
 include("address_filter_choicemap.jl")
 include("simple.jl")
