@@ -47,19 +47,23 @@ end
 
 World(w::World{A,G}) where {A,G} = World{A,G}(w.gen_fns, w.state, w.calls, w.lookup_counts, w.call_sort, w.total_score, w.metadata_addr)
 
-function World{addrs, GenFnTypes}(gen_fns) where {addrs, GenFnTypes}
-    World{addrs, GenFnTypes}(
+function World{addrs, GenFnTypes}(gen_fns, world_args::NamedTuple) where {addrs, GenFnTypes}
+    w = World{addrs, GenFnTypes}(
         gen_fns,
         NoChangeWorldState(),
-        Calls(addrs, gen_fns, NamedTuple()),
+        Calls(addrs, gen_fns, world_args),
         LookupCounts(),
         CallSort(Call[]), # will be overwritten after `generate`
         0.
     )
+    for (arg_address, _) in pairs(world_args)
+        note_new_call!(w, Call(_world_args_addr, arg_address))
+    end
+    return w
 end
 
-function World(addrs::NTuple{n, Symbol}, gen_fns::NTuple{n, Gen.GenerativeFunction}) where {n}
-    World{addrs, typeof(gen_fns)}(gen_fns)
+function World(addrs::NTuple{n, Symbol}, gen_fns::NTuple{n, Gen.GenerativeFunction}, world_args::NamedTuple) where {n}
+    World{addrs, typeof(gen_fns)}(gen_fns, world_args)
 end
 
 # TODO: Could make this more informative by showing what calls it has in it

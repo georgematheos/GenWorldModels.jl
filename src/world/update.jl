@@ -175,11 +175,34 @@ end
 ##########################
 
 """
-    run_world_update!(world)
+    update_world_args!(world, new_world_args::NamedTuple, world_argdiffs::NamedTuple)
+
+Updates the world args to the given `new_world_args` if any of the `world_argdiffs` is not
+`NoChange()`.  Enqueues all calls which look up the changed args to be updated.
+"""
+function update_world_args_and_enqueue_downstream!(world, new_world_args, world_argdiffs)
+    diffed_addrs = findall(diff -> diff !== NoChange(), world_argdiffs)
+
+    is_diff = false
+    for (arg_address, diff) in pairs(world_argdiffs)
+        if diff !== NoChange()
+            is_diff = true
+            call = Call(_world_args_addr, arg_address)
+            world.state.diffs[call] = diff
+            enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, call)
+        end
+    end
+    if is_diff
+        world.calls = change_args_to(world.calls, new_world_args)
+    end
+end
+
+"""
+    run_subtrace_updates!(world)
 
 Entry-point/top level for the world update algorithm.
 """
-function run_world_update!(world)
+function run_subtrace_updates!(world)
     enquque_all_specd_calls!(world)
     while !isempty(world.state.update_queue)
         call = dequeue!(world.state.update_queue)
@@ -210,7 +233,7 @@ function enquque_all_specd_calls!(world)
             # if there is no value for this call, we'll have to generate it later,
             # so no need to add it to the update queue; generate will get called by the algorithm
             # when it is needed
-            if has_value_for_call(world, call)
+            if has_value_for_call(world, call) && !haskey(world.state.update_queue, call)
                 enqueue!(world.state.update_queue, call, world.call_sort[call])
             end
         end
@@ -446,14 +469,20 @@ Initialize the given `externally_constrained_addrs` for calculating
 the weight of this update.
 This should be called _before_ updating the `UsingWorld` kernel trace.
 """
-function begin_update!(world::World, specs::Gen.UpdateSpec, externally_constrained_addrs::Selection)
+function begin_update!(world::World, specs::Gen.UpdateSpec, externally_constrained_addrs::Selection,
+    new_world_args::NamedTuple, world_argdiffs::NamedTuple
+)
     @assert (world.state isa NoChangeWorldState) "cannot initiate an update from a $(typeof(world.state))"
     world.state = UpdateWorldState(specs, externally_constrained_addrs)
+
+    # update the world args, and enqueue all the
+    # calls which look up these world args to be updated
+    update_world_args_and_enqueue_downstream!(world, new_world_args, world_argdiffs)
 
     # update the world as needed to make it consistent
     # with the `specs` for the calls we have already generated
     # this will reorder modify topological sort of calls in the world if needed
-    run_world_update!(world)
+    run_subtrace_updates!(world)
 
     # note that we are done updating the world, and are
     # now in the process of updating the kernel

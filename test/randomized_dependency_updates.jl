@@ -20,7 +20,8 @@ end
 ####################################
 
 @gen (static, diffs) function num_vals(world, t::Tuple{})
-    num ~ poisson(150)
+    mean ~ lookup_or_generate(world[:args][:num_values_mean])
+    num ~ poisson(mean)
     return num
 end
 
@@ -52,7 +53,7 @@ end
     return vals
 end
 
-sample_vals_world = UsingWorld(sample_vals_static_kernel, :num_vals => num_vals, :vals => sample_val_static)
+sample_vals_world = UsingWorld(sample_vals_static_kernel, :num_vals => num_vals, :vals => sample_val_static; world_args=(:num_values_mean,))
 @load_generated_functions()
 
 ##########################
@@ -136,7 +137,7 @@ function generate_world_trace(indices_to_sample, deps, vals, num_nodes)
     end
 
     # we are constraining all the calls, but we might not generate all of them, so turn off `check_all_constraints_used`
-    return generate(sample_vals_world, (indices_to_sample,), using_world_constraints; check_all_constraints_used=false)
+    return generate(sample_vals_world, (150, indices_to_sample,), using_world_constraints; check_all_constraints_used=false)
 end
 
 function generate_dynamic_trace(indices_to_sample, deps, vals, num_nodes)
@@ -272,7 +273,7 @@ function update_world_trace(old_world_trace, new_deps, new_vals, new_indices_to_
         end
     end
 
-    new_tr, weight, retdiff, discard = update(old_world_trace, (new_indices_to_sample,), (UnknownChange(),), constraints, Gen.AllSelection(); check_no_constrained_calls_deleted=false)
+    new_tr, weight, retdiff, discard = update(old_world_trace, (150, new_indices_to_sample,), (UnknownChange(),), constraints, Gen.AllSelection(); check_no_constrained_calls_deleted=false)
     return (new_tr, weight)
 end
 

@@ -26,16 +26,17 @@ function Gen.get_choices(tr::UsingWorldTrace)
     )
 end
 
-struct UsingWorld{V, Tr, n} <: Gen.GenerativeFunction{V, UsingWorldTrace{V, Tr}}
+struct UsingWorld{num_world_args, num_mgfs, V, Tr} <: Gen.GenerativeFunction{V, UsingWorldTrace{V, Tr}}
     kernel::Gen.GenerativeFunction{V, Tr}
-    addrs::NTuple{n, Symbol}
-    memoized_gen_fns::NTuple{n, GenerativeFunction}
+    mgf_addrs::NTuple{num_mgfs, Symbol}
+    memoized_gen_fns::NTuple{num_mgfs, GenerativeFunction}
+    world_arg_addrs::NTuple{num_world_args, Symbol}
 end
-function UsingWorld(kernel::GenerativeFunction, addr_to_gen_fn::Vararg{Pair{Symbol, <:GenerativeFunction}})
-    addrs = Tuple([addr for (addr, gen_fn) in addr_to_gen_fn])
-    @assert all(addrs .!= :kernel) ":kernel may not be a memoized generative function address"
+function UsingWorld(kernel::GenerativeFunction, addr_to_gen_fn::Vararg{Pair{Symbol, <:GenerativeFunction}}; world_args=())
+    mgf_addrs = Tuple([addr for (addr, gen_fn) in addr_to_gen_fn])
+    @assert all(mgf_addrs .!= :kernel) ":kernel may not be a memoized generative function address"
     gen_fns = Tuple([gen_fn for (addr, gen_fn) in addr_to_gen_fn])
-    UsingWorld(kernel, addrs, gen_fns)
+    UsingWorld(kernel, mgf_addrs, gen_fns, world_args)
 end
 
 function Base.getindex(tr::UsingWorldTrace, addr::Pair)
@@ -117,13 +118,22 @@ function check_world_counts_agree_with_generate_choicemaps(world, kernel_tr)
     end
 end
 
+
+function extract_world_args(uw::UsingWorld{num_world_args}, args::Tuple) where {num_world_args}
+    world_args = NamedTuple{uw.world_arg_addrs}(args[begin:num_world_args])
+    nonworld_args = args[num_world_args+1:end]
+    (world_args, nonworld_args)
+end
+
 function (gen_fn::UsingWorld)(args...)
     (_, _, retval) = propose(gen_fn, args)
     retval
 end
 
 function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; check_proper_usage=true, check_all_constraints_used=true)
-    world = World(gen_fn.addrs, gen_fn.memoized_gen_fns)
+    world_args, args = extract_world_args(gen_fn, args)
+
+    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
     begin_generate!(world, get_submap(constraints, :world))
     kernel_tr, kernel_weight = generate(gen_fn.kernel, (world, args...), get_submap(constraints, :kernel))
     world_weight = end_generate!(world, check_all_constraints_used)
@@ -140,7 +150,9 @@ function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; c
 end
 
 function Gen.simulate(gen_fn::UsingWorld, args::Tuple; check_proper_usage=true, check_all_constraints_used=true)
-    world = World(gen_fn.addrs, gen_fn.memoized_gen_fns)
+    world_args, args = extract_world_args(gen_fn, args)
+
+    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
     begin_simulate!(world)
     kernel_tr = simulate(gen_fn.kernel, (world, args...))
     end_simulate!(world, check_all_constraints_used)
@@ -156,7 +168,9 @@ function Gen.simulate(gen_fn::UsingWorld, args::Tuple; check_proper_usage=true, 
 end
 
 function Gen.propose(gen_fn::UsingWorld, args::Tuple)
-    world = World(gen_fn.addrs, gen_fn.memoized_gen_fns)
+    world_args, args = extract_world_args(gen_fn, args)
+
+    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
     begin_propose!(world)
     kernel_choices, kernel_weight, retval = propose(gen_fn.kernel, (world, args...))
     world_choices, world_weight = end_propose!(world)
@@ -170,7 +184,9 @@ function Gen.propose(gen_fn::UsingWorld, args::Tuple)
 end
 
 function Gen.assess(gen_fn::UsingWorld, args::Tuple, choices::ChoiceMap)
-    world = World(gen_fn.addrs, gen_fn.memoized_gen_fns)
+    world_args, args = extract_world_args(gen_fn, args)
+
+    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
     begin_assess!(world, get_submap(choices, :world))
     kernel_weight, retval = assess(gen_fn.kernel, (world, args...), get_submap(choices, :kernel))
     world_weight = end_assess!(world)
@@ -189,12 +205,18 @@ end
 ###########
 
 # TODO: these kwargs won't usually propagate through multiple update calls as is
-function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple, spec::Gen.UpdateSpec, externally_constrained_addrs::Selection; check_no_constrained_calls_deleted=true)
+function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
+    spec::Gen.UpdateSpec, externally_constrained_addrs::Selection;
+    check_no_constrained_calls_deleted=true
+)
     world = World(tr.world) # shallow copy of the world object
+
+    world_args, args = extract_world_args(tr.gen_fn, args)
+    world_argdiffs, argdiffs = extract_world_args(tr.gen_fn, argdiffs)
 
     # tell the world we are doing an update, and have it update all the values
     # for the constraints for values it has already generated
-    world_diff = begin_update!(world, get_subtree(spec, :world), get_subtree(externally_constrained_addrs, :world))
+    world_diff = begin_update!(world, get_subtree(spec, :world), get_subtree(externally_constrained_addrs, :world), world_args, world_argdiffs)
     
     (new_kernel_tr, kernel_weight, kernel_retdiff, kernel_discard) = update(
         tr.kernel_tr, (world, args...), (world_diff, argdiffs...), get_subtree(spec, :kernel), get_subtree(externally_constrained_addrs, :kernel)

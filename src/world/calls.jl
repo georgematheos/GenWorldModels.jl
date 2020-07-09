@@ -1,3 +1,5 @@
+const _world_args_addr = :args
+
 """
     Calls
 
@@ -23,7 +25,7 @@ function Calls(MGFAddrs::Tuple{Vararg{Symbol}}, mgfs, args::NamedTuple)
     Calls(NamedTuple{MGFAddrs}(maps), args)
 end
 
-mgf_addrs(::Calls{NamedTuple{Addrs, MapTypes}, ArgAddrs}) where {Addrs, MapTypes, ArgAddrs} = Addrs
+mgf_addrs(::Calls{NamedTuple{Addrs, MapTypes}, NamedTuple{ArgAddrs, ArgTypes}}) where {Addrs, MapTypes, ArgAddrs, ArgTypes} = Addrs
 
 function FunctionalCollections.assoc(calls::Calls, call::Call{mgf_addr}, trace::Trace) where {mgf_addr}
     traces_for_addr = calls.traces[mgf_addr]
@@ -39,19 +41,19 @@ function FunctionalCollections.dissoc(calls::Calls, call::Call{mgf_addr}) where 
     Calls(new_traces, calls.args)
 end
 
-function change_args_to(calls::Calls{T, ArgAddrs}, new_args::NamedTuple{ArgAddrs, <:Tuple}) where {T, ArgAddrs}
+function change_args_to(calls::Calls{T, NamedTuple{ArgAddrs, ArgTypes}}, new_args::NamedTuple{ArgAddrs, <:Tuple}) where {T, ArgAddrs, ArgTypes}
     Calls(calls.traces, new_args)
 end
 
 @generated function get_val(calls::Calls, call::Call{mgf_addr}) where {mgf_addr}
-    if mgf_addr == :args
+    if mgf_addr == _world_args_addr
         quote calls.args[key(call)] end
     else
         quote get_retval(calls.traces[$(QuoteNode(mgf_addr))][key(call)]) end
     end
 end
 @generated function has_val(calls::Calls, call::Call{mgf_addr}) where {mgf_addr}
-    if mgf_addr == :args
+    if mgf_addr == _world_args_addr
         quote haskey(calls.args, key(call)) end
     else
         quote haskey(calls.traces[$(QuoteNode(mgf_addr))], key(call)) end
@@ -69,3 +71,5 @@ function all_traces(calls::Calls)
         for a in mgf_addrs(calls)
     )
 end
+
+is_mgf_call(c::Call) = addr(c) !== _world_args_addr

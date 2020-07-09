@@ -18,7 +18,7 @@ function note_new_call(lc::LookupCounts, call::Call)
 end
 
 function note_new_lookup(lc::LookupCounts, call::Call, call_stack::Stack{Call})
-    new_lookup_counts = assoc(lc.lookup_counts, call, lc.lookup_counts[call] + 1)    
+    new_lookup_counts = assoc(lc.lookup_counts, call, lc.lookup_counts[call] + 1)
     if !isempty(call_stack)
         looked_up_in = first(call_stack)
 
@@ -63,8 +63,10 @@ end
 function note_lookup_removed(lc::LookupCounts, call::Call)
     new_count = lc.lookup_counts[call] - 1
     if new_count == 0
-        new_lookup_counts = dissoc(lc.lookup_counts, call)
-        new_dependency_counts = dissoc(lc.dependency_counts, call)
+        if is_mgf_call(call)
+            new_lookup_counts = dissoc(lc.lookup_counts, call)
+            new_dependency_counts = dissoc(lc.dependency_counts, call)
+        end
     else
         new_lookup_counts = assoc(lc.lookup_counts, call, new_count)
         new_dependency_counts = lc.dependency_counts
