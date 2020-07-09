@@ -301,6 +301,8 @@ function run_gen_update!(world, call, spec, ext_const_addrs)
     if retdiff != NoChange()
         world.state.diffs[call] = retdiff
     end
+
+    return retdiff
 end
 
 """

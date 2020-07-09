@@ -6,6 +6,15 @@ to generate & update such that the programs should have the same semantics.
 The tests will check that UsingWorld matches the behavior of Unfold.
 =#
 
+function Base.reduce(op, itr::Diffed; init)
+    reduced = reduce(op, strip_diff(itr); init=init)
+    if get_diff(itr) == NoChange()
+        Diffed(reduced, NoChange())
+    else
+        Diffed(reduced, UnknownChange())
+    end
+end
+
 ####################################
 # Static UsingWorld implementation #
 ####################################
@@ -28,7 +37,7 @@ lookup_random_values = Map(lookup_random_value)
     num_lookups ~ poisson(2)
     num_vals ~ lookup_or_generate(world[:num_vals][()])
     vals ~ lookup_random_values(fill(world, num_lookups), fill(num_vals, num_lookups))
-    total = reduce(+, strip_diff(vals); init=0.)
+    total = reduce(+, vals; init=0.)
     val ~ normal(total, 1)
     return val
 end
@@ -192,7 +201,6 @@ function generate_updated_dep_struct(dep_struct_trace, new_num_vals)
             end
         end
     end
-    
     (new_dep_struct_trace, _, _) = regenerate(dep_struct_trace, (new_num_vals,), (UnknownChange(),), selection)
 
     return new_dep_struct_trace
@@ -264,7 +272,7 @@ function update_world_trace(old_world_trace, new_deps, new_vals, new_indices_to_
         end
     end
 
-    new_tr, weight, retdiff, discard = update(old_world_trace, (new_indices_to_sample,), (UnknownChange(),), constraints; check_no_constrained_calls_deleted=false)
+    new_tr, weight, retdiff, discard = update(old_world_trace, (new_indices_to_sample,), (UnknownChange(),), constraints, Gen.AllSelection(); check_no_constrained_calls_deleted=false)
     return (new_tr, weight)
 end
 
@@ -325,16 +333,29 @@ function perform_random_update_and_run_tests(dep_struct_trace, using_world_trace
             println("$call score: ", get_score(tr))
         end
 
-        println("CURRENT TRACE SCORES:")
-        for (call, tr) in new_using_world_trace.world.subtraces
-            println("$call score: ", get_score(tr))
-        end
+        # println("CURRENT TRACE SCORES:")
+        # for (call, tr) in new_using_world_trace.world.subtraces
+        #     println("$call score: ", get_score(tr))
+        # end
 
         gend_world_trace, _ = generate_world_trace(new_indices_to_sample, new_deps, new_vals, new_num_vals)
-        println("GENERATED WORLD TRACE SCORES:")
-        for (call, tr) in gend_world_trace.world.subtraces
-            println("$call score: ", get_score(tr))
+        # println("GENERATED WORLD TRACE SCORES:")
+        # for (call, tr) in gend_world_trace.world.subtraces
+        #     println("$call score: ", get_score(tr))
+        # end
+
+        println("DIFFERENCE IN TRACE SCORES BETWEEN GENERATED AND UPDATED:")
+        tot_diff = 0.
+        for (call, gend_tr) in gend_world_trace.world.subtraces
+            upd_tr = new_using_world_trace.world.subtraces[call]
+            gscore = get_score(gend_tr)
+            uscore = get_score(upd_tr)
+            if !isapprox(gscore, uscore )
+                tot_diff += gscore - uscore
+                println("DIFF FOR $call : Generated=$gscore, Updated=$uscore")
+            end
         end
+        println("total difference in Gen'd and Up'd scores is $tot_diff")
 
         # println("new world trace:")
         # display(get_choices(new_using_world_trace))

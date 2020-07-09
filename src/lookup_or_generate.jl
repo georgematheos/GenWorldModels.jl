@@ -245,6 +245,4 @@ function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{Unkn
     return Gen.update(tr, args, (diff,), EmptyChoiceMap(), s)
 end
 
-# TODO: regenerate
-
 # TODO: gradients

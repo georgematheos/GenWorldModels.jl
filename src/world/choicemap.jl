@@ -2,7 +2,7 @@
 # World ChoiceMap #
 ###################
 
-struct MemoizedGenerativeFunctionChoiceMap <: Gen.AddressTree{Value}
+struct MemoizedGenerativeFunctionChoiceMap <: Gen.AddressTree{Gen.Value}
     world::World
     addr::Symbol
 end
