@@ -1,20 +1,3 @@
-#############################
-# Types, constructors, gets #
-#############################
-
-"""
-    Call
-Represents calling the gen fn with address `addr` on argument `key`
-"""
-struct Call{addr}
-    key
-end
-Call(addr, key) = Call{addr}(key)
-Call(p::Pair{Symbol, <:Any}) = Call(p[1], p[2])
-key(call::Call) = call.key
-addr(call::Call{a}) where {a} = a
-Base.show(io::IO, c::Call) = print(io, "Call($(addr(c) => key(c)))")
-
 """
     WorldState
 
@@ -33,135 +16,10 @@ abstract type WorldState end
 # denotes no update or generation is currently being performed
 struct NoChangeWorldState <: WorldState end
 
-"""
-    LookupCounts
-
-An immutable datatype to track the dependencies in the world and the number of times each lookup has occurred.
-"""
-struct LookupCounts
-    lookup_counts::PersistentHashMap{Call, Int} # counts[call] is the number of times this was looked up
-    # dependency_counts[call1][call2] = # times call1 looked up in call2
-    # ie. indexing is dependency_counts[looked_up, looker_upper]
-    dependency_counts::PersistentHashMap{Call, PersistentHashMap{Call, Int}}
-end
-LookupCounts() = LookupCounts(PersistentHashMap{Call, Int}(), PersistentHashMap{Call, PersistentHashMap{Call, Int}}())
-
-function note_new_call(lc::LookupCounts, call::Call)
-    new_lookup_counts = assoc(lc.lookup_counts, call, 0)
-    new_dependency_counts = assoc(lc.dependency_counts, call, PersistentHashMap{Call, Int}())
-    LookupCounts(new_lookup_counts, new_dependency_counts)
-end
-
-function note_new_lookup(lc::LookupCounts, call::Call, call_stack::Stack{Call})
-    new_lookup_counts = assoc(lc.lookup_counts, call, lc.lookup_counts[call] + 1)    
-    if !isempty(call_stack)
-        looked_up_in = first(call_stack)
-
-        if haskey(lc.dependency_counts[call], looked_up_in)
-            new_count = lc.dependency_counts[call][looked_up_in] + 1
-        else
-            new_count = 1
-        end
-
-        new_dependency_counts = assoc(lc.dependency_counts, call,
-            assoc(lc.dependency_counts[call], looked_up_in, new_count)
-        )
-    else
-        new_dependency_counts = lc.dependency_counts
-    end
-    LookupCounts(new_lookup_counts, new_dependency_counts)
-end
-# note lookup removal from another call (ie. not from kernel)
-function note_lookup_removed(lc::LookupCounts, call::Call, called_from::Call)
-    new_count = lc.dependency_counts[call][called_from] - 1
-    if new_count == 0
-        new_dependency_counts = assoc(lc.dependency_counts, call,
-            dissoc(lc.dependency_counts[call], called_from)
-        )
-    else
-        new_dependency_counts = assoc(lc.dependency_counts, call,
-        assoc(lc.dependency_counts[call], called_from, new_count)
-        )
-    end
-
-    new_count = lc.lookup_counts[call] - 1
-    if new_count == 0
-        new_lookup_counts = dissoc(lc.lookup_counts, call)
-        new_dependency_counts = dissoc(new_dependency_counts, call)
-    else
-        new_lookup_counts = assoc(lc.lookup_counts, call, new_count)
-    end
-
-    (LookupCounts(new_lookup_counts, new_dependency_counts), new_count)
-end
-# note lookup removed from kernel (ie. not removed from another call)
-function note_lookup_removed(lc::LookupCounts, call::Call)
-    new_count = lc.lookup_counts[call] - 1
-    if new_count == 0
-        new_lookup_counts = dissoc(lc.lookup_counts, call)
-        new_dependency_counts = dissoc(lc.dependency_counts, call)
-    else
-        new_lookup_counts = assoc(lc.lookup_counts, call, new_count)
-        new_dependency_counts = lc.dependency_counts
-    end
-
-    (LookupCounts(new_lookup_counts, new_dependency_counts), new_count)
-end
-
-function get_all_calls_which_look_up(lc::LookupCounts, call)
-    (call_which_looked_up for (call_which_looked_up, count) in lc.dependency_counts[call] if count > 0)
-end
-
-"""
-    get_number_of_expected_kernel_lookups(lc::LookupCounts, call::Call)
-
-Gives the number of traced lookups to `call` which must have occurred in the kernel
-for the lookup counts object to have the number of counts it has tracked,
-assuming all other calls have been properly tracked.
-"""
-function get_number_of_expected_kernel_lookups(lc::LookupCounts, call::Call)
-    count = lc.lookup_counts[call]
-    for (looker_upper, dependency_lookup_count) in lc.dependency_counts[call]
-        count -= dependency_lookup_count
-    end
-    return count
-end
-
-"""
-    CallSort
-
-A data structure to store a topological sort for all the calls in the world.
-If the algorithms work properly, at the end of every update, the call sort
-and the lookup counts should be consistent in that the call sort should
-have a valid topological ordering for the dependencies between the calls tracked
-in lookup counts.
-"""
-struct CallSort
-    call_to_idx::PersistentHashMap
-    max_index::Int
-end
-function CallSort(idx_to_call::Vector{Call})
-    call_to_idx = PersistentHashMap([call => i for (i, call) in enumerate(idx_to_call)]...)
-    CallSort(call_to_idx, length(idx_to_call))
-end
-Base.getindex(srt::CallSort, call::Call) = srt.call_to_idx[call]
-function change_index_to(srt::CallSort, call::Call, idx::Int)
-    new_map = assoc(srt.call_to_idx, call, idx)
-    new_max_idx = max(srt.max_index, idx)
-    CallSort(new_map, new_max_idx)
-end
-add_call_to_end(srt::CallSort, call::Call) = change_index_to(srt, call, srt.max_index + 1)
-function remove_call(srt::CallSort, call::Call)
-    # note that for performance, we do not go through the calls with index higher than `call`
-    # and decrement these indices to make sure the sort's max index stays as small
-    # as possible.  Since these are stored as Int64s, we have ~ 2^63
-    # updates before we overflow, which practically speaking should be fine
-    # for almost any usecase.
-    CallSort(
-        dissoc(srt.call_to_idx, call),
-        srt.max_index
-    )
-end
+include("call.jl") # `Call` type
+include("calls.jl") # `Calls` data structure to store subtraces
+include("lookup_counts.jl") # `LookupCounts` data structure to store the dependency graph & the counts
+include("call_sort.jl") # `CallSort` data structure to maintain a topological numbering of the calls.
 
 """
     World
@@ -176,24 +34,24 @@ is used to refer to it.
 mutable struct World{addrs, GenFnTypes}
     gen_fns::GenFnTypes # tuple of the generative functions for this world
     state::WorldState # a state representing what operation is currently being performed on the world (eg. update, generate)
-    subtraces::PersistentHashMap{Call, Trace} # subtraces[:addr => key] is the subtrace for this lookup
+    calls::Calls
     lookup_counts::LookupCounts # tracks how many times each call was performed, and which calls were performed from which
     call_sort::CallSort # a topological sort of which calls must be finished before the next can begin
     total_score::Float64
     metadata_addr::Symbol # an address for `lookup_or_generate`s from this world in choicemaps
 end
 
-function World{addrs, GenFnTypes}(gen_fns, state, subtraces, lookup_counts, call_sort, total_score) where {addrs, GenFnTypes}
-    World{addrs, GenFnTypes}(gen_fns, state, subtraces, lookup_counts, call_sort, total_score, gensym("WORLD_LOOKUP"))
+function World{addrs, GenFnTypes}(gen_fns, state, calls, lookup_counts, call_sort, total_score) where {addrs, GenFnTypes}
+    World{addrs, GenFnTypes}(gen_fns, state, calls, lookup_counts, call_sort, total_score, gensym("WORLD_LOOKUP"))
 end
 
-World(w::World{A,G}) where {A,G} = World{A,G}(w.gen_fns, w.state, w.subtraces, w.lookup_counts, w.call_sort, w.total_score, w.metadata_addr)
+World(w::World{A,G}) where {A,G} = World{A,G}(w.gen_fns, w.state, w.calls, w.lookup_counts, w.call_sort, w.total_score, w.metadata_addr)
 
 function World{addrs, GenFnTypes}(gen_fns) where {addrs, GenFnTypes}
     World{addrs, GenFnTypes}(
         gen_fns,
         NoChangeWorldState(),
-        PersistentHashMap{Call, Trace}(),
+        Calls(addrs, gen_fns, NamedTuple()),
         LookupCounts(),
         CallSort(Call[]), # will be overwritten after `generate`
         0.
@@ -246,9 +104,9 @@ end
 @inline get_gen_fn(world::World, ::Call{addr}) where {addr} = get_gen_fn(world, addr)
 
 get_all_calls_which_look_up(world::World, call) = get_all_calls_which_look_up(world.lookup_counts, call)
-has_value_for_call(world::World, call::Call) = haskey(world.subtraces, call)
-get_value_for_call(world::World, call::Call) = get_retval(world.subtraces[call])
-get_trace(world::World, call::Call) = world.subtraces[call]
+has_value_for_call(world::World, call::Call) = has_val(world.calls, call)
+get_value_for_call(world::World, call::Call) = get_val(world.calls, call)
+get_trace(world::World, call::Call) = get_trace(world.calls, call)
 total_score(world::World) = world.total_score
 
 """
@@ -272,7 +130,7 @@ function generate_value!(world, call, constraints)
 
     gen_fn = get_gen_fn(world, call)
     tr, weight = generate_fn(world.state)(gen_fn, (world, key(call)), constraints)
-    world.subtraces = assoc(world.subtraces, call, tr)
+    world.calls = assoc(world.calls, call, tr)
     note_new_call!(world, call)
     world.total_score += get_score(tr)
 

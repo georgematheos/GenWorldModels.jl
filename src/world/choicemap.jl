@@ -10,7 +10,7 @@ end
 function Gen.get_subtree(c::MemoizedGenerativeFunctionChoiceMap, key)
     call = Call(c.addr, key)
     if has_value_for_call(c.world, call)
-        get_choices(c.world.subtraces[call])
+        get_choices(get_trace(c.world.calls, call))
     else
         EmptyChoiceMap()
     end
@@ -21,9 +21,8 @@ Gen.get_values_shallow(c::MemoizedGenerativeFunctionChoiceMap) = ()
 # TODO: store subtraces in a way s.t. we can avoid this filter call and do a direct lookup
 function Gen.get_subtrees_shallow(c::MemoizedGenerativeFunctionChoiceMap)
     (
-        key(call) => get_choices(subtrace)
-        for (call, subtrace) in
-            filter(((call, subtrace),) -> addr(call) == c.addr, c.world.subtraces)
+        lookup_key => get_choices(subtrace)
+        for (lookup_key, subtrace) in traces_for_mgf(c.world.calls, c.addr)
     )
 end
 

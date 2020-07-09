@@ -133,8 +133,8 @@ score from the world.state weight, and add the choices to the state's discard.
 Returns the choicemap of the removed trace.
 """
 function remove_call!(world, call)
-    tr = world.subtraces[call]
-    world.subtraces = dissoc(world.subtraces, call)
+    tr = get_trace(world.calls, call)
+    world.calls = dissoc(world.calls, call)
     score = get_score(tr)
 
     remove_call_from_sort!(world, call)
@@ -268,7 +268,7 @@ Run `Gen.update` for the given call, and update the world
 and worldstate accordingly.
 """
 function run_gen_update!(world, call, spec, ext_const_addrs)
-    old_tr = world.subtraces[call]
+    old_tr = get_trace(world.calls, call)
     new_tr, weight, retdiff, discard = Gen.update(
         old_tr,
         (world, key(call)),
@@ -294,7 +294,7 @@ function run_gen_update!(world, call, spec, ext_const_addrs)
         world.total_score += get_score(new_tr) - get_score(old_tr)
     end
 
-    world.subtraces = assoc(world.subtraces, call, new_tr)
+    world.calls = assoc(world.calls, call, new_tr)
     world.state.original_choicemaps[call] = get_choices(old_tr)
     set_submap!(world.state.discard, addr(call) => key(call), discard)
 

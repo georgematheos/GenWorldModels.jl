@@ -89,7 +89,7 @@ function lookup_or_generate_during_generate!(world, call)
 
     note_new_lookup!(world, call, world.state.call_stack)
 
-    return get_retval(world.subtraces[call])
+    return get_val(world.calls, call)
 end
 
 function generate_value_during_generate!(world, call)

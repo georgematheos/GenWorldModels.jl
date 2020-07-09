@@ -329,25 +329,16 @@ function perform_random_update_and_run_tests(dep_struct_trace, using_world_trace
         println(ord_old)
 
         println("OLD TRACE SCORES:")
-        for (call, tr) in using_world_trace.world.subtraces
+        for (call, tr) in GenWorldModels.all_traces(using_world_trace.world.calls)
             println("$call score: ", get_score(tr))
         end
 
-        # println("CURRENT TRACE SCORES:")
-        # for (call, tr) in new_using_world_trace.world.subtraces
-        #     println("$call score: ", get_score(tr))
-        # end
-
         gend_world_trace, _ = generate_world_trace(new_indices_to_sample, new_deps, new_vals, new_num_vals)
-        # println("GENERATED WORLD TRACE SCORES:")
-        # for (call, tr) in gend_world_trace.world.subtraces
-        #     println("$call score: ", get_score(tr))
-        # end
 
         println("DIFFERENCE IN TRACE SCORES BETWEEN GENERATED AND UPDATED:")
         tot_diff = 0.
-        for (call, gend_tr) in gend_world_trace.world.subtraces
-            upd_tr = new_using_world_trace.world.subtraces[call]
+        for (call, gend_tr) in GenWorldModels.all_traces(gend_world_trace.world.calls)
+            upd_tr = GenWorldModels.get_trace(new_using_world_trace.world.calls, call)
             gscore = get_score(gend_tr)
             uscore = get_score(upd_tr)
             if !isapprox(gscore, uscore )
