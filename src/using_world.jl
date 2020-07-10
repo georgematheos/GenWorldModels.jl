@@ -233,6 +233,4 @@ function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
     (new_tr, weight, kernel_retdiff, discard)
 end
 
-# TODO: regenerate
-
 # TODO: gradients?

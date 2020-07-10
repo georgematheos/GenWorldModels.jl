@@ -193,6 +193,9 @@ function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple, con
     error("lookup_or_generate may not be updated with constraints.")
 end
 
+# handle "regenerate"ing the trace
+Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple, ::Selection, ::Selection) = update(tr, args, argdiffs, EmptyChoiceMap(), EmptySelection())
+
 Gen.update(tr::LookupOrGenerateTrace, ::Tuple, ::Tuple{NoChange}, ::EmptyChoiceMap, ::Selection) = (tr, 0., NoChange(), EmptyChoiceMap())
 
 # key change

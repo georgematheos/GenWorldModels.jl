@@ -50,7 +50,9 @@ function note_lookup_removed(lc::LookupCounts, call::Call, called_from::Call)
     end
 
     new_count = lc.lookup_counts[call] - 1
-    if new_count == 0
+    if new_count == 0 && is_mgf_call(call)
+        # if we now have 0 lookups, and this is a mgf call (rather than a world arg),
+        # remove this key from the lookup_counts dictionary
         new_lookup_counts = dissoc(lc.lookup_counts, call)
         new_dependency_counts = dissoc(new_dependency_counts, call)
     else

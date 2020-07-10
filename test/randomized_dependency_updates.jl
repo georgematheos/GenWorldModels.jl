@@ -273,7 +273,7 @@ function update_world_trace(old_world_trace, new_deps, new_vals, new_indices_to_
         end
     end
 
-    new_tr, weight, retdiff, discard = update(old_world_trace, (150, new_indices_to_sample,), (UnknownChange(),), constraints, Gen.AllSelection(); check_no_constrained_calls_deleted=false)
+    new_tr, weight, retdiff, discard = update(old_world_trace, (150, new_indices_to_sample,), (NoChange(), UnknownChange(),), constraints, Gen.AllSelection(); check_no_constrained_calls_deleted=false)
     return (new_tr, weight)
 end
 

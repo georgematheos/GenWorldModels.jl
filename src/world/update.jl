@@ -109,7 +109,8 @@ end
 Decrease the count for the number of lookups for `call` in the world.
 If another call `called_from` is provided, also decrease
 the count for the number of times `call` is looked up by `call_from`.
-If decreasing the count brings it to zero, remove the call from the world.
+If decreasing the count brings it to zero,
+and this is a MGF call (as opposed to a world arg), remove the call from the world.
 
 Returns the "discard" due to removals of calls from the world
 caused by removing this lookup.  If no call is removed, this is an `EmptyChoiceMap`,
@@ -117,7 +118,7 @@ otherwise it is the choicemap for the removed trace.
 """
 function remove_lookup!(world::World, call::Call, called_from...)
     new_num_lookups_for_call = note_lookup_removed!(world, call, called_from...)
-    if new_num_lookups_for_call == 0
+    if new_num_lookups_for_call == 0 && is_mgf_call(call)
         return remove_call!(world, call)
     else
         return EmptyChoiceMap()
@@ -175,7 +176,7 @@ end
 ##########################
 
 """
-    update_world_args!(world, new_world_args::NamedTuple, world_argdiffs::NamedTuple)
+    update_world_args_and_enqueue_downstream!(world, new_world_args::NamedTuple, world_argdiffs::NamedTuple)
 
 Updates the world args to the given `new_world_args` if any of the `world_argdiffs` is not
 `NoChange()`.  Enqueues all calls which look up the changed args to be updated.

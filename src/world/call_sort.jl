@@ -11,9 +11,14 @@ struct CallSort
     call_to_idx::PersistentHashMap
     max_index::Int
 end
-function CallSort(idx_to_call::Vector{Call})
-    call_to_idx = PersistentHashMap([call => i for (i, call) in enumerate(idx_to_call)]...)
-    CallSort(call_to_idx, length(idx_to_call))
+CallSort() = CallSort(PersistentHashMap(), 0)
+function add_vector_of_new_calls(srt::CallSort, idx_to_call::Vector{Call})
+    map = srt.call_to_idx
+    for (idx, call) in enumerate(idx_to_call)
+        map = assoc(map, call, idx)
+    end
+    maxidx = max(length(idx_to_call), srt.max_index)
+    CallSort(map, maxidx)
 end
 Base.getindex(srt::CallSort, call::Call) = srt.call_to_idx[call]
 function change_index_to(srt::CallSort, call::Call, idx::Int)
@@ -22,6 +27,7 @@ function change_index_to(srt::CallSort, call::Call, idx::Int)
     CallSort(new_map, new_max_idx)
 end
 add_call_to_end(srt::CallSort, call::Call) = change_index_to(srt, call, srt.max_index + 1)
+add_stationary_call(srt::CallSort, call::Call) = change_index_to(srt, call, -1)
 function remove_call(srt::CallSort, call::Call)
     # note that for performance, we do not go through the calls with index higher than `call`
     # and decrement these indices to make sure the sort's max index stays as small

@@ -73,9 +73,10 @@ function end_generate!(world::World, check_all_constraints_used)
     end
         
     # save the topological sort for the calls in the world
-    world.call_sort = CallSort(world.state.call_sort)
+    world.call_sort = add_vector_of_new_calls(world.call_sort, world.state.call_sort)
+
     weight = world.state.weight
-    
+
     world.state = NoChangeWorldState()
     
     return weight

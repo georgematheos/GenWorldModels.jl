@@ -53,11 +53,13 @@ function World{addrs, GenFnTypes}(gen_fns, world_args::NamedTuple) where {addrs,
         NoChangeWorldState(),
         Calls(addrs, gen_fns, world_args),
         LookupCounts(),
-        CallSort(Call[]), # will be overwritten after `generate`
+        CallSort(),
         0.
     )
     for (arg_address, _) in pairs(world_args)
-        note_new_call!(w, Call(_world_args_addr, arg_address))
+        call = Call(_world_args_addr, arg_address)
+        note_new_call!(w, call)
+        w.call_sort = add_stationary_call(w.call_sort, call)
     end
     return w
 end

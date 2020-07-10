@@ -25,7 +25,7 @@ end
 Gen.get_subtree(t::AddressFilterAddressTree, addr::Pair) = Gen._get_subtree(t, addr)
 
 function Gen.get_subtrees_shallow(t::AddressFilterAddressTree)
-    (
+    #=Gen.nonempty_subtree_itr=#( # discard the empty subtrees -- TODO: is this inefficient?
         (addr, AddressFilterAddressTree(subtree, t.f))
         for (addr, subtree) in get_subtrees_shallow(t.tree)
         if t.f(addr)
