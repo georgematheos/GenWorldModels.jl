@@ -1,0 +1,4 @@
+dreams/
+slurm*
+.DS_*
+.ipynb_checkpoints/
