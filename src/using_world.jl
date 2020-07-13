@@ -6,11 +6,11 @@ struct UsingWorldTrace{V, Tr} <: Gen.Trace
     kernel_tr::Tr
     world::World
     score::Float64
-    args::Tuple
+    kernel_args::Tuple
     gen_fn::GenerativeFunction{V, UsingWorldTrace{V, Tr}}
 end
 
-Gen.get_args(tr::UsingWorldTrace) = tr.args
+Gen.get_args(tr::UsingWorldTrace) = (_world_args(tr.world)..., tr.kernel_args...)
 Gen.get_retval(tr::UsingWorldTrace) = get_retval(tr.kernel_tr)
 Gen.get_score(tr::UsingWorldTrace) = tr.score
 Gen.get_gen_fn(tr::UsingWorldTrace) = tr.gen_fn
@@ -131,15 +131,15 @@ function (gen_fn::UsingWorld)(args...)
 end
 
 function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; check_proper_usage=true, check_all_constraints_used=true)
-    world_args, args = extract_world_args(gen_fn, args)
+    world_args, kernel_args = extract_world_args(gen_fn, args)
 
     world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
     begin_generate!(world, get_submap(constraints, :world))
-    kernel_tr, kernel_weight = generate(gen_fn.kernel, (world, args...), get_submap(constraints, :kernel))
+    kernel_tr, kernel_weight = generate(gen_fn.kernel, (world, kernel_args...), get_submap(constraints, :kernel))
     world_weight = end_generate!(world, check_all_constraints_used)
     
     score = get_score(kernel_tr) + total_score(world)
-    tr = UsingWorldTrace(kernel_tr, world, score, args, gen_fn)
+    tr = UsingWorldTrace(kernel_tr, world, score, kernel_args, gen_fn)
     weight = kernel_weight + world_weight
     
     if check_proper_usage
@@ -150,15 +150,15 @@ function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; c
 end
 
 function Gen.simulate(gen_fn::UsingWorld, args::Tuple; check_proper_usage=true, check_all_constraints_used=true)
-    world_args, args = extract_world_args(gen_fn, args)
+    world_args, kernel_args = extract_world_args(gen_fn, args)
 
     world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
     begin_simulate!(world)
-    kernel_tr = simulate(gen_fn.kernel, (world, args...))
+    kernel_tr = simulate(gen_fn.kernel, (world, kernel_args...))
     end_simulate!(world, check_all_constraints_used)
 
     score = get_score(kernel_tr) + total_score(world)
-    tr = UsingWorldTrace(kernel_tr, world, score, args, gen_fn)
+    tr = UsingWorldTrace(kernel_tr, world, score, kernel_args, gen_fn)
     
     if check_proper_usage
         check_world_counts_agree_with_generate_choicemaps(world, kernel_tr)
@@ -168,11 +168,11 @@ function Gen.simulate(gen_fn::UsingWorld, args::Tuple; check_proper_usage=true, 
 end
 
 function Gen.propose(gen_fn::UsingWorld, args::Tuple)
-    world_args, args = extract_world_args(gen_fn, args)
+    world_args, kernel_args = extract_world_args(gen_fn, args)
 
     world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
     begin_propose!(world)
-    kernel_choices, kernel_weight, retval = propose(gen_fn.kernel, (world, args...))
+    kernel_choices, kernel_weight, retval = propose(gen_fn.kernel, (world, kernel_args...))
     world_choices, world_weight = end_propose!(world)
 
     weight = kernel_weight + world_weight
@@ -184,11 +184,11 @@ function Gen.propose(gen_fn::UsingWorld, args::Tuple)
 end
 
 function Gen.assess(gen_fn::UsingWorld, args::Tuple, choices::ChoiceMap)
-    world_args, args = extract_world_args(gen_fn, args)
+    world_args, kernel_args = extract_world_args(gen_fn, args)
 
     world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
     begin_assess!(world, get_submap(choices, :world))
-    kernel_weight, retval = assess(gen_fn.kernel, (world, args...), get_submap(choices, :kernel))
+    kernel_weight, retval = assess(gen_fn.kernel, (world, kernel_args...), get_submap(choices, :kernel))
     world_weight = end_assess!(world)
 
     (kernel_weight + world_weight, retval)
@@ -211,7 +211,7 @@ function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
 )
     world = World(tr.world) # shallow copy of the world object
 
-    world_args, args = extract_world_args(tr.gen_fn, args)
+    world_args, kernel_args = extract_world_args(tr.gen_fn, args)
     world_argdiffs, argdiffs = extract_world_args(tr.gen_fn, argdiffs)
 
     # tell the world we are doing an update, and have it update all the values
@@ -219,13 +219,13 @@ function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
     world_diff = begin_update!(world, get_subtree(spec, :world), get_subtree(externally_constrained_addrs, :world), world_args, world_argdiffs)
     
     (new_kernel_tr, kernel_weight, kernel_retdiff, kernel_discard) = update(
-        tr.kernel_tr, (world, args...), (world_diff, argdiffs...), get_subtree(spec, :kernel), get_subtree(externally_constrained_addrs, :kernel)
+        tr.kernel_tr, (world, kernel_args...), (world_diff, argdiffs...), get_subtree(spec, :kernel), get_subtree(externally_constrained_addrs, :kernel)
     )
 
     world_weight, world_discard = end_update!(world, kernel_discard, check_no_constrained_calls_deleted)
 
     new_score = get_score(new_kernel_tr) + total_score(world)
-    new_tr = UsingWorldTrace(new_kernel_tr, world, new_score, args, tr.gen_fn)
+    new_tr = UsingWorldTrace(new_kernel_tr, world, new_score, kernel_args, tr.gen_fn)
     weight = kernel_weight + world_weight
     discard = StaticChoiceMap((world=world_discard, kernel=kernel_discard))
     discard = AddressFilterChoiceMap(discard, addr -> addr != metadata_addr(world))

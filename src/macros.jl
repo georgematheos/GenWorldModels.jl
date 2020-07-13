@@ -1,3 +1,5 @@
+_LOOKUP_OR_GENERATE = esc(:($(@__MODULE__).lookup_or_generate))
+
 """
     @w memoized_gen_fn[lookup_key]
 
@@ -9,7 +11,7 @@ is defined at the global scope.
 macro w(expr)
     memoized_fn_name = expr.args[1]
     key_expr = expr.args[2]
-    return :($(esc(:world))[$(QuoteNode(memoized_fn_name))][$key_expr])
+    return :($_LOOKUP_OR_GENERATE($(esc(:world))[$(QuoteNode(memoized_fn_name))][$(esc(key_expr))]))
 end
 
 """
@@ -21,10 +23,10 @@ called on `[world[memoized_gen_fn_addr][key] for key in lookup_key_iterable]`.
 
 Assumes `world` exists in the current scope and `Map` is defined at the global scope.
 """
+# TODO: do this in a way that can deal with argdiffs!  see `test/world_args.jl` for some idea on how to do this
 macro WorldMap(mgf_addr, args)
-    lookup_or_generate = esc(:($(@__MODULE__).lookup_or_generate))
     quote
-        Map($lookup_or_generate)([
+        Map($_LOOKUP_OR_GENERATE)([
             $(esc(:world))[$mgf_addr][arg] for arg in $args
         ])
     end
@@ -42,7 +44,7 @@ function parse_mgf_exprs(mgf_raw_exprs)
             expr
         else
             @assert expr isa Symbol
-            :($(QuoteNode(expr))=>$expr)
+            :($(QuoteNode(expr))=>$(esc(expr)))
         end
         for expr in mgf_raw_exprs
     ]
@@ -77,7 +79,7 @@ macro UsingWorld(exprs...)
         exprs = exprs[2:end]
     end
 
-    kernel_expr = exprs[1]
+    kernel_expr = esc(exprs[1])
     mgf_exprs = parse_mgf_exprs(exprs[2:end])
 
     push!(using_world_args, kernel_expr)
@@ -86,4 +88,34 @@ macro UsingWorld(exprs...)
     using_world = esc(:($(@__MODULE__).UsingWorld))
 
     quote $using_world($(using_world_args...)) end
+end
+
+"""
+    @warg argname1, argname2, ...
+
+Look up the given world args and store them in local variables with the arg names.
+
+## Example
+```julia
+    @w_args argname1, argname2
+```
+is equivalent to
+```julia
+    argname1 ~ lookup_or_generate(world[:args][:argname1])
+    argname2 ~ lookup_or_generate(world[:args][:argname2])
+```
+"""
+macro w_args(argnames)
+    if argnames isa Symbol
+        argnames = (argnames,)
+    else
+        @assert argnames.head == :tuple "Incorrect usage!  Correct usage: @warg argname1, argname2, ..."
+        argnames = argnames.args
+    end
+
+    exprs = Expr[]
+    for argname in argnames
+        push!(exprs, :($(esc(argname)) ~ $_LOOKUP_OR_GENERATE($(esc(:world))[$(QuoteNode(:args))][$(QuoteNode(argname))])))
+    end
+    q = quote $(exprs...) end
 end

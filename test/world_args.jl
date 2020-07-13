@@ -62,6 +62,7 @@ flip_coins = UsingWorld(
     almost_always_heads_prior = (5000, 1) # should result in coins with extremely high probability of heads
     tr = simulate(flip_coins, (2, almost_always_heads_prior, 5))
     @test get_retval(tr) == fill(2, 5) # each coin should have 5 heads (unless this is an extremely rare event!)
+    @test get_args(tr) == (2, almost_always_heads_prior, 5)
 
     tr, weight = generate(flip_coins, (2, (1, 1), 5), choicemap(
         (:world => :coin => 1 => :prob, 0.7),
