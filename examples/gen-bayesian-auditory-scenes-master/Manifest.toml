@@ -413,11 +413,9 @@ version = "0.11.2"
 
 [[Gen]]
 deps = ["DataStructures", "Distributions", "ForwardDiff", "FunctionalCollections", "JSON", "LinearAlgebra", "MacroTools", "Random", "ReverseDiff", "SpecialFunctions"]
-git-tree-sha1 = "21402cd5a9bf5efdda89e2fa40b7f07216decead"
-repo-rev = "20200706-georgematheos-updatespec"
-repo-url = "/Users/georgematheos/Developer/research/Gen"
+path = "../../../Gen"
 uuid = "ea4f424c-a589-11e8-07c0-fd5c91b9da4a"
-version = "0.3.3"
+version = "0.3.5"
 
 [[GenTF]]
 deps = ["Gen", "MLDatasets", "PyCall"]
@@ -428,10 +426,8 @@ uuid = "1956f2fc-1631-11e9-1597-3d3589996c0f"
 version = "0.1.0"
 
 [[GenWorldModels]]
-deps = ["DataStructures", "FunctionalCollections", "Gen"]
-git-tree-sha1 = "07dd5da73dabfb665eee3d289d5739ff6879f437"
-repo-rev = "open_universe_inference"
-repo-url = "/Users/georgematheos/Developer/research/GenWorldModels.jl"
+deps = ["DataStructures", "FunctionalCollections", "Gen", "MacroTools"]
+path = "/Users/georgematheos/Developer/research/GenWorldModels.jl/"
 uuid = "3540416b-6f6e-4f4e-9ce0-d5802f4ca5a4"
 version = "0.1.0"
 
