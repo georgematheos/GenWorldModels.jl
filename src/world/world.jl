@@ -73,6 +73,9 @@ Base.show(io::IO, world::World{addrs, <:Any}) where {addrs} = print(io, "world{$
 
 metadata_addr(world::World) = world.metadata_addr
 
+# NOTE: this should never be called from within a generative function; these MUST use calls to `lookup_or_generate`
+_world_args(world::World) = get_args(world.calls)
+
 # functions for tracking counts and dependency structure
 function note_new_call!(world, args...)
     world.lookup_counts = note_new_call(world.lookup_counts, args...)

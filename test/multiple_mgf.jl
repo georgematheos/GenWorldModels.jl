@@ -1,9 +1,12 @@
+using GenWorldModels: @w, @UsingWorld
+
 @gen (static, diffs) function a(world, idx)
     b_val ~ @w b[idx]
     # same as `b_val ~ lookup_or_generate(world[:b][idx])`
     val ~ normal(b_val, 0.05)
     return val
 end
+
 @gen function b(world, idx)
     if idx == 1
         val ~ normal(0, 1)
@@ -20,7 +23,7 @@ end
     sum = a_val + b_val
     return sum
 end
-ab = UsingWorld(ab_kernel, :a => a, :b => b)
+ab = @UsingWorld(ab_kernel, a, b)
 @load_generated_functions()
 
 @testset "multiple memoized generative functions" begin

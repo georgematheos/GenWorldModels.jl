@@ -26,6 +26,7 @@ function Calls(MGFAddrs::Tuple{Vararg{Symbol}}, mgfs, args::NamedTuple)
 end
 
 mgf_addrs(::Calls{NamedTuple{Addrs, MapTypes}, NamedTuple{ArgAddrs, ArgTypes}}) where {Addrs, MapTypes, ArgAddrs, ArgTypes} = Addrs
+get_args(calls::Calls) = calls.args
 
 function FunctionalCollections.assoc(calls::Calls, call::Call{mgf_addr}, trace::Trace) where {mgf_addr}
     traces_for_addr = calls.traces[mgf_addr]
