@@ -39,3 +39,34 @@ function insert_id(table::IDTable, typename::Symbol, idx::Int, id::UUID)
     new_idx_to_id = merge(table.idx_to_id, NamedTuple{(typename,)}((new_idx_to_id_for_type,)))
     IDTable(new_id_to_idx, new_idx_to_id)
 end
+
+function move_all_between(table::IDTable, typename::Symbol; min, inc, max=Inf)
+    id_to_idx_for_type = table.id_to_idx[typename]
+    idx_to_id_for_type = table.idx_to_id[typename]
+    changed_ids = UUID[]
+
+    # TODO: don't scan the full table; only look at those which we actually need to change
+    for (idx, id) in table.idx_to_id[typename]
+        if idx >= min && idx <= max
+            id_to_idx_for_type = assoc(id_to_idx_for_type, id, idx + inc)
+            idx_to_id_for_type = assoc(idx_to_id_for_type, idx + inc, id)
+            push!(changed_ids, id)
+        end
+    end
+    # We have not changed the idx for each id for indices in the range,
+    # and changed the id for indices in the range (min+inc, max+inc).
+    # Now we need to change the ids for indices in range (min, min+inc-1) and (max+inc+1, max).
+    # In particular, we change the ids by simply deleting the current association--others can be 
+    # added later if need be.
+    for idx=min:(min+inc-1)
+        idx_to_id_for_type = dissoc(idx_to_id_for_type, idx)
+    end
+    for idx=(max+inc+1):max
+        idx_to_id_for_type = dissoc(idx_to_id_for_type, idx)
+    end
+
+    new_id_to_idx = merge(table.id_to_idx, NamedTuple{(typename,)}((id_to_idx_for_type,)))
+    new_idx_to_id = merge(table.idx_to_id, NamedTuple{(typename,)}((idx_to_id_for_type,)))
+    new_table = IDTable(new_id_to_idx, new_idx_to_id)
+    return (new_table, changed_ids)
+end

@@ -1,3 +1,5 @@
+include("oupm_updates.jl")
+
 # NOTE: The algorithm for updating the world is described and explained in pseudocode
 # and in english in `update_algorithm.md`.
 
@@ -195,6 +197,18 @@ function update_world_args_and_enqueue_downstream!(world, new_world_args, world_
     end
     if is_diff
         world.world_args = new_world_args
+    end
+end
+
+"""
+    perform_oupm_updates_and_enqueue_downstream!(world, oupm_updates)
+
+Performs all the oupm updates in `oupm_updates` in order, and enqueues
+any calls which look at the indices for changed identifiers.
+"""
+function perform_oupm_updates_and_enqueue_downstream!(world, oupm_updates)
+    for oupm_update in oupm_updates
+        perform_oupm_update_and_enqueue_downstream!(world, oupm_update)
     end
 end
 
@@ -470,7 +484,7 @@ Initialize the given `externally_constrained_addrs` for calculating
 the weight of this update.
 This should be called _before_ updating the `UsingWorld` kernel trace.
 """
-function begin_update!(world::World, specs::Gen.UpdateSpec, externally_constrained_addrs::Selection,
+function begin_update!(world::World, specs::Gen.UpdateSpec, oupm_moves::Tuple, externally_constrained_addrs::Selection,
     new_world_args::NamedTuple, world_argdiffs::NamedTuple
 )
     @assert (world.state isa NoChangeWorldState) "cannot initiate an update from a $(typeof(world.state))"
@@ -479,6 +493,10 @@ function begin_update!(world::World, specs::Gen.UpdateSpec, externally_constrain
     # update the world args, and enqueue all the
     # calls which look up these world args to be updated
     update_world_args_and_enqueue_downstream!(world, new_world_args, world_argdiffs)
+
+    # perform the moves specified in `oupm_moves`, and enqueue all calls
+    # which look up the indices for these and hence need to be updated
+    perform_oupm_moves_and_enqueue_downstream!(world, oupm_moves)
 
     # update the world as needed to make it consistent
     # with the `specs` for the calls we have already generated

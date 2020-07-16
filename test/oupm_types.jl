@@ -51,4 +51,6 @@ end
     # should throw error if we don't specify that AudioSource is an OUPMType
     broken_get_vols_and_inds = UsingWorld(_vol_ind_kernel, :volume => get_volume)
     @test_throws Exception simulate(broken_get_vols_and_inds, ())
+
+    # TODO: test updating with diffs enabled
 end

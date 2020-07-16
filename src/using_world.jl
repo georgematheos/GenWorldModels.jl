@@ -210,10 +210,9 @@ end
 # updates #
 ###########
 
-# TODO: these kwargs won't usually propagate through multiple update calls as is
-function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
-    spec::Gen.UpdateSpec, externally_constrained_addrs::Selection;
-    check_no_constrained_calls_deleted=true
+function _update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
+    main_spec::Gen.UpdateSpec, oupm_moves::Tuple, externally_constrained_addrs::Selection,
+    check_no_constrained_calls_deleted
 )
     world = World(tr.world) # shallow copy of the world object
 
@@ -222,10 +221,15 @@ function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
 
     # tell the world we are doing an update, and have it update all the values
     # for the constraints for values it has already generated
-    world_diff = begin_update!(world, get_subtree(spec, :world), get_subtree(externally_constrained_addrs, :world), world_args, world_argdiffs)
-    
+    world_diff = begin_update!(world,
+        get_subtree(main_spec, :world),
+        oupm_moves,
+        get_subtree(externally_constrained_addrs, :world),
+        world_args, world_argdiffs
+    )
+
     (new_kernel_tr, kernel_weight, kernel_retdiff, kernel_discard) = update(
-        tr.kernel_tr, (world, kernel_args...), (world_diff, argdiffs...), get_subtree(spec, :kernel), get_subtree(externally_constrained_addrs, :kernel)
+        tr.kernel_tr, (world, kernel_args...), (world_diff, argdiffs...), get_subtree(main_spec, :kernel), get_subtree(externally_constrained_addrs, :kernel)
     )
 
     world_weight, world_discard = end_update!(world, kernel_discard, check_no_constrained_calls_deleted)
@@ -237,6 +241,21 @@ function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
     discard = AddressFilterChoiceMap(discard, addr -> addr != metadata_addr(world))
 
     (new_tr, weight, kernel_retdiff, discard)
+
+end
+
+# TODO: these kwargs won't usually propagate through multiple update calls as is
+@inline function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
+    spec::Gen.UpdateSpec, externally_constrained_addrs::Selection;
+    check_no_constrained_calls_deleted=true
+)
+    _update(tr, args, argdiffs, spec, (), externally_constrained_addrs, check_no_constrained_calls_deleted)
+end
+@inline function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
+    spec::UpdateWithOUPMMovesSpec, externally_constrained_addrs::Selection;
+    check_no_constrained_calls_deleted=true
+)
+    _update(tr, args, argdiffs, spec.subspec, spec.moves, externally_constrained_addrs, check_no_constrained_calls_deleted)
 end
 
 # TODO: gradients?
