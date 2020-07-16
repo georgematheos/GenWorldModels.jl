@@ -21,13 +21,17 @@ function add_vector_of_new_calls(srt::CallSort, idx_to_call::Vector{Call})
     CallSort(map, maxidx)
 end
 Base.getindex(srt::CallSort, call::Call) = srt.call_to_idx[call]
+
+# world args and looking up object indices are always before all MGF calls in the sort
+Base.getindex(srt::CallSort, call::Call{_world_args_addr}) = -1
+Base.getindex(srt::CallSort, call::Call{_get_index_addr}) = -1
+
 function change_index_to(srt::CallSort, call::Call, idx::Int)
     new_map = assoc(srt.call_to_idx, call, idx)
     new_max_idx = max(srt.max_index, idx)
     CallSort(new_map, new_max_idx)
 end
 add_call_to_end(srt::CallSort, call::Call) = change_index_to(srt, call, srt.max_index + 1)
-add_stationary_call(srt::CallSort, call::Call) = change_index_to(srt, call, -1)
 function remove_call(srt::CallSort, call::Call)
     # note that for performance, we do not go through the calls with index higher than `call`
     # and decrement these indices to make sure the sort's max index stays as small

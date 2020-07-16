@@ -133,7 +133,7 @@ end
 function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; check_proper_usage=true, check_all_constraints_used=true)
     world_args, kernel_args = extract_world_args(gen_fn, args)
 
-    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
+    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args, ())
     begin_generate!(world, get_submap(constraints, :world))
     kernel_tr, kernel_weight = generate(gen_fn.kernel, (world, kernel_args...), get_submap(constraints, :kernel))
     world_weight = end_generate!(world, check_all_constraints_used)
@@ -152,7 +152,7 @@ end
 function Gen.simulate(gen_fn::UsingWorld, args::Tuple; check_proper_usage=true, check_all_constraints_used=true)
     world_args, kernel_args = extract_world_args(gen_fn, args)
 
-    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
+    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args, ())
     begin_simulate!(world)
     kernel_tr = simulate(gen_fn.kernel, (world, kernel_args...))
     end_simulate!(world, check_all_constraints_used)
@@ -170,7 +170,7 @@ end
 function Gen.propose(gen_fn::UsingWorld, args::Tuple)
     world_args, kernel_args = extract_world_args(gen_fn, args)
 
-    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
+    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args, ())
     begin_propose!(world)
     kernel_choices, kernel_weight, retval = propose(gen_fn.kernel, (world, kernel_args...))
     world_choices, world_weight = end_propose!(world)
@@ -186,7 +186,7 @@ end
 function Gen.assess(gen_fn::UsingWorld, args::Tuple, choices::ChoiceMap)
     world_args, kernel_args = extract_world_args(gen_fn, args)
 
-    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
+    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args, ())
     begin_assess!(world, get_submap(choices, :world))
     kernel_weight, retval = assess(gen_fn.kernel, (world, kernel_args...), get_submap(choices, :kernel))
     world_weight = end_assess!(world)

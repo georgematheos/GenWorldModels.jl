@@ -134,8 +134,8 @@ score from the world.state weight, and add the choices to the state's discard.
 Returns the choicemap of the removed trace.
 """
 function remove_call!(world, call)
-    tr = get_trace(world.calls, call)
-    world.calls = dissoc(world.calls, call)
+    tr = get_trace(world, call)
+    world.traces = dissoc(world.traces, call)
     score = get_score(tr)
 
     remove_call_from_sort!(world, call)
@@ -194,7 +194,7 @@ function update_world_args_and_enqueue_downstream!(world, new_world_args, world_
         end
     end
     if is_diff
-        world.calls = change_args_to(world.calls, new_world_args)
+        world.world_args = new_world_args
     end
 end
 
@@ -234,7 +234,7 @@ function enquque_all_specd_calls!(world)
             # if there is no value for this call, we'll have to generate it later,
             # so no need to add it to the update queue; generate will get called by the algorithm
             # when it is needed
-            if has_value_for_call(world, call) && !haskey(world.state.update_queue, call)
+            if has_val(world, call) && !haskey(world.state.update_queue, call)
                 enqueue!(world.state.update_queue, call, world.call_sort[call])
             end
         end
@@ -262,7 +262,7 @@ function update_or_generate!(world, call)
     enqueue!(world.state.updated_sort_indices, call_topological_position, call_topological_position)
     world.state.fringe_top = max(world.state.fringe_top, call_topological_position)
 
-    if !has_value_for_call(world, call)
+    if !has_val(world, call)
         push!(world.state.call_stack, call)
         run_gen_generate!(world, call, spec)
         pop!(world.state.call_stack)
@@ -292,7 +292,7 @@ Run `Gen.update` for the given call, and update the world
 and worldstate accordingly.
 """
 function run_gen_update!(world, call, spec, ext_const_addrs)
-    old_tr = get_trace(world.calls, call)
+    old_tr = get_trace(world, call)
     new_tr, weight, retdiff, discard = Gen.update(
         old_tr,
         (world, key(call)),
@@ -318,7 +318,7 @@ function run_gen_update!(world, call, spec, ext_const_addrs)
         world.total_score += get_score(new_tr) - get_score(old_tr)
     end
 
-    world.calls = assoc(world.calls, call, new_tr)
+    world.traces = assoc(world.traces, call, new_tr)
     world.state.original_choicemaps[call] = get_choices(old_tr)
     set_submap!(world.state.discard, addr(call) => key(call), discard)
 
@@ -450,7 +450,7 @@ function check_no_constrained_calls_deleted(world::World)
                 continue;
             end
             call = Call(mgf_addr, key)
-            if !has_value_for_call(world, call)
+            if !has_val(world, call)
                 error("Constraint was provided for $(mgf_addr => key) but this call is not in the world at end of update!")
             end
         end
@@ -544,7 +544,7 @@ but is being updated so it is now a lookup for `call`.  In this case we should h
 in the world.  In this case we should have `reason_for_call = :to_be_updated`
 """
 function lookup_or_generate_during_world_update!(world, call, reason_for_call)
-    if !has_value_for_call(world, call)
+    if !has_val(world, call)
         # add this call to the sort, at the end for now
         world.call_sort = add_call_to_end(world.call_sort, call)
     end
@@ -560,7 +560,7 @@ function lookup_or_generate_during_world_update!(world, call, reason_for_call)
         note_new_lookup!(world, call, world.state.call_stack)    
     end
 
-    return get_value_for_call(world, call)
+    return get_val(world, call)
 end
 
 """
@@ -572,7 +572,7 @@ or there is an `update` for a `lookup_or_generate` subtrace which changes
 the key value so that the new call is `call`.
 """
 function lookup_or_generate_during_kernel_update!(world, call)
-    if !has_value_for_call(world, call)
+    if !has_val(world, call)
         spec = get_subtree(world.state.spec, addr(call) => key(call))
         push!(world.state.call_stack, call)
         weight = generate_value!(world, call, spec)
@@ -581,7 +581,7 @@ function lookup_or_generate_during_kernel_update!(world, call)
         world.state.weight += weight
     end
     note_new_lookup!(world, call, world.state.call_stack)
-    return get_value_for_call(world, call)
+    return get_val(world, call)
 end
 
 function lookup_or_generate_during_update!(world, call, reason_for_call)

@@ -29,7 +29,7 @@ function get_ungenerated_constraints(world::World, constraints::ChoiceMap)
     for (address, key_to_submap) in get_submaps_shallow(constraints)
         for (key, submap) in get_submaps_shallow(key_to_submap)
             c = Call(address, key)
-            if !has_value_for_call(world, c)
+            if !has_val(world, c)
                 push!(unused_constraints, c)
             end
         end
@@ -84,13 +84,13 @@ end
 end_simulate!(args...) = end_generate!(args...)
 
 function lookup_or_generate_during_generate!(world, call)
-    if !has_value_for_call(world, call)
+    if !has_val(world, call)
         generate_value_during_generate!(world, call)
     end
 
     note_new_lookup!(world, call, world.state.call_stack)
 
-    return get_val(world.calls, call)
+    return get_val(world, call)
 end
 
 function generate_value_during_generate!(world, call)

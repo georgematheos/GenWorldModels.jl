@@ -227,7 +227,7 @@ end
 function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{MGFCallValChangeDiff}, ::EmptyChoiceMap, ::Selection)
     valdiff = argdiffs[1].diff
     new_call = args[1]
-    new_val = get_value_for_call(new_call.world, call(new_call))
+    new_val = get_val(new_call.world, call(new_call))
     new_tr = LookupOrGenerateTrace(new_call, new_val)
     (new_tr, 0., valdiff, EmptyChoiceMap())
 end

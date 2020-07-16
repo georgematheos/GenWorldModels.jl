@@ -17,9 +17,17 @@ abstract type WorldState end
 struct NoChangeWorldState <: WorldState end
 
 include("call.jl") # `Call` type
-include("calls.jl") # `Calls` data structure to store subtraces
+
+# special addresses for world args and getting the index of a OUPM object
+const _world_args_addr = :args
+const _get_index_addr = :index
+is_mgf_call(c::Call) = addr(c) !== _world_args_addr && addr(c) !== _get_index_addr
+
+# data structures
+include("traces.jl") # `Traces` data structure to store subtraces
 include("lookup_counts.jl") # `LookupCounts` data structure to store the dependency graph & the counts
 include("call_sort.jl") # `CallSort` data structure to maintain a topological numbering of the calls.
+include("id_table.jl") # Association between IDs and indices for OUPM types
 
 """
     World
@@ -31,41 +39,44 @@ for each argument it has been called on.
 Every memoized generative function for a given world has a specific address which
 is used to refer to it.
 """
-mutable struct World{addrs, GenFnTypes}
+mutable struct World{addrs, GenFnTypes, WorldArgnames}
     gen_fns::GenFnTypes # tuple of the generative functions for this world
     state::WorldState # a state representing what operation is currently being performed on the world (eg. update, generate)
-    calls::Calls
+    traces::Traces
+    world_args::NamedTuple{WorldArgnames}
     lookup_counts::LookupCounts # tracks how many times each call was performed, and which calls were performed from which
     call_sort::CallSort # a topological sort of which calls must be finished before the next can begin
+    id_table::IDTable # associations between IDs and objects
     total_score::Float64
     metadata_addr::Symbol # an address for `lookup_or_generate`s from this world in choicemaps
 end
 
-function World{addrs, GenFnTypes}(gen_fns, state, calls, lookup_counts, call_sort, total_score) where {addrs, GenFnTypes}
-    World{addrs, GenFnTypes}(gen_fns, state, calls, lookup_counts, call_sort, total_score, gensym("WORLD_LOOKUP"))
+function World{addrs, GenFnTypes, WorldArgnames}(gen_fns, state, traces, world_args, lookup_counts, call_sort, id_table, total_score) where {addrs, GenFnTypes, WorldArgnames}
+    World{addrs, GenFnTypes, WorldArgnames}(gen_fns, state, traces, world_args, lookup_counts, call_sort, id_table, total_score, gensym("WORLD_LOOKUP"))
 end
 
-World(w::World{A,G}) where {A,G} = World{A,G}(w.gen_fns, w.state, w.calls, w.lookup_counts, w.call_sort, w.total_score, w.metadata_addr)
+World(w::World{A,G,N}) where {A,G,N} = World{A,G,N}(w.gen_fns, w.state, w.traces, w.world_args, w.lookup_counts, w.call_sort, w.id_table, w.total_score, w.metadata_addr)
 
-function World{addrs, GenFnTypes}(gen_fns, world_args::NamedTuple) where {addrs, GenFnTypes}
-    w = World{addrs, GenFnTypes}(
+function World{addrs, GenFnTypes, WorldArgnames}(gen_fns, world_args::NamedTuple{WorldArgnames}, oupm_types::Tuple) where {addrs, GenFnTypes, WorldArgnames}
+    w = World{addrs, GenFnTypes, WorldArgnames}(
         gen_fns,
         NoChangeWorldState(),
-        Calls(addrs, gen_fns, world_args),
+        Traces(addrs, gen_fns),
+        world_args,
         LookupCounts(),
         CallSort(),
+        IDTable(oupm_types),
         0.
     )
+    # note a call for every world arg
     for (arg_address, _) in pairs(world_args)
-        call = Call(_world_args_addr, arg_address)
-        note_new_call!(w, call)
-        w.call_sort = add_stationary_call(w.call_sort, call)
+        note_new_call!(w, Call(_world_args_addr, arg_address))
     end
     return w
 end
 
-function World(addrs::NTuple{n, Symbol}, gen_fns::NTuple{n, Gen.GenerativeFunction}, world_args::NamedTuple) where {n}
-    World{addrs, typeof(gen_fns)}(gen_fns, world_args)
+function World(addrs::NTuple{n, Symbol}, gen_fns::NTuple{n, Gen.GenerativeFunction}, world_args::NamedTuple{Names}, oupm_types::Tuple) where {n, Names}
+    World{addrs, typeof(gen_fns), Names}(gen_fns, world_args, oupm_types)
 end
 
 # TODO: Could make this more informative by showing what calls it has in it
@@ -74,7 +85,7 @@ Base.show(io::IO, world::World{addrs, <:Any}) where {addrs} = print(io, "world{$
 metadata_addr(world::World) = world.metadata_addr
 
 # NOTE: this should never be called from within a generative function; these MUST use calls to `lookup_or_generate`
-_world_args(world::World) = get_args(world.calls)
+_world_args(world::World) = world.world_args
 
 # functions for tracking counts and dependency structure
 function note_new_call!(world, args...)
@@ -112,11 +123,41 @@ end
 @inline get_gen_fn(world::World, addr::Symbol) = get_gen_fn(world, Val(addr))
 @inline get_gen_fn(world::World, ::Call{addr}) where {addr} = get_gen_fn(world, addr)
 
-get_all_calls_which_look_up(world::World, call) = get_all_calls_which_look_up(world.lookup_counts, call)
-has_value_for_call(world::World, call::Call) = has_val(world.calls, call)
-get_value_for_call(world::World, call::Call) = get_val(world.calls, call)
-get_trace(world::World, call::Call) = get_trace(world.calls, call)
-total_score(world::World) = world.total_score
+@inline get_all_calls_which_look_up(world::World, call) = get_all_calls_which_look_up(world.lookup_counts, call)
+@inline get_trace(world::World, call::Call) = get_trace(world.traces, call)
+@inline total_score(world::World) = world.total_score
+@generated function get_val(world::World, call::Call{mgf_addr}) where {mgf_addr}
+    if mgf_addr == _world_args_addr
+        quote world.world_args[key(call)] end
+    elseif mgf_addr == _get_index_addr
+        quote get_idx(world.id_table, key(call)) end
+    else
+        quote get_retval(get_trace(world, call)) end
+    end
+end
+@generated function has_val(world::World, call::Call{mgf_addr}) where {mgf_addr}
+    if mgf_addr == _world_args_addr
+        quote haskey(world.world_args, key(call)) end
+    elseif mgf_addr == _get_index_addr
+        quote has_identifier(world.id_table, key(call)) end
+    else
+        quote has_trace(world.traces, call) end
+    end
+end
+
+# get the identifier for the given object in the world,
+# or create one if there is not currently one
+function lookup_or_generate_id_object(world::World, type::Type{<:OUPMType}, idx::Int)
+    id, new_table, is_new_idx = _lookup_or_generate_identifier(world.id_table, type, idx)
+    world.id_table = new_table
+    object = type(id)
+
+    if is_new_idx
+        note_new_call!(world, Call(_get_index_addr, object))
+    end
+
+    object
+end
 
 """
     generate_value!(world, call, constraints)
@@ -135,11 +176,11 @@ Returns the `weight` returned by the call to the `generate` (or whatever functio
 """
 function generate_value!(world, call, constraints)
     @assert !(world.state isa NoChangeWorldState)
-    @assert !has_value_for_call(world, call)
+    @assert !has_val(world, call)
 
     gen_fn = get_gen_fn(world, call)
     tr, weight = generate_fn(world.state)(gen_fn, (world, key(call)), constraints)
-    world.calls = assoc(world.calls, call, tr)
+    world.traces = assoc(world.traces, call, tr)
     note_new_call!(world, call)
     world.total_score += get_score(tr)
 
