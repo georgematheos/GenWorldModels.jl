@@ -139,7 +139,7 @@ end
     if mgf_addr == _world_args_addr
         quote haskey(world.world_args, key(call)) end
     elseif mgf_addr == _get_index_addr
-        quote has_identifier(world.id_table, key(call)) end
+        quote has_id(world.id_table, key(call)) end
     else
         quote has_trace(world.traces, call) end
     end

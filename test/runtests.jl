@@ -2,6 +2,7 @@ module GenWorldModelsTests
 using Gen
 using GenWorldModels
 using Test
+using UUIDs
 include("address_filter_choicemap.jl")
 # include("macros.jl")
 include("simple.jl")
@@ -12,5 +13,7 @@ include("factorial.jl")
 include("simple_dependency_updates.jl")
 include("world_args.jl")
 include("randomized_dependency_updates.jl")
+
+include("oupm_types.jl")
 
 end # module

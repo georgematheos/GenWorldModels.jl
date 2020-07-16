@@ -15,9 +15,9 @@ end
 @inline get_idx(table::IDTable, type::Type{<:OUPMType}, id::UUID) = get_idx(table, Symbol(type), id)
 @inline get_idx(table::IDTable, typename::Symbol, id::UUID) = table.id_to_idx[typename][id]
 
-@inline has_idx(table::IDTable, obj::T) where {T <: OUPMType} = has_idx(table, T, obj.id)
-@inline has_idx(table::IDTable, type::Type{<:OUPMType}, id::UUID) = has_idx(table, Symbol(type), id)
-@inline has_idx(table::IDTable, typename::Symbol, id::UUID) = haskey(table.id_to_idx[typename], id)
+@inline has_id(table::IDTable, obj::T) where {T <: OUPMType} = has_id(table, T, obj.id)
+@inline has_id(table::IDTable, type::Type{<:OUPMType}, id::UUID) = has_id(table, Symbol(type), id)
+@inline has_id(table::IDTable, typename::Symbol, id::UUID) = haskey(table.id_to_idx[typename], id)
 
 @inline function _lookup_or_generate_identifier(table::IDTable, type::Type{<:OUPMType}, idx::Int)
     _lookup_or_generate_identifier(table, Symbol(type), idx)

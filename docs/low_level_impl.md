@@ -56,7 +56,7 @@ for each associated OUPM type.
 ### Construct OUPMType objects
 To construct an OUPMType object, a user should use the syntax
 ```julia
-OUPMType(AudioSource, world, idx)
+AudioSource(world, idx)
 ```
 This will construct an `AudioSource` object by looking up the identifier
 associated with `idx` in the given `world` object.
