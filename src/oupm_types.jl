@@ -1,5 +1,13 @@
-abstract type OUPMType end
-(T::Type{<:OUPMType})(world, idx::Int) = lookup_or_generate_id_object(world, T, idx)
+abstract type OUPMType{T} end
+macro type(name::Symbol)
+    quote
+        struct $(esc(name)){T} <: OUPMType{T}
+            idx_or_id::T
+            $(esc(name))(x::Int) = new{Int}(x)
+            $(esc(name))(x::UUID) = new{UUID}(x)
+        end
+    end
+end
 
 abstract type OUPMMove end
 struct BirthMove <: OUPMMove

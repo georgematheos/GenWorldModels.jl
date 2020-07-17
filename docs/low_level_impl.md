@@ -57,7 +57,7 @@ for each associated OUPM type.
 
 In a generative function, we can call
 ```julia
-source::AudioSource{UUID} ~ lookup_or_generate(world[:AudioSource][idx])
+source::AudioSource{UUID} ~ lookup_or_generate(world[AudioSource][idx])
 ```
 to get the identifier representation of the audio source with index `idx`.
 To support this, for every OUPM type `T` associated with the world, we will
@@ -74,9 +74,16 @@ val ~ lookup_or_generate(world[:mgf_address][AudioSource(idx::Int)])
 ```
 is made, internally this is converted into code which has the same effect as
 ```julia
-source ~ lookup_or_generate(world[:AudioSource][idx])
+source ~ lookup_or_generate(world[AudioSource][idx])
 val ~ lookup_or_generate(world[:mgf_address][source])
 ```
+
+#### Automatic change at latent call for updates
+Likewise, if an update specifies an update for address `:world => :mgf_address => AudioSource{Int}(idx)`,
+this will internally be understood as an update for `:world => :mgf_address => ~lookup_or_generate(world[AudioSource][idx])`.
+Note that the identifier for this index will be the identifier AFTER the OUPM updates have been applied to the world.
+This ensures that any constraints specified for a given index are actually reflected in the choicemap
+for that index after the update is done.
 
 ### Get the index associated with an OUPM object
 In a generative function, we can get the index associated with
@@ -113,7 +120,7 @@ to be consistent with the OUPM move; we can automate this in the future.
 We implement the custom update spec
 ```julia
 struct UpdateWithOUPMMoves <: CustomUpdateSpec
-    moves::Tuple{Vararg{OUPMMove}}
+    moves::Tuple{Vararg{<:OUPMMove}}
     subspec::UpdateSpec
 end
 ```
@@ -126,3 +133,47 @@ struct BirthMove <: OUPMMove
 end
 # ... other move types ...
 ```
+
+### `UsingWorld` ChoiceMap
+The address for any MGF call which has an `OUPMType{UUID}` as an argument
+will be replaced by the corresponding `OUPMType{Int}` in the `UsingWorld` choicemap.
+
+### "Reverse update spec"
+When we return a "discard"/"reverse update spec", the namespace
+will also substitute in the indexed objects for MGF calls (rather than
+identifier objects).
+
+If open universe moves are performed, the reverse update spec
+will be an `UpdateWithOUPMMoves` where the "discard" is the subspec,
+and the `moves` implement the reverse of the OUPM moves passed in.
+In this case, the indices put for the MGF calls in the `subspec` will
+be the indices for the state of the world BEFORE the forward moves were performed.
+This ensures that when the reverse `UpdateWithOUPMMoves` is performed,
+since the `subspec` is applied after the reversing `moves`, that the
+`subspec` truly is a reverse-direction update spec.
+
+### Places id/idx conversion can occur
+1. When there is a call to `lookup_or_generate(world[AudioSource][idx])`
+2. When there is a call to `lookup_or_generate(world[:index][AudioSource{UUID}(id)])`
+3. When there is a call to `world[:address][AudioSource{Int}(idx)]`.  This gets converted to `world[:address][AudioSource{UUID}(id)]`.
+4. When returning the `choicemap`, MGF call addresses are moved from `:address => AudioSource{UUID}(id)` to `:address => AudioSource{Int}(idx)`
+5. When returning the `discard`, MGF call addresses are moved to the index for the state of the `id_table` before the update occurred
+6. When an update spec for `UsingWorld` has something at `:address => AudioSource{Int}(idx)`, this is viewed as `:address => AudioSource{UUID}(id)`
+7. When a `externally_constrained_addrs` selection for `UsingWorld` has something at `:address => AudioSource{Int}(idx)`, this is converted.
+
+It should be an error if in an update to `UsingWorld`, the `externally_constrained_addrs` selection or the `update_spec` both specify
+an update for an object in ID form and the same object in IDX form.
+
+## TODOs
+- Automatic conversion at `world[:address][IDX_FORM]` call
+- Automatic conversion at update call for updatespec
+- Automatic conversion at update call for extconstaddrs
+- Choicemap conversion
+- Discard conversion
+- Reverse update specs
+- Thorough testing
+
+Completed, but may be worth testing more carefully:
+- Handle `lookup_or_generate(world[AudioSource][idx])`
+- Implement open universe moves
+- Implement OUPM move type

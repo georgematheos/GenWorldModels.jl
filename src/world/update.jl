@@ -11,6 +11,7 @@ mutable struct UpdateWorldState <: WorldState
     externally_constrained_addrs::Selection
     weight::Float64 # total weight of all updates
     discard::DynamicChoiceMap # discard for all world calls
+    original_id_table::IDTable # id table from before this update started
     # the following fields are used for the update algorithm as described in `update_algorithm.md`
     update_queue::PriorityQueue{Call, Int} # queued updates
     fringe_bottom::Int # INVARIANT: every call with topological index < fringe_bottom has been updated if it needs to be
@@ -34,6 +35,7 @@ function UpdateWorldState(spec::Gen.UpdateSpec, externally_constrained_addrs::Se
         externally_constrained_addrs,
         0., # weight
         choicemap(), # discard
+        world.id_table,
         PriorityQueue{Call, Int}(), # update_queue
         0, 0, # fringe_bottom, fringe_top
         Set{Call}(), Set{Call}(), Dict{Call, Diff}(), # visited, calls_whose_dependencies_have_diffs, diffs
@@ -82,7 +84,7 @@ function address have changed in the world during an update.
 """
 struct WorldUpdateAddrDiff <: IndexDiff
     world::World
-    address::Symbol
+    address::CallAddr
 end
 function get_diff_for_index(diff::WorldUpdateAddrDiff, key)
     call = Call(diff.address, key)
@@ -563,8 +565,12 @@ in the world.  In this case we should have `reason_for_call = :to_be_updated`
 """
 function lookup_or_generate_during_world_update!(world, call, reason_for_call)
     if !has_val(world, call)
-        # add this call to the sort, at the end for now
-        world.call_sort = add_call_to_end(world.call_sort, call)
+        if is_mgf_call(call)
+            # add this call to the sort, at the end for now
+            world.call_sort = add_call_to_end(world.call_sort, call)
+        elseif addr(call) <: Type{<:OUPMType}
+            generate_id_for_call!(world, call)
+        end
     end
 
     # if we haven't yet handled the update for this call, we have to do that before proceeding

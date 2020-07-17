@@ -4,34 +4,41 @@ struct IDTable{typenames}
 end
 
 function IDTable(types::Tuple)
-    typenames = map(type -> Symbol(type), types)
+    typenames = map(oupm_type_name, types)
     id_to_idx_maps = Tuple(PersistentHashMap{UUID, Int}() for _=1:length(types))
     idx_to_id_maps = Tuple(PersistentHashMap{Int, UUID}() for _=1:length(types))
     IDTable{()}(NamedTuple(), NamedTuple())
     IDTable{typenames}(NamedTuple{typenames}(id_to_idx_maps), NamedTuple{typenames}(idx_to_id_maps))
 end
 
-@inline get_idx(table::IDTable, obj::T) where {T <: OUPMType} = get_idx(table, T, obj.id)
-@inline get_idx(table::IDTable, type::Type{<:OUPMType}, id::UUID) = get_idx(table, Symbol(type), id)
+oupm_type_name(T) = Symbol(Base.typename(T))
+
+@inline get_idx(table::IDTable, obj::T) where {T <: OUPMType} = get_idx(table, T, obj.idx_or_id)
+@inline get_idx(table::IDTable, type::Type{<:OUPMType}, id::UUID) = get_idx(table, oupm_type_name(type), id)
 @inline get_idx(table::IDTable, typename::Symbol, id::UUID) = table.id_to_idx[typename][id]
 
-@inline has_id(table::IDTable, obj::T) where {T <: OUPMType} = has_id(table, T, obj.id)
-@inline has_id(table::IDTable, type::Type{<:OUPMType}, id::UUID) = has_id(table, Symbol(type), id)
+@inline has_id(table::IDTable, obj::T) where {T <: OUPMType} = has_id(table, T, obj.idx_or_id)
+@inline has_id(table::IDTable, type::Type{<:OUPMType}, id::UUID) = has_id(table, oupm_type_name(type), id)
 @inline has_id(table::IDTable, typename::Symbol, id::UUID) = haskey(table.id_to_idx[typename], id)
 
-@inline function _lookup_or_generate_identifier(table::IDTable, type::Type{<:OUPMType}, idx::Int)
-    _lookup_or_generate_identifier(table, Symbol(type), idx)
-end
-function _lookup_or_generate_identifier(table::IDTable, typename::Symbol, idx::Int)
-    if haskey(table.idx_to_id[typename], idx)
-        (table.idx_to_id[typename][idx], table, false)
-    else
-        id = UUIDs.uuid4()
-        new_table = insert_id(table, typename, idx, id)
-        (id, new_table, true)
-    end
+@inline has_idx(table::IDTable, type::Type{<:OUPMType}, idx::Int) = has_idx(table, oupm_type_name(type), idx)
+@inline has_idx(table::IDTable, typename::Symbol, idx::Int) = haskey(table.idx_to_id[typename], idx)
+@inline get_id(table::IDTable, type::Type{<:OUPMType}, idx::Int) = get_id(table, oupm_type_name(type), idx)
+@inline get_id(table::IDTable, typename::Symbol, idx::Int) = table.idx_to_id[typename][idx]
+
+@inline add_identifier_for(table::IDTable, type::Type{<:OUPMType}, idx::Int) = add_identifier_for(table, oupm_type_name(type), idx)
+function add_identifier_for(table::IDTable, typename::Symbol, idx::Int)
+    id = UUIDs.uuid4()
+    new_table = insert_id(table, typename, idx, id)
+    return (new_table, id)
 end
 
+"""
+    insert_id(table, typename, idx, id)
+
+Associate the `idx` with the given `id` and the `id` with the `idx`,
+potentially overwriting the current associations for this `id` and `idx`.
+"""
 function insert_id(table::IDTable, typename::Symbol, idx::Int, id::UUID)
     new_id_to_idx_for_type = assoc(table.id_to_idx[typename], id, idx)
     new_idx_to_id_for_type = assoc(table.idx_to_id[typename], idx, id)
@@ -40,10 +47,23 @@ function insert_id(table::IDTable, typename::Symbol, idx::Int, id::UUID)
     IDTable(new_id_to_idx, new_idx_to_id)
 end
 
-function move_all_between(table::IDTable, typename::Symbol; min, inc, max=Inf)
+"""
+    move_all_between(table::IDTable, changed_ids::Set, typename::Symbol; min::Int, Inc::Int, max=Inf)
+
+Change the id `table` so that all the ids currently associated
+with indices between `min` and `max` (inclusive) have their associated indices
+changed to be the current associated index plus `inc`.  (Ie. `new_idx = current_idx + inc`.)
+Push every identifier whose index was changed into the set `changed_ids`.
+Returns `new_table`.
+
+This update may result in some indices which previously had associated identifiers
+now having no associated identifier.
+The update may also overwrite current associations for indices in the range
+(min+inc,...min) or (max...max+inc).
+"""
+function move_all_between(table::IDTable, changed_ids::Set, typename::Symbol; min, inc, max=Inf)
     id_to_idx_for_type = table.id_to_idx[typename]
     idx_to_id_for_type = table.idx_to_id[typename]
-    changed_ids = UUID[]
 
     # TODO: don't scan the full table; only look at those which we actually need to change
     for (idx, id) in table.idx_to_id[typename]
@@ -68,5 +88,13 @@ function move_all_between(table::IDTable, typename::Symbol; min, inc, max=Inf)
     new_id_to_idx = merge(table.id_to_idx, NamedTuple{(typename,)}((id_to_idx_for_type,)))
     new_idx_to_id = merge(table.idx_to_id, NamedTuple{(typename,)}((idx_to_id_for_type,)))
     new_table = IDTable(new_id_to_idx, new_idx_to_id)
-    return (new_table, changed_ids)
+    return new_table
+end
+
+function move_identifier_from_index_to_index(table::IDTable, typename::Symbol; from_idx, to_idx)
+    id_to_idx_for_type = table.id_to_idx[typename]
+    idx_to_id_for_type = table.idx_to_id[typename]
+    id = idx_to_id_for_type[from_idx]
+    id_to_idx_for_type = assoc(id_to_idx_for_type, id, to_idx)
+    idx_to_id_for_type = assoc(idx_to_id_for_type, to_idx, )
 end

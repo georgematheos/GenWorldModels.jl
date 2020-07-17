@@ -85,7 +85,11 @@ end_simulate!(args...) = end_generate!(args...)
 
 function lookup_or_generate_during_generate!(world, call)
     if !has_val(world, call)
-        generate_value_during_generate!(world, call)
+        if is_mgf_call(call)
+            generate_value_during_generate!(world, call)
+        elseif addr(call) isa Type{<:OUPMType}
+            generate_id_for_call!(world, call)
+        end
     end
 
     note_new_lookup!(world, call, world.state.call_stack)

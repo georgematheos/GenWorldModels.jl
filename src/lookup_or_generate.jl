@@ -19,7 +19,7 @@ memoized_generative_function = world[:mgf_address]
 struct MemoizedGenerativeFunction{WorldType, addr}
     world::WorldType
 end
-MemoizedGenerativeFunction(world::WorldType, addr::Symbol) where {WorldType} = MemoizedGenerativeFunction{WorldType, addr}(world)
+MemoizedGenerativeFunction(world::WorldType, addr::CallAddr) where {WorldType} = MemoizedGenerativeFunction{WorldType, addr}(world)
 addr(mgf::MemoizedGenerativeFunction{<:Any, a}) where {a} = a
 world(mgf::MemoizedGenerativeFunction) = mgf.world
 
@@ -40,14 +40,14 @@ struct MemoizedGenerativeFunctionCall{WorldType, addr}
     world::WorldType
     key
 end
-MemoizedGenerativeFunctionCall(world::WorldType, addr::Symbol, key) where {WorldType} = MemoizedGenerativeFunctionCall{WorldType, addr}(world, key)
+MemoizedGenerativeFunctionCall(world::WorldType, addr::CallAddr, key) where {WorldType} = MemoizedGenerativeFunctionCall{WorldType, addr}(world, key)
 addr(::MemoizedGenerativeFunctionCall{<:Any, a}) where {a} = a
 key(mgf::MemoizedGenerativeFunctionCall) = mgf.key
 call(mgf::MemoizedGenerativeFunctionCall) = Call(addr(mgf), key(mgf))
 
 # world[:addr] gives a memoized gen function
 # world[:addr][key] gives a memoized gen function call
-Base.getindex(world::World, addr::Symbol) = MemoizedGenerativeFunction(world, addr)
+Base.getindex(world::World, addr::CallAddr) = MemoizedGenerativeFunction(world, addr)
 Base.getindex(mgf::MemoizedGenerativeFunction, key) = MemoizedGenerativeFunctionCall(world(mgf), addr(mgf), key)
 
 ###########################################
@@ -77,13 +77,13 @@ no_addr_change_error() = error("Changing the address of a `lookup_or_generate` i
 Base.getindex(world::World, addr::Diffed) = no_addr_change_error()
 Base.getindex(world::Diffed{<:World}, addr::Diffed) = no_addr_change_error()
 
-function Base.getindex(world::Diffed{<:World, WorldUpdateDiff}, addr::Symbol)
+function Base.getindex(world::Diffed{<:World, WorldUpdateDiff}, addr::CallAddr)
     mgf = strip_diff(world)[addr]
     diff = get_diff(world)[addr] # will be a WorldUpdateAddrDiff
     Diffed(mgf, diff)
 end
-Base.getindex(world::Diffed{<:World, UnknownChange}, addr::Symbol) = Diffed(strip_diff(world)[addr], UnknownChange())
-Base.getindex(world::Diffed{<:World, NoChange}, addr::Symbol) = Diffed(strip_diff(world)[addr], NoChange())
+Base.getindex(world::Diffed{<:World, UnknownChange}, addr::CallAddr) = Diffed(strip_diff(world)[addr], UnknownChange())
+Base.getindex(world::Diffed{<:World, NoChange}, addr::CallAddr) = Diffed(strip_diff(world)[addr], NoChange())
 
 function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateAddrDiff}, key)
     mgf_call = strip_diff(mgf)[key]

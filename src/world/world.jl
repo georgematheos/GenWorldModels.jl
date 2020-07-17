@@ -21,7 +21,9 @@ include("call.jl") # `Call` type
 # special addresses for world args and getting the index of a OUPM object
 const _world_args_addr = :args
 const _get_index_addr = :index
-is_mgf_call(c::Call) = addr(c) !== _world_args_addr && addr(c) !== _get_index_addr
+@inline function is_mgf_call(c::Call)
+    addr(c) isa Symbol && addr(c) !== _world_args_addr && addr(c) !== _get_index_addr
+end
 
 # data structures
 include("traces.jl") # `Traces` data structure to store subtraces
@@ -126,37 +128,41 @@ end
 @inline get_all_calls_which_look_up(world::World, call) = get_all_calls_which_look_up(world.lookup_counts, call)
 @inline get_trace(world::World, call::Call) = get_trace(world.traces, call)
 @inline total_score(world::World) = world.total_score
-@generated function get_val(world::World, call::Call{mgf_addr}) where {mgf_addr}
-    if mgf_addr == _world_args_addr
+@generated function get_val(world::World, call::Call{call_addr}) where {call_addr}
+    if call_addr == _world_args_addr
         quote world.world_args[key(call)] end
-    elseif mgf_addr == _get_index_addr
+    elseif call_addr == _get_index_addr
         quote get_idx(world.id_table, key(call)) end
+    elseif call_addr isa Type{<:OUPMType}
+        quote call_addr(get_id(world.id_table, call_addr, key(call))) end
     else
         quote get_retval(get_trace(world, call)) end
     end
 end
-@generated function has_val(world::World, call::Call{mgf_addr}) where {mgf_addr}
-    if mgf_addr == _world_args_addr
+@generated function has_val(world::World, call::Call{call_addr}) where {call_addr}
+    if call_addr == _world_args_addr
         quote haskey(world.world_args, key(call)) end
-    elseif mgf_addr == _get_index_addr
+    elseif call_addr == _get_index_addr
         quote has_id(world.id_table, key(call)) end
+    elseif call_addr <: Type{<:OUPMType}
+        quote has_idx(world.id_table, call_addr, key(call)) end
     else
         quote has_trace(world.traces, call) end
     end
 end
 
-# get the identifier for the given object in the world,
-# or create one if there is not currently one
-function lookup_or_generate_id_object(world::World, type::Type{<:OUPMType}, idx::Int)
-    id, new_table, is_new_idx = _lookup_or_generate_identifier(world.id_table, type, idx)
-    world.id_table = new_table
-    object = type(id)
+"""
+    generate_id_for_call!(world, call)
 
-    if is_new_idx
-        note_new_call!(world, Call(_get_index_addr, object))
-    end
-
-    object
+Given a `call` whose address is an open universe type `T`, and whose
+key is an index `idx`, where there is currently no identifier associated
+with `T(idx)` in the world, generate an identifier for this.
+"""
+function generate_id_for_call!(world::World, call::Call)
+    T = addr(call)
+    (world.id_table, id) = add_identifier_for(world.id_table, T, key(call))
+    note_new_call!(world, call)
+    note_new_call!(world, Call(_get_index_addr, T(id)))
 end
 
 """

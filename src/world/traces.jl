@@ -34,7 +34,7 @@ function FunctionalCollections.dissoc(traces::Traces, call::Call{mgf_addr}) wher
     Traces(new_traces)
 end
 
-has_trace(traces::Traces, call::Call) = haskey(traces.traces[addr(call)], key(call))
+has_trace(traces::Traces, call::Call) = is_mgf_call(call) && haskey(traces.traces[addr(call)], key(call))
 get_trace(traces::Traces, call::Call) = traces.traces[addr(call)][key(call)]
 traces_for_mgf(traces::Traces, mgf_addr::Symbol) = traces.traces[mgf_addr]
 function all_traces(traces::Traces)
