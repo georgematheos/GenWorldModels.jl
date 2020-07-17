@@ -6,10 +6,10 @@
 
 At the beginning of the model, we declare the open universe types as Julia types.
 Later we can add syntactic sugar, but the underlying representation is that
-each such object stores an `identifier`:
+each such object stores either an identifier or an index:
 ```julia
-struct AudioSource <: OUPMType
-  id::UUID
+struct AudioSource{T} <: OUPMType{T}
+  id::T
 end
 ```
 
@@ -53,24 +53,39 @@ with associated open universe types, it will create a bidirectional
 functional collection lookup table between identifiers and indices
 for each associated OUPM type.
 
-### Construct OUPMType objects
-To construct an OUPMType object, a user should use the syntax
+### Changing index --> identifier
+
+In a generative function, we can call
 ```julia
-AudioSource(world, idx)
+source::AudioSource{UUID} ~ lookup_or_generate(world[:AudioSource][idx])
 ```
-This will construct an `AudioSource` object by looking up the identifier
-associated with `idx` in the given `world` object.
-If this `idx` is not currently associated, the world
-will generate an identifer and fill in the entry in its lookup table.
+to get the identifier representation of the audio source with index `idx`.
+To support this, for every OUPM type `T` associated with the world, we will
+add the namespace `Symbol(T)` to the supported calls.  This call
+either looks up the identifier for the given `idx` if one exists, or
+generates one and stores it in the world lookup table if none exists yet.
+Note that this means each open universe type `T` must have a different name.
+
+#### Automatic change at latent call
+
+Whenever a call
+```julia
+val ~ lookup_or_generate(world[:mgf_address][AudioSource(idx::Int)])
+```
+is made, internally this is converted into code which has the same effect as
+```julia
+source ~ lookup_or_generate(world[:AudioSource][idx])
+val ~ lookup_or_generate(world[:mgf_address][source])
+```
 
 ### Get the index associated with an OUPM object
 In a generative function, we can get the index associated with
-an object like `source::AudioSource` by calling
+an object like `source::AudioSource{UUID}` by calling
 ```julia
 idx ~ lookup_or_generate(world[:index][source])
 ```
 
-To support this internally, we will augment the `Calls` object to
+To support this internally, we will augment world to
 treat `:index` as a special namespace which has its value returned by triggering
 a lookup in the lookup table.  It is an error if the identifier for
 `source` is not recognized.
