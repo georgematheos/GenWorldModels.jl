@@ -144,7 +144,7 @@ end
         quote haskey(world.world_args, key(call)) end
     elseif call_addr == _get_index_addr
         quote has_id(world.id_table, key(call)) end
-    elseif call_addr <: Type{<:OUPMType}
+    elseif call_addr isa Type{<:OUPMType}
         quote has_idx(world.id_table, call_addr, key(call)) end
     else
         quote has_trace(world.traces, call) end

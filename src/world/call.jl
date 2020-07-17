@@ -5,10 +5,10 @@ const CallAddr = Union{Symbol, Type{<:OUPMType}}
 
 Represents calling the gen fn with address `addr` on argument `key`
 """
-struct Call{addr}
-    key
+struct Call{addr, KeyType}
+    key::KeyType
 end
-Call(addr, key) = Call{addr}(key)
+Call(addr, key::T) where {T} = Call{addr, T}(key)
 Call(p::Pair{<:CallAddr, <:Any}) = Call(p[1], p[2])
 key(call::Call) = call.key
 addr(call::Call{a}) where {a} = a

@@ -50,6 +50,19 @@ call(mgf::MemoizedGenerativeFunctionCall) = Call(addr(mgf), key(mgf))
 Base.getindex(world::World, addr::CallAddr) = MemoizedGenerativeFunction(world, addr)
 Base.getindex(mgf::MemoizedGenerativeFunction, key) = MemoizedGenerativeFunctionCall(world(mgf), addr(mgf), key)
 
+# if the key is an OUPM object in index form, we should automatically convert
+# to identifier form
+function Base.getindex(mgf::MemoizedGenerativeFunction, key::OUPMType{Int})
+    T = oupm_type(key)
+    idx = key.idx_or_id
+    get_id_call = Call(T, idx)
+    if !has_val(mgf.world, get_id_call)
+        generate_id_for_call!(mgf.world, get_id_call)
+    end
+    id_obj = get_val(mgf.world, get_id_call)
+    return mgf[id_obj]
+end
+
 ###########################################
 # Argdiff propagation for MGF and MGFCall #
 ###########################################

@@ -165,7 +165,7 @@ It should be an error if in an update to `UsingWorld`, the `externally_constrain
 an update for an object in ID form and the same object in IDX form.
 
 ## TODOs
-- Automatic conversion at `world[:address][IDX_FORM]` call
+- Argdiff propagation for conversion in `world[:address][IDX_FORM]`
 - Automatic conversion at update call for updatespec
 - Automatic conversion at update call for extconstaddrs
 - Choicemap conversion
@@ -174,6 +174,7 @@ an update for an object in ID form and the same object in IDX form.
 - Thorough testing
 
 Completed, but may be worth testing more carefully:
+- Automatic conversion at `world[:address][IDX_FORM]` call
 - Handle `lookup_or_generate(world[AudioSource][idx])`
 - Implement open universe moves
 - Implement OUPM move type

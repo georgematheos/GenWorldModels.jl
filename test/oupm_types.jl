@@ -1,6 +1,6 @@
 @type AudioSource
 
-@gen (static) function get_volume(world::World, source::AudioSource)
+@gen (static) function get_volume(world::World, source::AudioSource{UUID})
     vol ~ uniform_discrete(20, 100)
     idx ~ lookup_or_generate(world[:index][source])
     return idx => vol
@@ -17,11 +17,21 @@ end
 
 @load_generated_functions()
 
-@testset "open universe types - basics" begin
+get_vols_and_inds = UsingWorld(
+    _vol_ind_kernel,
+    :volume => get_volume;
+    oupm_types=(AudioSource,)
+)
+
+@testset "open universe types" begin
+@testset "type construction" begin
     @test AudioSource(1) isa AudioSource{Int}
     @test AudioSource(uuid4()) isa AudioSource{UUID}
     @test_throws MethodError AudioSource("i am a string")
-
+    @test GenWorldModels.oupm_type(AudioSource(1)) == AudioSource
+    @test GenWorldModels.oupm_type(AudioSource(uuid4())) == AudioSource
+end
+@testset "simple lookup_or_generate conversion" begin
     @gen function _simple_convert(world)
         src ~ lookup_or_generate(world[AudioSource][1])
         idx ~ lookup_or_generate(world[:index][src])
@@ -33,13 +43,16 @@ end
     @test get_retval(tr)[1] == 1
     @test get_retval(tr)[2] isa AudioSource{UUID}
 end
+@testset "automatic conversion at lookup_or_generate for generate" begin
+    tr = simulate(get_vols_and_inds, ())
+    inds_to_vols = get_retval(tr)
+    for ((out_index, _), in_index) in zip(inds_to_vols, tr[:kernel => :samples])
+        @test out_index == in_index
+    end
+end
+end
 
 # @testset "open universe types - `UsingWorld` functionality"
-#     get_vols_and_inds = UsingWorld(
-#         _vol_ind_kernel,
-#         :volume => get_volume;
-#         oupm_types=(AudioSource,)
-#     )
 #     tr = simulate(get_vols_and_inds, ())
 #     idx = tr[:kernel => :samples][1]
 #     source = AudioSource(idx)
