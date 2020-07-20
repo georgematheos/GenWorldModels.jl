@@ -66,13 +66,16 @@ function move_all_between(table::IDTable, changed_ids::Set, typename::Symbol; mi
     idx_to_id_for_type = table.idx_to_id[typename]
 
     # TODO: don't scan the full table; only look at those which we actually need to change
+    actual_max = 0
     for (idx, id) in table.idx_to_id[typename]
         if idx >= min && idx <= max
+            actual_max = actual_max > idx ? actual_max : idx
             id_to_idx_for_type = assoc(id_to_idx_for_type, id, idx + inc)
             idx_to_id_for_type = assoc(idx_to_id_for_type, idx + inc, id)
             push!(changed_ids, id)
         end
     end
+    max = actual_max
     # We have not changed the idx for each id for indices in the range,
     # and changed the id for indices in the range (min+inc, max+inc).
     # Now we need to change the ids for indices in range (min, min+inc-1) and (max+inc+1, max).

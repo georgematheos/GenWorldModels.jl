@@ -264,7 +264,9 @@ end
     spec::UpdateWithOUPMMovesSpec, externally_constrained_addrs::Selection;
     check_no_constrained_calls_deleted=true
 )
-    _update(tr, args, argdiffs, spec.subspec, spec.moves, externally_constrained_addrs, check_no_constrained_calls_deleted)
+    (new_tr, weight, retdiff, discard) = _update(tr, args, argdiffs, spec.subspec, spec.moves, externally_constrained_addrs, check_no_constrained_calls_deleted)
+    reverse_update_spec = UpdateWithOUPMMovesSpec(reverse_moves(spec.moves), discard)
+    return (new_tr, weight, retdiff, reverse_update_spec)
 end
 
 # TODO: gradients?

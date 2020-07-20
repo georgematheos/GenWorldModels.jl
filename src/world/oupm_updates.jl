@@ -94,3 +94,12 @@ function perform_oupm_move!(world, spec::MoveMove)
 
     return changed_ids
 end
+
+function reverse_moves(moves::Tuple)
+    Tuple(reverse_move(moves[j]) for j=length(moves):-1:1)
+end
+reverse_move(m::BirthMove) = DeathMove(m.type, m.idx)
+reverse_move(m::DeathMove) = BirthMove(m.type, m.idx)
+reverse_move(m::SplitMove) = MergeMove(m.type, m.from_idx, m.to_idx1, m.to_idx2)
+reverse_move(m::MergeMove) = SplitMove(m.type, m.to_idx, m.from_idx1, m.from_idx2)
+reverse_move(m::MoveMove) = MoveMove(m.type, m.to_idx, m.from_idx)

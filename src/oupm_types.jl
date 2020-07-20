@@ -75,3 +75,7 @@ struct UpdateWithOUPMMovesSpec <: Gen.CustomUpdateSpec
     moves::Tuple{Vararg{<:OUPMMove}}
     subspec::Gen.UpdateSpec
 end
+
+export @type
+export BirthMove, DeathMove, SplitMove, MergeMove, MoveMove
+export UpdateWithOUPMMovesSpec

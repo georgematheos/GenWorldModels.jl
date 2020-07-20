@@ -93,4 +93,63 @@ end
 
     # TODO: test updating with diffs enabled
 end
+
+@testset "oupm moves - basics" begin
+    constraints = choicemap(
+        (:kernel => :num_sources, 5),
+        (:kernel => :num_samples, 2),
+        (:kernel => :samples => 1, 2),
+        (:kernel => :samples => 2, 3)
+    )
+    tr, weight = generate(get_vols_and_inds, (), constraints)
+    @test isapprox(weight, -(log(5) + log(2) + 2*log(5)))
+    ch = get_choices(tr)
+
+    ### BIRTH ###
+
+    # birth a new object at index 3.  Since we are looking up index 3 (but not index 4), this means the new index 3 will be
+    # generated newly, and we discard the old index 3 (which is now at index 4 and is not looked up).
+    spec = UpdateWithOUPMMovesSpec((BirthMove(AudioSource, 3),), choicemap((:kernel => :num_sources, 6)))
+    new_tr, weight, _, reverse_move = update(tr, (), (), spec, AllSelection())
+    newch = get_choices(new_tr)
+    s2 = AudioSource(2); s3 = AudioSource(3)
+    @test get_subtree(newch, :world => :volume => s2) == get_subtree(ch, :world => :volume => s2)
+    @test length(collect(get_subtrees_shallow(get_subtree(newch, :world => :volume)))) == 2
+    @test new_tr[:world => :volume => s3] != tr[:world => :volume => s3] # should have been regenerated
+    # generating weight not included since this is cancelled out by the Q distribution
+    expected_weight = -logpdf(normal, tr[:world => :volume => s3 => :vol], 100, 4) + 2*(log(1/6) - log(1/5))
+    @test isapprox(expected_weight, weight)
+    @test new_tr[][1] == tr[][1]
+    @test new_tr[][2] != tr[][2]
+
+    @test reverse_move isa UpdateWithOUPMMovesSpec
+    @test reverse_move.moves == (DeathMove(AudioSource, 3),)
+    expected_reverse_constraints = choicemap((:kernel => :num_sources, 5))
+    set_submap!(expected_reverse_constraints, :world => :volume => s3, get_submap(ch, :world => :volume => s3))
+    @test reverse_move.subspec == expected_reverse_constraints
+
+    # birth a new object at index 2.  Should generate new trace at index 2, move current trace at 2 to 3, and discard current 3.
+    spec = UpdateWithOUPMMovesSpec((BirthMove(AudioSource, 2),), choicemap((:kernel => :num_sources, 6)))
+    new_tr, weight, _, reverse_move = update(tr, (), (), spec, AllSelection())
+    newch = get_choices(new_tr)
+    @test get_subtree(newch, :world => :volume => s3) == get_subtree(ch, :world => :volume => s2)
+    @test length(collect(get_subtrees_shallow(get_subtree(newch, :world => :volume)))) == 2
+    @test new_tr[:world => :volume => s2] != tr[:world => :volume => s2] # should have been regenerated
+    expected_weight = -logpdf(normal, tr[:world => :volume => s3 => :vol], 100, 4) + 2*(log(1/6) - log(1/5))
+    @test isapprox(expected_weight, weight)
+    @test new_tr[][2].second == tr[][1].second
+    @test new_tr[][1] != tr[][1]
+
+    @test reverse_move isa UpdateWithOUPMMovesSpec
+    @test reverse_move.moves == (DeathMove(AudioSource, 2),)
+    expected_reverse_constraints = choicemap((:kernel => :num_sources, 5))
+    set_submap!(expected_reverse_constraints, :world => :volume => s3, get_submap(ch, :world => :volume => s3))
+    @test reverse_move.subspec == expected_reverse_constraints
+    # display(discard)
+    # println("exp:")
+    # display(expected_discard)
+
+
+end
+
 end

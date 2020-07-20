@@ -47,7 +47,7 @@ struct ConvertKeyAtDepthAddressTree{LT, depth, F, B} <: Gen.AddressTree{LT}
     fwd_convert::F
     bwd_convert::B
 end
-function ConvertKeyAtDepthAddressTree{LT, depth}(tree::Gen.AddressTree{LT}, f::F, b::B) where {LT, depth, F, B}
+function ConvertKeyAtDepthAddressTree{LT, depth}(tree, f::F, b::B) where {LT, depth, F, B}
     ConvertKeyAtDepthAddressTree{LT, depth, F, B}(tree, f, b)
 end
 
