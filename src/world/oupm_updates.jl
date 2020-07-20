@@ -20,7 +20,7 @@ function perform_oupm_move!(world, spec::BirthMove)
 end
 function perform_oupm_move!(world, spec::DeathMove)
     changed_ids = Set{UUID}()
-    move_all_between!(world, changed_ids, spec.type; min=spec.idx, inc=-1)
+    move_all_between!(world, changed_ids, spec.type; min=spec.idx+1, inc=-1)
     return changed_ids
 end
 function perform_oupm_move!(world, spec::SplitMove)

@@ -68,8 +68,8 @@ function move_all_between(table::IDTable, changed_ids::Set, typename::Symbol; mi
     # TODO: don't scan the full table; only look at those which we actually need to change
     actual_max = 0
     for (idx, id) in table.idx_to_id[typename]
+        actual_max = actual_max > idx ? actual_max : idx
         if idx >= min && idx <= max
-            actual_max = actual_max > idx ? actual_max : idx
             id_to_idx_for_type = assoc(id_to_idx_for_type, id, idx + inc)
             idx_to_id_for_type = assoc(idx_to_id_for_type, idx + inc, id)
             push!(changed_ids, id)
