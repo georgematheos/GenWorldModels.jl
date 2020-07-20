@@ -16,7 +16,12 @@ Gen.get_score(tr::UsingWorldTrace) = tr.score
 Gen.get_gen_fn(tr::UsingWorldTrace) = tr.gen_fn
 
 function Gen.get_choices(tr::UsingWorldTrace)
-    full_choices = StaticChoiceMap((kernel=get_choices(tr.kernel_tr), world=get_choices(tr.world)))
+    full_choices = StaticChoiceMap(
+        (
+            kernel=get_choices(tr.kernel_tr),
+            world=to_idx_repr(get_choices(tr.world), tr.world.id_table)
+        )
+    )
     
     # return a choicemap which filters out all the choices addressed with `metadata_addr`,
     # since these are just used for internal tracking and should not be exposed
@@ -50,16 +55,16 @@ function Base.getindex(tr::UsingWorldTrace, addr::Pair)
     if first == :kernel
         return tr.kernel_tr[second]
     elseif first == :world
-
         # TODO: if there is only one call for a MGF, we should be able to just look up that address
 
         mgf_addr, rest = second
         try 
             if rest isa Pair
                 key, remaining = rest
+                key = convert_key_to_id_form(key, tr.world.id_table)
                 return get_trace(tr.world, Call(mgf_addr, key))[remaining]
             else
-                return get_trace(tr.world, Call(mgf_addr, rest))[]
+                return get_trace(tr.world, Call(mgf_addr, convert_key_to_id_form(rest, tr.world.id_table)))[]
             end
         catch
             key = rest isa Pair ? rest[1] : rest
@@ -214,19 +219,19 @@ function _update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
     main_spec::Gen.UpdateSpec, oupm_moves::Tuple, externally_constrained_addrs::Selection,
     check_no_constrained_calls_deleted
 )
-    world = World(tr.world) # shallow copy of the world object
-
     world_args, kernel_args = extract_world_args(tr.gen_fn, args)
     world_argdiffs, argdiffs = extract_world_args(tr.gen_fn, argdiffs)
 
-    # tell the world we are doing an update, and have it update all the values
-    # for the constraints for values it has already generated
-    world_diff = begin_update!(world,
-        get_subtree(main_spec, :world),
-        oupm_moves,
-        get_subtree(externally_constrained_addrs, :world),
-        world_args, world_argdiffs
-    )
+    # tell the world we are doing an update, and have it perform any needed open
+    # universe moves, and update the world args
+    # will return a new world object with these updates applied
+    world = begin_update(tr.world, oupm_moves, world_args, world_argdiffs)
+
+    # update all the nodes in the world.  pass in the updatespec and externally_constrained_addrs
+    # converted so that they use identifier representation for objects
+    id_spec = to_id_repr(get_subtree(main_spec, :world), world.id_table)
+    id_ext_const_addrs = to_id_repr(get_subtree(externally_constrained_addrs, :world), world.id_table)
+    world_diff = update_mgf_calls!(world, id_spec, id_ext_const_addrs)
 
     (new_kernel_tr, kernel_weight, kernel_retdiff, kernel_discard) = update(
         tr.kernel_tr, (world, kernel_args...), (world_diff, argdiffs...), get_subtree(main_spec, :kernel), get_subtree(externally_constrained_addrs, :kernel)
@@ -237,11 +242,15 @@ function _update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
     new_score = get_score(new_kernel_tr) + total_score(world)
     new_tr = UsingWorldTrace(new_kernel_tr, world, new_score, kernel_args, tr.gen_fn)
     weight = kernel_weight + world_weight
-    discard = StaticChoiceMap((world=world_discard, kernel=kernel_discard))
+    discard = StaticChoiceMap(
+        (
+            world=to_idx_repr(world_discard, tr.world.id_table), # use the id_table from the trace's world, so we have the pre-update idx association
+            kernel=kernel_discard
+        )
+    )
     discard = AddressFilterChoiceMap(discard, addr -> addr != metadata_addr(world))
 
     (new_tr, weight, kernel_retdiff, discard)
-
 end
 
 # TODO: these kwargs won't usually propagate through multiple update calls as is

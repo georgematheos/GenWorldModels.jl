@@ -18,10 +18,9 @@ end
 Gen.get_subtree(c::MemoizedGenerativeFunctionChoiceMap, addr::Pair) = Gen._get_subtree(c, addr)
 Gen.get_values_shallow(c::MemoizedGenerativeFunctionChoiceMap) = ()
 
-# TODO: store subtraces in a way s.t. we can avoid this filter call and do a direct lookup
 function Gen.get_subtrees_shallow(c::MemoizedGenerativeFunctionChoiceMap)
     (
-        lookup_key => get_choices(subtrace)
+        (lookup_key, get_choices(subtrace))
         for (lookup_key, subtrace) in traces_for_mgf(c.world.traces, c.addr)
     )
 end

@@ -26,10 +26,10 @@ const _get_index_addr = :index
 end
 
 # data structures
-include("traces.jl") # `Traces` data structure to store subtraces
-include("lookup_counts.jl") # `LookupCounts` data structure to store the dependency graph & the counts
-include("call_sort.jl") # `CallSort` data structure to maintain a topological numbering of the calls.
-include("id_table.jl") # Association between IDs and indices for OUPM types
+include("data_structures/traces.jl") # `Traces` data structure to store subtraces
+include("data_structures/lookup_counts.jl") # `LookupCounts` data structure to store the dependency graph & the counts
+include("data_structures/call_sort.jl") # `CallSort` data structure to maintain a topological numbering of the calls.
+include("data_structures/id_table.jl") # Association between IDs and indices for OUPM types
 
 """
     World
@@ -163,6 +163,7 @@ function generate_id_for_call!(world::World, call::Call)
     (world.id_table, id) = add_identifier_for(world.id_table, T, key(call))
     note_new_call!(world, call)
     note_new_call!(world, Call(_get_index_addr, T(id)))
+    return id
 end
 
 """
@@ -215,9 +216,9 @@ function lookup_or_generate!(world::World, call::Call; reason_for_call=:generate
     end
 end
 
-include("generate.jl")
-include("assess.jl")
-include("propose.jl")
-include("project.jl")
+include("gfi/generate.jl")
+include("gfi/assess.jl")
+include("gfi/propose.jl")
+include("gfi/project.jl")
 include("choicemap.jl")
-include("update.jl")
+include("gfi/update.jl")

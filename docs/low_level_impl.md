@@ -164,12 +164,44 @@ since the `subspec` is applied after the reversing `moves`, that the
 It should be an error if in an update to `UsingWorld`, the `externally_constrained_addrs` selection or the `update_spec` both specify
 an update for an object in ID form and the same object in IDX form.
 
+### Standardized IDX vs ID formats for updates
+
+To retain valid Gen semantics, during an `update` with an update spec
+of type `AddressTreeLeaf{<:Union{Value, SelectionLeaf})`, all the addresses
+provided as MGF keys should be in the index representation--since this is the representation
+exposed in the `UsingWorld` choicemap.  Likewise, the discard should be in index representation.
+
+However, when we have a `UpdateWithOpenUniverseMoves`, as a custom update spec, we may
+have whatever semantics we like for the underlying `subspec`.  Since I forsee that these custom
+update spec objects will typically be constructed programatically (probably using some
+sort of involution DSL), would be reasonable to have the `subspec` accept MGF keys in its addresses
+in identifier form.  Since when we perform open universe moves, the indices change meaning, it
+becomes slightly thorny to use the index form for specifying what moves should occur.
+As a result, while I intend to allow users to use indices too in whatever interface is ultimately
+exposed to them for this, I have in mind that I also want to support directly using the identifier form.
+
+However, the cases where this is important are probably fairly rare, since usually when we are
+doing an open universe move, if we're constraining anything, it's one of the newly created objects.
+(It seems more unusual for us to constrain another object in the same move as we eg. do a split/merge.)
+While I ultimately want to support this, for now I'm going to simply require that
+all the addresses are in index form.
+
+#### Implementation: `world` sees everything in identifier form
+The `UsingWorld` combinator will convert the from the indexed form
+to identifier form before passing the update spec and externally constrained
+addresses into the `world` to update the calls there.  To do this, I will
+need a few stages:
+1. `begin_update!` will update the world args and perform open universe moves
+   and return a new `world` object
+2. The kernel will convert the spec and ext_const_addrs to identifier form.
+   It might do this lazily by just wrapping the choicemaps in some other form.
+3. `run_subtrace_updates!` will use this converted spec, etc., to update the world
+4. then we run the kernel updates and finish up as usual
+
+
 ## TODOs
 - Argdiff propagation for conversion in `world[:address][IDX_FORM]`
-- Automatic conversion at update call for updatespec
-- Automatic conversion at update call for extconstaddrs
-- Choicemap conversion
-- Discard conversion
+- Argdiff propagation for `world[AudioSource][idx]`
 - Reverse update specs
 - Thorough testing
 
@@ -178,3 +210,7 @@ Completed, but may be worth testing more carefully:
 - Handle `lookup_or_generate(world[AudioSource][idx])`
 - Implement open universe moves
 - Implement OUPM move type
+- Automatic conversion at update call for updatespec
+- Automatic conversion at update call for extconstaddrs
+- Choicemap conversion
+- Discard conversion

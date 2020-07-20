@@ -1,4 +1,4 @@
-include("oupm_updates.jl")
+include("../oupm_updates.jl")
 
 # NOTE: The algorithm for updating the world is described and explained in pseudocode
 # and in english in `update_algorithm.md`.
@@ -29,10 +29,10 @@ mutable struct UpdateWorldState <: WorldState
     original_choicemaps::Dict{Call, ChoiceMap}
     world_update_complete::Bool # once we have finished updating all the calls and move to update the kernel, this goes from false to true
 end
-function UpdateWorldState(spec::Gen.UpdateSpec, externally_constrained_addrs::Selection)
+function UpdateWorldState(world)
     UpdateWorldState(
-        spec,
-        externally_constrained_addrs,
+        EmptyAddressTree(), # spec
+        EmptySelection(), # externally_constrained_addrs
         0., # weight
         choicemap(), # discard
         world.id_table,
@@ -202,15 +202,16 @@ function update_world_args_and_enqueue_downstream!(world, new_world_args, world_
     end
 end
 
+
 """
-    perform_oupm_updates_and_enqueue_downstream!(world, oupm_updates)
+    perform_oupm_moves_and_enqueue_downstream!(world, oupm_updates)
 
 Performs all the oupm updates in `oupm_updates` in order, and enqueues
 any calls which look at the indices for changed identifiers.
 """
-function perform_oupm_updates_and_enqueue_downstream!(world, oupm_updates)
+function perform_oupm_moves_and_enqueue_downstream!(world, oupm_updates)
     for oupm_update in oupm_updates
-        perform_oupm_update_and_enqueue_downstream!(world, oupm_update)
+        perform_oupm_move_and_enqueue_downstream!(world, oupm_update)
     end
 end
 
@@ -478,19 +479,20 @@ end
 #######################################################
 
 """
-    begin_update!(world::World, specs::UpdateSpec, externally_constrained_addrs::Selection)
+    begin_update!(world::World, oupm_moves::Tuple, new_world_args::NamedTuple, world_argdiffs::NamedTuple)
 
-Initiate an update for the `UsingWorld` generative function by updating
-the calls in the world as specified by `specs`.
-Initialize the given `externally_constrained_addrs` for calculating
-the weight of this update.
-This should be called _before_ updating the `UsingWorld` kernel trace.
+Initiate an update for the `UsingWorld` generative function.  This will shallow-copy
+the world and put the new copy in update mode.  It will update the world args
+as specified, and perform the specified open universe moves, then return
+the new world object.
+This will not yet update any memoized generative function calls.
 """
-function begin_update!(world::World, specs::Gen.UpdateSpec, oupm_moves::Tuple, externally_constrained_addrs::Selection,
-    new_world_args::NamedTuple, world_argdiffs::NamedTuple
-)
+function begin_update(world::World, oupm_moves::Tuple, new_world_args::NamedTuple, world_argdiffs::NamedTuple)
     @assert (world.state isa NoChangeWorldState) "cannot initiate an update from a $(typeof(world.state))"
-    world.state = UpdateWorldState(specs, externally_constrained_addrs)
+
+    # shallow copy the world and put in update mode
+    world = World(world)
+    world.state = UpdateWorldState(world)
 
     # update the world args, and enqueue all the
     # calls which look up these world args to be updated
@@ -499,6 +501,21 @@ function begin_update!(world::World, specs::Gen.UpdateSpec, oupm_moves::Tuple, e
     # perform the moves specified in `oupm_moves`, and enqueue all calls
     # which look up the indices for these and hence need to be updated
     perform_oupm_moves_and_enqueue_downstream!(world, oupm_moves)
+
+    return world
+end
+
+"""
+    update_mgf_calls!(world::World, spec, ext_const_addrs)
+
+Update all the calls in the `world` according to the given update spec,
+with weight determined by the given `ext_const_addrs`.
+Returns the `WorldUpdateDiff` object reflecting the changes
+to the memoized generative functions.
+"""
+function update_mgf_calls!(world::World, spec::Gen.UpdateSpec, ext_const_addrs::Gen.Selection)
+    world.state.spec = spec
+    world.state.externally_constrained_addrs = ext_const_addrs
 
     # update the world as needed to make it consistent
     # with the `specs` for the calls we have already generated

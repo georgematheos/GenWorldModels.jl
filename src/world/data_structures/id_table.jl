@@ -91,10 +91,24 @@ function move_all_between(table::IDTable, changed_ids::Set, typename::Symbol; mi
     return new_table
 end
 
-function move_identifier_from_index_to_index(table::IDTable, typename::Symbol; from_idx, to_idx)
-    id_to_idx_for_type = table.id_to_idx[typename]
-    idx_to_id_for_type = table.idx_to_id[typename]
-    id = idx_to_id_for_type[from_idx]
-    id_to_idx_for_type = assoc(id_to_idx_for_type, id, to_idx)
-    idx_to_id_for_type = assoc(idx_to_id_for_type, to_idx, )
+# function move_identifier_from_index_to_index(table::IDTable, typename::Symbol; from_idx, to_idx)
+#     id_to_idx_for_type = table.id_to_idx[typename]
+#     idx_to_id_for_type = table.idx_to_id[typename]
+#     id = idx_to_id_for_type[from_idx]
+#     id_to_idx_for_type = assoc(id_to_idx_for_type, id, to_idx)
+#     idx_to_id_for_type = assoc(idx_to_id_for_type, to_idx, id)
+# end
+
+@inline convert_key_to_id_form(key, id_table) = key
+@inline function convert_key_to_id_form(key::OUPMType{Int}, id_table)
+    type = oupm_type(key)
+    id = get_id(id_table, type, key.idx_or_id)
+    type(id)
+end
+
+@inline convert_key_to_idx_form(key, id_table) = key
+@inline function convert_key_to_idx_form(key::OUPMType{UUID}, id_table)
+    type = oupm_type(key)
+    idx = get_idx(id_table, type, key.idx_or_id)
+    type(idx)
 end

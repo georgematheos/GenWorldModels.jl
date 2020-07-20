@@ -3,8 +3,8 @@ function move_all_between!(world, changed_ids, type; min, inc, max=Inf)
     world.id_table = new_id_table
 end
 
-function perform_oupm_update_and_enqueue_downstream!(world, spec)
-    changed_ids = perform_oupm_update!(world, spec)
+function perform_oupm_move_and_enqueue_downstream!(world, spec)
+    changed_ids = perform_oupm_move!(world, spec)
     for id in changed_ids
         # note there is a diff for looking up the index; enqueue calls that use this idx to be updated
         call = Call(_get_index_addr, spec.type(id))
@@ -13,17 +13,17 @@ function perform_oupm_update_and_enqueue_downstream!(world, spec)
     end
 end
 
-function perform_oupm_update!(world, spec::BirthMove)
+function perform_oupm_move!(world, spec::BirthMove)
     changed_ids = Set{UUID}()
     move_all_between!(world, changed_ids, spec.type; min=spec.idx, inc=1)
     return changed_ids
 end
-function perform_oupm_update!(world, spec::DeathMove)
+function perform_oupm_move!(world, spec::DeathMove)
     changed_ids = Set{UUID}()
     move_all_between!(world, changed_ids, spec.type; min=spec.idx, inc=-1)
     return changed_ids
 end
-function perform_oupm_update!(world, spec::SplitMove)
+function perform_oupm_move!(world, spec::SplitMove)
     from_idx = spec.from_idx
     to_idx1 = min(spec.to_idx1, spec.to_idx2)
     to_idx2 = max(spec.to_idx1, spec.to_idx2)
@@ -48,7 +48,7 @@ function perform_oupm_update!(world, spec::SplitMove)
 
     return changed_ids
 end
-function perform_oupm_update!(world, spec::MergeMove)
+function perform_oupm_move!(world, spec::MergeMove)
     to_idx = spec.to_idx
     from_idx1 = min(spec.from_idx1, spec.from_idx2)
     from_idx2 = max(spec.from_idx1, spec.from_idx2)
@@ -73,7 +73,7 @@ function perform_oupm_update!(world, spec::MergeMove)
     
     return changed_ids
 end
-function perform_oupm_update!(world, spec::MoveMove)
+function perform_oupm_move!(world, spec::MoveMove)
     typename = oupm_type_name(spec.type)
     
     changed_ids = Set{UUID}()
