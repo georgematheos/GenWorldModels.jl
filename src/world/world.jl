@@ -205,8 +205,6 @@ should be called.
 Will return the value that the given `call` returns after the generation/execution.
 """
 function lookup_or_generate!(world::World, call::Call; reason_for_call=:generate)    
-    # if somehow we called a `generate` while running updates,
-    # we need to handle it differently
     if world.state isa UpdateWorldState
         lookup_or_generate_during_update!(world, call, reason_for_call)
     elseif world.state isa GenerateWorldState
@@ -216,6 +214,7 @@ function lookup_or_generate!(world::World, call::Call; reason_for_call=:generate
     end
 end
 
+include("world_diffs.jl")
 include("gfi/generate.jl")
 include("gfi/assess.jl")
 include("gfi/propose.jl")

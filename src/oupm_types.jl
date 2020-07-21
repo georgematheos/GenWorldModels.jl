@@ -1,4 +1,11 @@
 """
+    OUPMTypeIdxChange
+
+Diff for an index-form OUPMType which has had its index change value.
+"""
+struct OUPMTypeIdxChange <: Gen.Diff end
+
+"""
     OUPMType{UUID}
 
 Abstract supertype for open universe types in "identifier form".
@@ -25,6 +32,9 @@ AudioSource
 function oupm_type(t::OUPMType)
     error("No function `oupm_type` found for $t::$(typeof(t)). Make sure oupm types are declared with @type.")
 end
+oupm_type(t::Diffed{<:OUPMType, NoChange}) = Diffed(oupm_type(strip_diff(t)), NoChange())
+oupm_type(t::Diffed{<:OUPMType, OUPMTypeIdxChange}) = Diffed(oupm_type(strip_diff(t)), NoChange())
+oupm_type(t::Diffed{<:OUPMType, UnknownChange}) = Diffed(oupm_type(strip_diff(t)), UnknownChange())
 
 """
     @type TypeName
@@ -39,10 +49,16 @@ macro type(name::Symbol)
             $(esc(name))(x::UUID) = new{UUID}(x)
         end
         $(@__MODULE__).oupm_type(::$(esc(name))) = $(esc(name))
-
+        $(esc(name))(d::Diffed{Int, Gen.NoChange}) = Gen.Diffed($(esc(name))(Gen.strip_diff(d)), NoChange())
+        $(esc(name))(d::Diffed{Int, Gen.UnknownChange}) = Gen.Diffed($(esc(name))(Gen.strip_diff(d)), OUPMTypeIdxChange())
         $(esc(name)) # the "return" from @type should be the type
     end
 end
+
+idx(t::OUPMType{Int}) = t.idx_or_id
+idx(d::Diffed{<:OUPMType{Int}, UnknownChange}) = Diffed(idx(strip_diff(d)), UnknownChange())
+idx(d::Diffed{<:OUPMType{Int}, OUPMTypeIdxChange}) = Diffed(idx(strip_diff(d)), UnknownChange())
+idx(d::Diffed{<:OUPMType{Int}, NoChange}) = Diffed(idx(strip_diff(d)), NoChange())
 
 abstract type OUPMMove end
 struct BirthMove <: OUPMMove

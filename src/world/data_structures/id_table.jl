@@ -62,10 +62,11 @@ now having no associated identifier.
 The update may also overwrite current associations for indices in the range
 (min+inc,...min) or (max...max+inc).
 """
-function move_all_between(table::IDTable, changed_ids::Set, typename::Symbol; min=1, inc, max=Inf)
+function move_all_between(table::IDTable, typename::Symbol; min=1, inc, max=Inf)
     id_to_idx_for_type = table.id_to_idx[typename]
     idx_to_id_for_type = table.idx_to_id[typename]
-
+    
+    changed_ids = Set{UUID}()
     for (idx, id) in table.idx_to_id[typename]
         if (min <= idx && idx <= max)
             id_to_idx_for_type = assoc(id_to_idx_for_type, id, idx+inc)
@@ -86,7 +87,7 @@ function move_all_between(table::IDTable, changed_ids::Set, typename::Symbol; mi
     new_id_to_idx = merge(table.id_to_idx, NamedTuple{(typename,)}((id_to_idx_for_type,)))
     new_idx_to_id = merge(table.idx_to_id, NamedTuple{(typename,)}((idx_to_id_for_type,)))
     new_table = IDTable(new_id_to_idx, new_idx_to_id)
-    return new_table
+    return (new_table, changed_ids)
 end
 
 # function move_identifier_from_index_to_index(table::IDTable, typename::Symbol; from_idx, to_idx)
