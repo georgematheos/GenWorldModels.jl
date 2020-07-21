@@ -28,7 +28,7 @@ oupm_type_name(T) = Symbol(Base.typename(T))
 
 @inline add_identifier_for(table::IDTable, type::Type{<:OUPMType}, idx::Int) = add_identifier_for(table, oupm_type_name(type), idx)
 function add_identifier_for(table::IDTable, typename::Symbol, idx::Int)
-    id = UUIDs.uuid4()
+    id = UUIDs.uuid1()
     new_table = insert_id(table, typename, idx, id)
     return (new_table, id)
 end
@@ -40,6 +40,7 @@ Associate the `idx` with the given `id` and the `id` with the `idx`,
 potentially overwriting the current associations for this `id` and `idx`.
 """
 function insert_id(table::IDTable, typename::Symbol, idx::Int, id::UUID)
+    @assert !haskey(table.id_to_idx[typename], id) "we should never be inserting an id which already exists!"
     new_id_to_idx_for_type = assoc(table.id_to_idx[typename], id, idx)
     new_idx_to_id_for_type = assoc(table.idx_to_id[typename], idx, id)
     new_id_to_idx = merge(table.id_to_idx, NamedTuple{(typename,)}((new_id_to_idx_for_type,)))
@@ -61,31 +62,25 @@ now having no associated identifier.
 The update may also overwrite current associations for indices in the range
 (min+inc,...min) or (max...max+inc).
 """
-function move_all_between(table::IDTable, changed_ids::Set, typename::Symbol; min, inc, max=Inf)
+function move_all_between(table::IDTable, changed_ids::Set, typename::Symbol; min=1, inc, max=Inf)
     id_to_idx_for_type = table.id_to_idx[typename]
     idx_to_id_for_type = table.idx_to_id[typename]
 
-    # TODO: don't scan the full table; only look at those which we actually need to change
-    actual_max = 0
     for (idx, id) in table.idx_to_id[typename]
-        actual_max = actual_max > idx ? actual_max : idx
-        if idx >= min && idx <= max
-            id_to_idx_for_type = assoc(id_to_idx_for_type, id, idx + inc)
-            idx_to_id_for_type = assoc(idx_to_id_for_type, idx + inc, id)
+        if (min <= idx && idx <= max)
+            id_to_idx_for_type = assoc(id_to_idx_for_type, id, idx+inc)
+            idx_to_id_for_type = assoc(idx_to_id_for_type, idx+inc, id)
             push!(changed_ids, id)
         end
-    end
-    max = actual_max
-    # We have not changed the idx for each id for indices in the range,
-    # and changed the id for indices in the range (min+inc, max+inc).
-    # Now we need to change the ids for indices in range (min, min+inc-1) and (max+inc+1, max).
-    # In particular, we change the ids by simply deleting the current association--others can be 
-    # added later if need be.
-    for idx=min:(min+inc-1)
-        idx_to_id_for_type = dissoc(idx_to_id_for_type, idx)
-    end
-    for idx=(max+inc+1):max
-        idx_to_id_for_type = dissoc(idx_to_id_for_type, idx)
+
+        if (min+inc <= idx && idx < min) || (max < idx && idx <= max + inc)
+            # identifier should be deleted since idx has moved and no idx will replace it
+            id_to_idx_for_type = dissoc(id_to_idx_for_type, id)
+            push!(changed_ids, id)
+        elseif (min <= idx && idx < min+inc) || (max+inc < idx && idx <= max)
+            # index should be deleted since id has moved and no id will replace it
+            idx_to_id_for_type = dissoc(idx_to_id_for_type, idx)
+        end
     end
 
     new_id_to_idx = merge(table.id_to_idx, NamedTuple{(typename,)}((id_to_idx_for_type,)))
