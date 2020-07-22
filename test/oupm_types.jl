@@ -193,6 +193,9 @@ function test_audiosource_moves_successful(old_tr, new_tr; expected_moves, expec
     oldch = get_choices(old_tr)
     newch = get_choices(new_tr)
     for (old, new) in expected_moves
+        if !(get_subtree(oldch, :world => :volume => AudioSource(old)) == get_subtree(newch, :world => :volume => AudioSource(new)))
+            println("old=$old, new=$new")
+        end
         @test get_subtree(oldch, :world => :volume => AudioSource(old)) == get_subtree(newch, :world => :volume => AudioSource(new))
     end
     for newidx in expected_new
@@ -353,6 +356,24 @@ end
         new_tr, weight, _, reverse_move = update(tr, (), (), spec, AllSelection())
         test_audiosource_moves_successful(tr, new_tr; expected_moves=(5=>3,), expected_new=(2,4))
         test_correct_reverse_move(reverse_move; expected_move=SplitMove(AudioSource, 4, 3, 2), expected_constrained=(2,3))
+    end
+
+    @testset "simple move moves" begin
+        tr, weight = generate(get_vols_and_inds, (), constraints_3_samples)
+        spec = UpdateWithOUPMMovesSpec((MoveMove(AudioSource, 2, 5),), EmptyChoiceMap())
+        new_tr, weight, _, reverse_move = update(tr, (), (), spec, AllSelection())
+        test_audiosource_moves_successful(tr, new_tr; expected_moves=(3=>2,2=>5), expected_new=(3,))
+        test_correct_reverse_move(reverse_move; expected_move=MoveMove(AudioSource, 5, 2), expected_constrained=(5,))
+
+        spec = UpdateWithOUPMMovesSpec((MoveMove(AudioSource, 4, 2),), EmptyChoiceMap())
+        new_tr, weight, _, reverse_move = update(tr, (), (), spec, AllSelection())
+        test_audiosource_moves_successful(tr, new_tr; expected_moves=(2=>3,5=>5), expected_new=(2,))
+        test_correct_reverse_move(reverse_move; expected_move=MoveMove(AudioSource, 2, 4), expected_constrained=(3,))
+
+        spec = UpdateWithOUPMMovesSpec((MoveMove(AudioSource, 5, 2),), EmptyChoiceMap())
+        new_tr, weight, _, reverse_move = update(tr, (), (), spec, AllSelection())
+        test_audiosource_moves_successful(tr, new_tr; expected_moves=(2=>3,5=>2), expected_new=(5,))
+        test_correct_reverse_move(reverse_move; expected_move=MoveMove(AudioSource, 2, 5), expected_constrained=(3,))
     end
 end
 

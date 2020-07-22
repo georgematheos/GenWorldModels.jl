@@ -225,10 +225,9 @@ argdiff ends up in the world, all calls which have `lookup_or_generate` for that
 will be properly enqueued.
 
 ## TODOs
-- Test split, merge, move
 - Test argdiff propagation
 
-Completed, but may be worth testing more carefully:
+Completed:
 - Automatic conversion at `world[:address][IDX_FORM]` call
 - Handle `lookup_or_generate(world[AudioSource][idx])`
 - Implement open universe moves
@@ -240,3 +239,4 @@ Completed, but may be worth testing more carefully:
 - Reverse update specs at top level
 - Argdiff propagation for conversion in `world[:address][IDX_FORM]`
 - Argdiff propagation for `world[AudioSource][idx]`
+- Test split, merge, move

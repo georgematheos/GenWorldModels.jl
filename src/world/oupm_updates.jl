@@ -86,28 +86,26 @@ function perform_oupm_move!(world, spec::MergeMove)
 
     return changed_indices
 end
-# function perform_oupm_move!(world, spec::MoveMove)
-# # TODO
-#     typename = oupm_type_name(spec.type)
+function perform_oupm_move!(world, spec::MoveMove)
+    typename = oupm_type_name(spec.type)
     
-#     changed_ids = Set{UUID}()
-#     _has_id = has_idx(world.id_table, typename, spec.from_idx)
+    _has_id = has_idx(world.id_table, typename, spec.from_idx)
 
-#     if _has_id
-#         id = get_id(world.id_table, spec.type, spec.from_idx)
-#     end
-#     if spec.from_idx < spec.to_idx
-#         move_all_between!(world, changed_ids, spec.type; min=spec.from_idx+1, max=spec.to_idx, inc=-1)
-#     else
-#         move_all_between!(world, changed_ids, spec.type; min=spec.to_idx, max=spec.from_idx-1, inc=+1)
-#     end
-#     if _has_id
-#         world.id_table = insert_id(world.id_table, typename, spec.to_idx, id)
-#         push!(changed_ids, id)
-#     end
+    if _has_id
+        id = get_id(world.id_table, spec.type, spec.from_idx)
+    end
+    if spec.from_idx < spec.to_idx
+        changed_ids = move_all_between!(world, spec.type; min=spec.from_idx+1, max=spec.to_idx, inc=-1)
+    else
+        changed_ids = move_all_between!(world, spec.type; min=spec.to_idx, max=spec.from_idx-1, inc=+1)
+    end
+    if _has_id
+        world.id_table = insert_id(world.id_table, typename, spec.to_idx, id)
+        push!(changed_ids, id)
+    end
 
-#     return changed_ids
-# end
+    return changed_ids
+end
 
 function reverse_moves(moves::Tuple)
     Tuple(reverse_move(moves[j]) for j=length(moves):-1:1)
@@ -116,4 +114,4 @@ reverse_move(m::BirthMove) = DeathMove(m.type, m.idx)
 reverse_move(m::DeathMove) = BirthMove(m.type, m.idx)
 reverse_move(m::SplitMove) = MergeMove(m.type, m.from_idx, m.to_idx1, m.to_idx2)
 reverse_move(m::MergeMove) = SplitMove(m.type, m.to_idx, m.from_idx1, m.from_idx2)
-reverse_move(m::MoveMove) = MoveMove(m.type, m.to_idx, m.from_idx)i
+reverse_move(m::MoveMove) = MoveMove(m.type, m.to_idx, m.from_idx)
