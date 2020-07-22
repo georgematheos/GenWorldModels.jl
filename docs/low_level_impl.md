@@ -226,7 +226,7 @@ will be properly enqueued.
 
 ## TODOs
 - Test split, merge, move
-- Test argdiff propagat
+- Test argdiff propagation
 
 Completed, but may be worth testing more carefully:
 - Automatic conversion at `world[:address][IDX_FORM]` call

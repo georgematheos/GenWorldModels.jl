@@ -12,15 +12,21 @@ function perform_oupm_move_and_enqueue_downstream!(world, spec)
     table_before_update = world.id_table
     changed_ids = perform_oupm_move!(world, spec)
     for id in changed_ids
-        idx = get_idx(table_before_update, spec.type, id)
-
         getindex_call = Call(_get_index_addr, spec.type(id))
         world.state.diffs[getindex_call] = IDAssociationChanged()
         enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, getindex_call)
 
-        getid_call = Call(spec.type, idx)
+        old_idx = get_idx(table_before_update, spec.type, id)
+        getid_call = Call(spec.type, old_idx)
         world.state.diffs[getid_call] = IDAssociationChanged()
         enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, getid_call)
+
+        if has_id(world.id_table, spec.type, id)
+            new_idx = get_idx(world.id_table, spec.type, id)
+            if !has_idx(table_before_update, spec.type, new_idx)
+                note_new_call!(world, Call(spec.type, new_idx))
+            end
+        end
     end
 end
 
@@ -77,6 +83,8 @@ function perform_oupm_move!(world, spec::MergeMove)
         mb!(from_idx2 + 1, to_idx + 1, -2),
         mb!(to_idx + 2, Inf, -1)
     end
+
+    return changed_indices
 end
 # function perform_oupm_move!(world, spec::MoveMove)
 # # TODO

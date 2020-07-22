@@ -65,9 +65,11 @@ end
 function note_lookup_removed(lc::LookupCounts, call::Call)
     new_count = lc.lookup_counts[call] - 1
     if new_count == 0
-        if is_mgf_call(call)
+        if is_mgf_call(call) || addr(call) isa Type{<:OUPMType}
             new_lookup_counts = dissoc(lc.lookup_counts, call)
             new_dependency_counts = dissoc(lc.dependency_counts, call)
+        else
+            return (lc, 0)
         end
     else
         new_lookup_counts = assoc(lc.lookup_counts, call, new_count)
