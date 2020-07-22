@@ -189,8 +189,30 @@ end
     @test !GenWorldModels.has_idx(new_table, AudioSource, 6)
 end
 
+function test_audiosource_moves_successful(old_tr, new_tr; expected_moves, expected_new)
+    oldch = get_choices(old_tr)
+    newch = get_choices(new_tr)
+    for (old, new) in expected_moves
+        @test get_subtree(oldch, :world => :volume => AudioSource(old)) == get_subtree(newch, :world => :volume => AudioSource(new))
+    end
+    for newidx in expected_new
+        # check that every index where we should have a new value 
+        for oldidx in (2, 3, 5)
+            @test oldch[:world => :volume => AudioSource(oldidx) => :vol] != newch[:world => :volume => AudioSource(newidx) => :vol]
+        end
+    end
+end
+function test_correct_reverse_move(reverse_spec; expected_move, expected_constrained)
+    @test reverse_spec isa UpdateWithOUPMMovesSpec
+    @test reverse_spec.moves == (expected_move,)
+    @test length(collect(get_subtrees_shallow(get_subtree(reverse_spec.subspec, :world => :volume)))) == length(expected_constrained)
+    for idx in expected_constrained
+        @test !isempty(get_subtree(reverse_spec.subspec, :world => :volume => AudioSource(idx)))
+    end
+end
+
 @testset "oupm moves - basics" begin
-    constraints = choicemap(
+    constraints_2_samples = choicemap(
         (:kernel => :num_sources, 5),
         (:kernel => :num_samples, 2),
         (:kernel => :samples => 1, 2),
@@ -198,7 +220,7 @@ end
     )
 
     @testset "simple birth moves" begin
-        tr, weight = generate(get_vols_and_inds, (), constraints)
+        tr, weight = generate(get_vols_and_inds, (), constraints_2_samples)
         @test isapprox(weight, -(log(5) + log(2) + 2*log(5)))
         ch = get_choices(tr)
 
@@ -244,7 +266,7 @@ end
    end
 
     @testset "simple death moves" begin
-        tr, weight = generate(get_vols_and_inds, (), constraints)
+        tr, weight = generate(get_vols_and_inds, (), constraints_2_samples)
         @test isapprox(weight, -(log(5) + log(2) + 2*log(5)))
         ch = get_choices(tr)
 
@@ -286,6 +308,35 @@ end
         set_submap!(expected_reverse_constraints, :world => :volume => s2, get_submap(ch, :world => :volume => s2))
         @test reverse_move.subspec == expected_reverse_constraints
     end
+
+    constraints_3_samples = choicemap(
+        (:kernel => :num_sources, 5),
+        (:kernel => :num_samples, 3),
+        (:kernel => :samples => 1, 2),
+        (:kernel => :samples => 2, 3),
+        (:kernel => :samples => 3, 5)
+    )
+
+    @testset "simple split moves" begin
+        tr, weight = generate(get_vols_and_inds, (), constraints_3_samples)
+        ch = get_choices(tr)
+
+        spec = UpdateWithOUPMMovesSpec((SplitMove(AudioSource, 2, 4, 6),), choicemap((:kernel => :num_sources, 6)))
+        new_tr, weight, _, reverse_move = update(tr, (), (), spec, AllSelection())
+        test_audiosource_moves_successful(tr, new_tr; expected_moves=(3=>2,5=>5), expected_new=(3,))
+        test_correct_reverse_move(reverse_move; expected_move=MergeMove(AudioSource, 2, 4, 6), expected_constrained=(2,))
+
+        spec = UpdateWithOUPMMovesSpec((SplitMove(AudioSource, 4, 2, 5),), choicemap((:kernel => :num_sources, 6)))
+        new_tr, weight, _, reverse_move = update(tr, (), (), spec, AllSelection())
+        test_audiosource_moves_successful(tr, new_tr; expected_moves=(2 => 3,), expected_new=(2, 5))
+        test_correct_reverse_move(reverse_move; expected_move=MergeMove(AudioSource, 4, 2, 5), expected_constrained=(3, 5))
+        
+        spec = UpdateWithOUPMMovesSpec((SplitMove(AudioSource, 5, 4, 2),), choicemap((:kernel => :num_sources, 6)))
+        new_tr, weight, _, reverse_move = update(tr, (), (), spec, AllSelection())
+        test_audiosource_moves_successful(tr, new_tr; expected_moves=(2 => 3, 3=>5), expected_new=(2,))
+        test_correct_reverse_move(reverse_move; expected_move=MergeMove(AudioSource, 5, 4, 2), expected_constrained=(5,))
+    end
 end
+
 
 end
