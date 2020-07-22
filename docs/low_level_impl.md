@@ -153,16 +153,29 @@ since the `subspec` is applied after the reversing `moves`, that the
 `subspec` truly is a reverse-direction update spec.
 
 ### Places id/idx conversion can occur
+
+Handled in world/`lookup_or_generate`:
 1. When there is a call to `lookup_or_generate(world[AudioSource][idx])`
 2. When there is a call to `lookup_or_generate(world[:index][AudioSource{UUID}(id)])`
 3. When there is a call to `world[:address][AudioSource{Int}(idx)]`.  This gets converted to `world[:address][AudioSource{UUID}(id)]`.
-4. When returning the `choicemap`, MGF call addresses are moved from `:address => AudioSource{UUID}(id)` to `:address => AudioSource{Int}(idx)`
-5. When returning the `discard`, MGF call addresses are moved to the index for the state of the `id_table` before the update occurred
-6. When an update spec for `UsingWorld` has something at `:address => AudioSource{Int}(idx)`, this is viewed as `:address => AudioSource{UUID}(id)`
-7. When a `externally_constrained_addrs` selection for `UsingWorld` has something at `:address => AudioSource{Int}(idx)`, this is converted.
 
-It should be an error if in an update to `UsingWorld`, the `externally_constrained_addrs` selection or the `update_spec` both specify
-an update for an object in ID form and the same object in IDX form.
+To make it easier to track lookups for indices and identifiers, (3) will be handled by internally making
+a call to (1).  Ie. when one calls `lookup_or_generate(world[:address][AudioSource{Int}(idx)])`,
+`lookup_or_generate` handles this via two seperate calls:
+```julia
+id_form ~ lookup_or_generate(world[AudioSource][idx])
+retval ~ lookup_or_generate(world[:address][id_form])
+```
+Below I will describe how I am going to update the `lookup_or_generate` function to support this.
+
+Handled in `UsingWorld`:
+1. When returning the `choicemap`, MGF call addresses are moved from `:address => AudioSource{UUID}(id)` to `:address => AudioSource{Int}(idx)`
+2. When returning the `discard`, MGF call addresses are moved to the index for the state of the `id_table` before the update occurred
+3. When an update spec for `UsingWorld` has something at `:address => AudioSource{Int}(idx)`, this is viewed as `:address => AudioSource{UUID}(id)`
+4. When a `externally_constrained_addrs` selection for `UsingWorld` has something at `:address => AudioSource{Int}(idx)`, this is converted.
+(These are handled in `UsingWorld` in the sense that the world object does not need to understand that these happen;
+the top-level `UsingWorld` can handle these conversions so the `world` object can only interface with identifiers in the choicemap,
+discard, update spec, and ext_const_addrs.  See below for details.)
 
 ### Standardized IDX vs ID formats for updates
 
@@ -198,12 +211,22 @@ need a few stages:
 3. `run_subtrace_updates!` will use this converted spec, etc., to update the world
 4. then we run the kernel updates and finish up as usual
 
+### Changing `lookup_or_generate`
+When we pass in a MGF call which has a key in `OUPMType{Int}` form, we want
+`lookup_or_generate` to internally convert this to a call to the id form.
+To do this, I will have each `lookup_or_generate` call with a key in `OUPMType{Int}`
+make a call to `lookup_or_generate(world[Type][idx])`.
+The choicemap from this will be stored in the trace, and included as a submap
+of the outputted `lookup_or_generate` trace so it will be recognized as a subcall
+by the `world`'s choicemap scanning method.
+
+This means that whenever an index's id is updated, etc., so long as the proper
+argdiff ends up in the world, all calls which have `lookup_or_generate` for that index
+will be properly enqueued.
 
 ## TODOs
-- Argdiff propagation for conversion in `world[:address][IDX_FORM]`
-- Argdiff propagation for `world[AudioSource][idx]`
-- Reverse update specs
-- Thorough testing
+- Test split, merge, move
+- Test argdiff propagat
 
 Completed, but may be worth testing more carefully:
 - Automatic conversion at `world[:address][IDX_FORM]` call
@@ -214,3 +237,6 @@ Completed, but may be worth testing more carefully:
 - Automatic conversion at update call for extconstaddrs
 - Choicemap conversion
 - Discard conversion
+- Reverse update specs at top level
+- Argdiff propagation for conversion in `world[:address][IDX_FORM]`
+- Argdiff propagation for `world[AudioSource][idx]`

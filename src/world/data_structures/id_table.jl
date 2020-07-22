@@ -11,6 +11,31 @@ function IDTable(types::Tuple)
     IDTable{typenames}(NamedTuple{typenames}(id_to_idx_maps), NamedTuple{typenames}(idx_to_id_maps))
 end
 
+function Base.show(io::IO, table::IDTable{typenames}) where {typenames}
+    # we should always have the same ids and idxs in the idx_to_id and id_to_idx table,
+    # but we retain the capacity to print buggy, nonsymmetric tables to help with debugging
+    println("----------------- ID Table -----------------")
+    for name in typenames
+        println(io, "$name")
+        for (idx, id) in table.idx_to_id[name]
+            if haskey(table.id_to_idx[name], id) && table.id_to_idx[name][id] == idx
+                println(io, " $idx <-> $id")
+            end
+        end
+        for (idx, id) in table.idx_to_id[name]
+            if !haskey(table.id_to_idx[name], id) || table.id_to_idx[name][id] !== idx
+                println(io, " $idx --> $id")
+            end
+        end
+        for (id, idx) in table.id_to_idx[name]
+            if !haskey(table.idx_to_id[name], idx) || table.idx_to_id[name][idx] !== id
+                println(io, " $idx <-- $id")
+            end
+        end
+    end
+    println("--------------------------------------------")
+end
+
 oupm_type_name(T) = Symbol(Base.typename(T))
 
 @inline get_idx(table::IDTable, obj::T) where {T <: OUPMType} = get_idx(table, T, obj.idx_or_id)
@@ -65,21 +90,39 @@ The update may also overwrite current associations for indices in the range
 function move_all_between(table::IDTable, typename::Symbol; min=1, inc, max=Inf)
     id_to_idx_for_type = table.id_to_idx[typename]
     idx_to_id_for_type = table.idx_to_id[typename]
+    original_idx_to_id = idx_to_id_for_type
     
     changed_ids = Set{UUID}()
-    for (idx, id) in table.idx_to_id[typename]
+    for (idx, id) in original_idx_to_id
+        # at each step through this loop, we will update
+        # id_to_idx_for_type[id].
+        # if we are moving this ID, we will also update idx_to_id_for_type[idx+inc].
+        # if there is no ID which will be moved to position `idx`, we also
+        # update idx_to_id_for_type[idx]
         if (min <= idx && idx <= max)
+            # all ids in the min<=...<=max range have their index incremented by `inc`
             id_to_idx_for_type = assoc(id_to_idx_for_type, id, idx+inc)
             idx_to_id_for_type = assoc(idx_to_id_for_type, idx+inc, id)
             push!(changed_ids, id)
-        end
-
-        if (min+inc <= idx && idx < min) || (max < idx && idx <= max + inc)
-            # identifier should be deleted since idx has moved and no idx will replace it
+        elseif (min+inc <= idx && idx < min) || (max < idx && idx <= max+inc)
+            # all ids with current index in an area IDs are getting moved to, but where
+            # ids are not moving anywhere, should be removed since they are going to be overwritten
             id_to_idx_for_type = dissoc(id_to_idx_for_type, id)
             push!(changed_ids, id)
+        end
+
+        if (min+inc <= idx && idx <= max+inc)
+            # all indices in the range where IDs are being moved will either
+            # 1. have an ID moved to this index, in which case the above `if` statement handles the id change
+            # or
+            # 2. have no ID which is going to get moved to it, and hence needs to have its current id deleted
+            # we handle (2) here.
+            if !haskey(original_idx_to_id, idx-inc)
+                idx_to_id_for_type = dissoc(idx_to_id_for_type, idx)
+            end
         elseif (min <= idx && idx < min+inc) || (max+inc < idx && idx <= max)
-            # index should be deleted since id has moved and no id will replace it
+            # all indices in an area where IDs are moving from, but no IDs are moving to,
+            # should be removed
             idx_to_id_for_type = dissoc(idx_to_id_for_type, idx)
         end
     end

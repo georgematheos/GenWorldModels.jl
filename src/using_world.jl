@@ -30,6 +30,21 @@ function Gen.get_choices(tr::UsingWorldTrace)
         addr -> addr != metadata_addr(tr.world)
     )
 end
+function get_id_choices(tr::UsingWorldTrace)
+    full_choices = StaticChoiceMap(
+        (
+            kernel=get_choices(tr.kernel_tr),
+            world=get_choices(tr.world)
+        )
+    )
+    
+    # return a choicemap which filters out all the choices addressed with `metadata_addr`,
+    # since these are just used for internal tracking and should not be exposed
+    AddressFilterChoiceMap(
+        full_choices,
+        addr -> addr != metadata_addr(tr.world)
+    )
+end
 
 struct UsingWorld{num_world_args, num_mgfs, V, Tr} <: Gen.GenerativeFunction{V, UsingWorldTrace{V, Tr}}
     kernel::Gen.GenerativeFunction{V, Tr}

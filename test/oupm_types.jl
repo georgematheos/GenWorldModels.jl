@@ -144,6 +144,49 @@ end
     @test gidx(ids[7]) == 7
     @test gid(8) == ids[8]
     @test gidx(ids[8]) == 8
+
+    # test what happens if there are gaps in the filled in indices
+    table = GenWorldModels.IDTable((AudioSource,))
+    (table, id2) = GenWorldModels.add_identifier_for(table, AudioSource, 2)
+    (table, id3) = GenWorldModels.add_identifier_for(table, AudioSource, 3)
+    (table, id5) = GenWorldModels.add_identifier_for(table, AudioSource, 5)
+    new_table, _ = GenWorldModels.move_all_between(table, GenWorldModels.oupm_type_name(AudioSource); min=3, max=5, inc=-2)
+    gid = idx -> GenWorldModels.get_id(new_table, AudioSource, idx)
+    gidx = id -> GenWorldModels.get_idx(new_table, AudioSource, id)
+    @test gid(3) == id5
+    @test gidx(id5) == 3
+    @test gid(1) == id3
+    @test gidx(id3) == 1
+    @test !GenWorldModels.has_id(new_table, AudioSource, id2)
+    @test !GenWorldModels.has_idx(new_table, AudioSource, 2)
+    @test !GenWorldModels.has_idx(new_table, AudioSource, 4)
+    @test !GenWorldModels.has_idx(new_table, AudioSource, 5)
+
+    new_table, _ = GenWorldModels.move_all_between(table, GenWorldModels.oupm_type_name(AudioSource); min=3, max=5, inc=-1)
+    gid = idx -> GenWorldModels.get_id(new_table, AudioSource, idx)
+    gidx = id -> GenWorldModels.get_idx(new_table, AudioSource, id)
+    @test gid(2) == id3
+    @test gidx(id3) == 2
+    @test gid(4) == id5
+    @test gidx(id5) == 4
+    @test !GenWorldModels.has_id(new_table, AudioSource, id2)
+    @test !GenWorldModels.has_idx(new_table, AudioSource, 1)
+    @test !GenWorldModels.has_idx(new_table, AudioSource, 3)
+    @test !GenWorldModels.has_idx(new_table, AudioSource, 5)
+
+    new_table, _ = GenWorldModels.move_all_between(table, GenWorldModels.oupm_type_name(AudioSource); min=3, max=5, inc=+2)
+    gid = idx -> GenWorldModels.get_id(new_table, AudioSource, idx)
+    gidx = id -> GenWorldModels.get_idx(new_table, AudioSource, id)
+    @test gid(2) == id2
+    @test gidx(id2) == 2
+    @test gid(5) == id3
+    @test gidx(id3) == 5
+    @test gid(7) == id5
+    @test gidx(id5) == 7
+    @test !GenWorldModels.has_idx(new_table, AudioSource, 1)
+    @test !GenWorldModels.has_idx(new_table, AudioSource, 3)
+    @test !GenWorldModels.has_idx(new_table, AudioSource, 4)
+    @test !GenWorldModels.has_idx(new_table, AudioSource, 6)
 end
 
 @testset "oupm moves - basics" begin
@@ -153,19 +196,17 @@ end
         (:kernel => :samples => 1, 2),
         (:kernel => :samples => 2, 3)
     )
-    tr, weight = generate(get_vols_and_inds, (), constraints)
-    @test isapprox(weight, -(log(5) + log(2) + 2*log(5)))
-    ch = get_choices(tr)
 
     @testset "simple birth moves" begin
+        tr, weight = generate(get_vols_and_inds, (), constraints)
+        @test isapprox(weight, -(log(5) + log(2) + 2*log(5)))
+        ch = get_choices(tr)
+
         # birth a new object at index 3.  Since we are looking up index 3 (but not index 4), this means the new index 3 will be
         # generated newly, and we discard the old index 3 (which is now at index 4 and is not looked up).
         spec = UpdateWithOUPMMovesSpec((BirthMove(AudioSource, 3),), choicemap((:kernel => :num_sources, 6)))
         new_tr, weight, _, reverse_move = update(tr, (), (), spec, AllSelection())
         newch = get_choices(new_tr)
-        display(ch)
-        display(newch)
-
         s2 = AudioSource(2); s3 = AudioSource(3)
         @test length(collect(get_subtrees_shallow(get_subtree(ch, :world => :volume)))) == 2
         @test get_subtree(newch, :world => :volume => s2) == get_subtree(ch, :world => :volume => s2)
@@ -203,6 +244,10 @@ end
    end
 
     @testset "simple death moves" begin
+        tr, weight = generate(get_vols_and_inds, (), constraints)
+        @test isapprox(weight, -(log(5) + log(2) + 2*log(5)))
+        ch = get_choices(tr)
+
         spec = UpdateWithOUPMMovesSpec((DeathMove(AudioSource, 3),), choicemap((:kernel => :num_sources, 4)))
         new_tr, weight, _, reverse_move = update(tr, (), (), spec, AllSelection())
         newch = get_choices(new_tr)
@@ -223,19 +268,15 @@ end
         @test reverse_move.subspec == expected_reverse_constraints
 
         # delete 2, so 3 moves to 2, and a new 3 is generated
-        println("last update:")
         spec = UpdateWithOUPMMovesSpec((DeathMove(AudioSource, 2),), choicemap((:kernel => :num_sources, 4)))
         new_tr, weight, _, reverse_move = update(tr, (), (), spec, AllSelection())
         newch = get_choices(new_tr)
         @test get_subtree(newch, :world => :volume => s2) == get_subtree(ch, :world => :volume => s3)
         @test length(collect(get_subtrees_shallow(get_subtree(newch, :world => :volume)))) == 2
         @test new_tr[:world => :volume => s3] != tr[:world => :volume => s3] # should have been regenerated
-        display(ch)
-        display(newch)
-        display(new_tr.world.id_table.id_to_idx)
-        display(new_tr.world.id_table.idx_to_id)
         expected_weight = -logpdf(normal, tr[:world => :volume => s2 => :vol], 100, 4) + 2*(log(1/4) - log(1/5))
         @test isapprox(expected_weight, weight)
+        @test new_tr[][2] !== tr[][2]
         @test new_tr[][1].second == tr[][2].second
         @test new_tr[][1] != tr[][1]
 

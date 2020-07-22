@@ -193,6 +193,12 @@ function generate_value!(world, call, constraints)
 
     return weight
 end
+function generate_value!(world, call::Call{<:OUPMType}, ::EmptyAddressTree)
+    @assert !(world.state isa NoChangeWorldState)
+    @assert !has_val(world, call)
+    generate_id_for_call!(world, call)
+    return 0.
+end
 
 """
     lookup_or_generate!

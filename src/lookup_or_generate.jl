@@ -11,6 +11,16 @@ Gen.get_gen_fn(tr::LookupOrGenerateTrace) = lookup_or_generate
 Gen.project(::LookupOrGenerateTrace, ::EmptySelection) = 0.
 Gen.project(::LookupOrGenerateTrace, ::Selection) = 0.
 
+struct InvalidLookupOrGenerateTrace <: LookupOrGenerateTrace
+    call::MemoizedGenerativeFunctionCall
+end
+Gen.get_score(::InvalidLookupOrGenerateTrace) = -Inf
+Gen.project(::InvalidLookupOrGenerateTrace, ::EmptySelection) = -Inf
+Gen.project(::InvalidLookupOrGenerateTrace, ::Selection) = -Inf
+Gen.get_args(tr::InvalidLookupOrGenerateTrace) = (tr.call,)
+Gen.get_retval(::InvalidLookupOrGenerateTrace) = nothing
+Gen.get_choices(::InvalidLookupOrGenerateTrace) = EmptyAddressTree()
+
 """
     lookup_or_generate(world[address][key])
 
@@ -82,7 +92,6 @@ end
     args::Tuple{MemoizedGenerativeFunctionCall},
     argdiffs::Tuple{<:Gen.Diff}, spec::Gen.UpdateSpec, ext_const_addrs::Gen.Selection
 )
-    println("updating LOG from $(get_args(tr)[1]) to $(args[1]) : diff is $(argdiffs[1])")
     new_tr, weight, retdiff, discard = update(tr.tr, args, argdiffs, spec, ext_const_addrs)
     (AutomaticIdxToIdLookupOrGenerateTrace(new_tr), weight, retdiff, discard)
 end
@@ -121,9 +130,14 @@ end
 function Gen.update(tr::SimpleLookupOrGenerateTrace, args::Tuple, argdiffs::Tuple, constraints::ChoiceMap, ::Selection)
     error("lookup_or_generate may not be updated with constraints.")
 end
+function Gen.update(tr::SimpleLookupOrGenerateTrace, args::Tuple, argdiffs::Tuple, ::EmptyChoiceMap, ::Selection)
+    error("Unrecognized update signature for lookup_or_generate.  Perhaps argdiff $(argdiffs[1]) is not recognized?")
+end
 
 # handle "regenerate"ing the trace
 Gen.update(tr::SimpleLookupOrGenerateTrace, args::Tuple, argdiffs::Tuple, ::Selection, ::Selection) = update(tr, args, argdiffs, EmptyChoiceMap(), EmptySelection())
+
+# no change
 Gen.update(tr::SimpleLookupOrGenerateTrace, ::Tuple, ::Tuple{NoChange}, ::EmptyChoiceMap, ::Selection) = (tr, 0., NoChange(), EmptyChoiceMap())
 
 ### SimpleLookupOrGenerateTrace updates ###
@@ -152,6 +166,24 @@ function Gen.update(tr::SimpleLookupOrGenerateTrace, args::Tuple, argdiffs::Tupl
     (new_tr, 0., retdiff, EmptyChoiceMap())
 end
 
+# ID lookup for OUPM type
+# if the ID association has changed, we ultimately want to perform a `lookup_or_generate!` call in case we need to 
+# generate a new ID--so we can use the logic for the `ToBeUpdatedDiff` for this.
+function Gen.update(tr::SimpleLookupOrGenerateTrace, args::Tuple{MemoizedGenerativeFunctionCall{<:Any, <:OUPMType}}, argdiffs::Tuple{IDAssociationChanged}, ::EmptyChoiceMap, ::Selection)
+    update(tr, args, (ToBeUpdatedDiff(),), EmptyChoiceMap(), EmptySelection())
+end
+
+# INDEX lookup for OUPM type
+# either the identifier has been moved, in which case we can simply treat this as a call whose val has changed,
+# or the identifier has been deleted, in which case this call is invalidated, so we return 0 probability
+function Gen.update(tr::SimpleLookupOrGenerateTrace, args::Tuple{MemoizedGenerativeFunctionCall{<:Any, _get_index_addr}}, argdiffs::Tuple{IDAssociationChanged}, ::EmptyChoiceMap, ::Selection)
+    if has_val(args[1].world, call(args[1]))
+        update(tr, args, (MGFCallValChangeDiff(UnknownChange()),), EmptyChoiceMap(), EmptySelection())
+    else
+        (InvalidLookupOrGenerateTrace(args[1]), -Inf, UnknownChange(), get_choices(tr))
+    end
+end
+
 # value has changed, but we don't need to update, and haven't changed key
 function Gen.update(tr::SimpleLookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{MGFCallValChangeDiff}, ::EmptyChoiceMap, ::Selection)
     valdiff = argdiffs[1].diff
@@ -178,7 +210,7 @@ end
     else
         diff = WorldUpdateDiff(new_call.world)[addr(new_call)][key(new_call)]
         # for these 3 diff types, just keep the diff type as is
-        if diff !== NoChange() && diff !== ToBeUpdatedDiff() && diff !== WorldDiffedNoKeyChange()
+        if diff !== NoChange() && diff !== ToBeUpdatedDiff() && diff !== WorldDiffedNoKeyChange() && diff !== IDAssociationChanged()
             diff = MGFCallValChangeDiff(diff)
         end
     end

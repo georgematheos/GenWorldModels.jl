@@ -21,8 +21,6 @@ function perform_oupm_move_and_enqueue_downstream!(world, spec)
         getid_call = Call(spec.type, idx)
         world.state.diffs[getid_call] = IDAssociationChanged()
         enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, getid_call)
-
-        println("Set diff for $getid_call and $getindex_call")
     end
 end
 

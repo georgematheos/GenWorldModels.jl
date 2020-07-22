@@ -104,7 +104,7 @@ function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateAddr
     diff = get_diff(mgf)[key] # may be a nochange, if !has_diff_for_index(get_diff(mgf), key)
     # unless this is either NoChange or ToBeUpdated, we want to make sure `update` knows that this is just
     # a normal diff which comes from a value change, and doesn't need to trigger special update behavior
-    if diff != NoChange() && diff != ToBeUpdatedDiff()
+    if diff !== NoChange() && diff !== ToBeUpdatedDiff() && diff !== IDAssociationChanged()
         diff = MGFCallValChangeDiff(diff)
     end
 

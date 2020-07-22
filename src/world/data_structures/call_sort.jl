@@ -22,10 +22,6 @@ function add_vector_of_new_calls(srt::CallSort, idx_to_call::Vector{Call})
 end
 Base.getindex(srt::CallSort, call::Call) = srt.call_to_idx[call]
 
-# world args and looking up object indices are always before all MGF calls in the sort
-Base.getindex(srt::CallSort, call::Call{_world_args_addr}) = -1
-Base.getindex(srt::CallSort, call::Call{_get_index_addr}) = -1
-
 function change_index_to(srt::CallSort, call::Call, idx::Int)
     new_map = assoc(srt.call_to_idx, call, idx)
     new_max_idx = max(srt.max_index, idx)
@@ -43,3 +39,10 @@ function remove_call(srt::CallSort, call::Call)
         srt.max_index
     )
 end
+
+# world args and looking up object indices are always before all MGF calls in the sort
+# and cannot have their indices changed
+const _StaticPositionCall = Union{Call{_world_args_addr}, Call{_get_index_addr}, Call{<:OUPMType{Int}}}
+Base.getindex(::CallSort, ::_StaticPositionCall) = -1
+change_index_to(srt::CallSort, ::_StaticPositionCall, ::Int) = srt
+remove_call(srt::CallSort, call::_StaticPositionCall) = srt

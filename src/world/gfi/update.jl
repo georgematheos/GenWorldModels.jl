@@ -69,7 +69,7 @@ otherwise it is the choicemap for the removed trace.
 """
 function remove_lookup!(world::World, call::Call, called_from...)
     new_num_lookups_for_call = note_lookup_removed!(world, call, called_from...)
-    if new_num_lookups_for_call == 0 && is_mgf_call(call)
+    if new_num_lookups_for_call == 0
         return remove_call!(world, call)
     else
         return EmptyChoiceMap()
@@ -121,6 +121,13 @@ function remove_call!(world, call)
     # return the choices currently in the deleted trace so we can update counts based on their removal
     return get_choices(tr)
 end
+
+remove_call!(world, call::Call{_world_args_addr}) = EmptyAddressTree()
+remove_call!(world, call::Call{_get_index_addr}) = EmptyAddressTree()
+function remove_call!(world, call::Call{<:OUPMType})
+    EmptyAddressTree() # TODO: remove the id/idx pairing from the ID table
+end
+
 
 ##########################
 # World update algorithm #
@@ -528,17 +535,14 @@ but is being updated so it is now a lookup for `call`.  In this case we should h
 in the world.  In this case we should have `reason_for_call = :to_be_updated`
 """
 function lookup_or_generate_during_world_update!(world, call, reason_for_call)
-    if !has_val(world, call)
-        if is_mgf_call(call)
-            # add this call to the sort, at the end for now
-            world.call_sort = add_call_to_end(world.call_sort, call)
-        elseif addr(call) <: Type{<:OUPMType}
-            generate_id_for_call!(world, call)
-        end
+    no_val = !has_val(world, call)
+    if no_val && is_mgf_call(call)
+        # add this call to the sort, at the end for now
+        world.call_sort = add_call_to_end(world.call_sort, call)
     end
 
     # if we haven't yet handled the update for this call, we have to do that before proceeding
-    if world.call_sort[call] >= world.state.fringe_bottom && !(call in world.state.visited)
+    if no_val || (world.call_sort[call] >= world.state.fringe_bottom && !(call in world.state.visited))
         update_or_generate!(world, call)
     end
 
