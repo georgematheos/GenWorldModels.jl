@@ -19,7 +19,7 @@ function Gen.get_choices(tr::UsingWorldTrace)
     full_choices = StaticChoiceMap(
         (
             kernel=get_choices(tr.kernel_tr),
-            world=to_idx_repr(get_choices(tr.world), tr.world.id_table)
+            world=to_idx_repr(tr.world, get_choices(tr.world))
         )
     )
     
@@ -76,10 +76,11 @@ function Base.getindex(tr::UsingWorldTrace, addr::Pair)
         try 
             if rest isa Pair
                 key, remaining = rest
-                key = convert_key_to_id_form(key, tr.world.id_table)
+                key = convert_key_to_id_form(tr.world, key)
                 return get_trace(tr.world, Call(mgf_addr, key))[remaining]
             else
-                return get_trace(tr.world, Call(mgf_addr, convert_key_to_id_form(rest, tr.world.id_table)))[]
+                key = convert_key_to_id_form(tr.world, rest)
+                return get_trace(tr.world, Call(mgf_addr, key))[]
             end
         catch
             key = rest isa Pair ? rest[1] : rest
@@ -244,8 +245,8 @@ function _update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
 
     # update all the nodes in the world.  pass in the updatespec and externally_constrained_addrs
     # converted so that they use identifier representation for objects
-    id_spec = to_id_repr(get_subtree(main_spec, :world), world.id_table)
-    id_ext_const_addrs = to_id_repr(get_subtree(externally_constrained_addrs, :world), world.id_table)
+    id_spec = to_id_repr!(world, get_subtree(main_spec, :world))
+    id_ext_const_addrs = to_id_repr(world, get_subtree(externally_constrained_addrs, :world))
     world_diff = update_mgf_calls!(world, id_spec, id_ext_const_addrs)
 
     (new_kernel_tr, kernel_weight, kernel_retdiff, kernel_discard) = update(
@@ -259,7 +260,7 @@ function _update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
     weight = kernel_weight + world_weight
     discard = StaticChoiceMap(
         (
-            world=to_idx_repr(world_discard, tr.world.id_table), # use the id_table from the trace's world, so we have the pre-update idx association
+            world=to_idx_repr(tr.world, world_discard), # use the id_table from the trace's world, so we have the pre-update idx association
             kernel=kernel_discard
         )
     )

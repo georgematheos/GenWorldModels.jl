@@ -51,6 +51,7 @@ oupm_type_name(T) = Symbol(Base.typename(T))
 @inline get_id(table::IDTable, type::Type{<:OUPMType}, idx::Int) = get_id(table, oupm_type_name(type), idx)
 @inline get_id(table::IDTable, typename::Symbol, idx::Int) = table.idx_to_id[typename][idx]
 
+# ALL instances of generating a new ID should pass through this function
 @inline add_identifier_for(table::IDTable, type::Type{<:OUPMType}, idx::Int) = add_identifier_for(table, oupm_type_name(type), idx)
 function add_identifier_for(table::IDTable, typename::Symbol, idx::Int)
     id = UUIDs.uuid1()
@@ -131,26 +132,4 @@ function move_all_between(table::IDTable, typename::Symbol; min=1, inc, max=Inf)
     new_idx_to_id = merge(table.idx_to_id, NamedTuple{(typename,)}((idx_to_id_for_type,)))
     new_table = IDTable(new_id_to_idx, new_idx_to_id)
     return (new_table, changed_ids)
-end
-
-# function move_identifier_from_index_to_index(table::IDTable, typename::Symbol; from_idx, to_idx)
-#     id_to_idx_for_type = table.id_to_idx[typename]
-#     idx_to_id_for_type = table.idx_to_id[typename]
-#     id = idx_to_id_for_type[from_idx]
-#     id_to_idx_for_type = assoc(id_to_idx_for_type, id, to_idx)
-#     idx_to_id_for_type = assoc(idx_to_id_for_type, to_idx, id)
-# end
-
-@inline convert_key_to_id_form(key, id_table) = key
-@inline function convert_key_to_id_form(key::OUPMType{Int}, id_table)
-    type = oupm_type(key)
-    id = get_id(id_table, type, key.idx_or_id)
-    type(id)
-end
-
-@inline convert_key_to_idx_form(key, id_table) = key
-@inline function convert_key_to_idx_form(key::OUPMType{UUID}, id_table)
-    type = oupm_type(key)
-    idx = get_idx(id_table, type, key.idx_or_id)
-    type(idx)
 end
