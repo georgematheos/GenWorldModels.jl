@@ -140,4 +140,20 @@ observe_sample_sum = UsingWorld(observe_samples_sum_kernel, :val => get_val; oup
     end
     split_merge_mh_kern = OUPMMHKernel(split_merge_proposal, (), split_merge_involution)
     new_tr = run_mh_20(tr, split_merge_mh_kern, obs)
+
+    ### Moving stuff ###
+    @gen function move_proposal(tr)
+        num_samples = tr[:kernel => :num_samples]
+        from_idx ~ uniform_discrete(1, num_samples)
+        to_idx ~ uniform_discrete(1, num_samples)
+    end
+    @oupm_involution move_inv (old_tr, fwd_prop_tr) to (new_tr, bwd_prop_tr) begin
+        from = @read(fwd_prop_tr[:from_idx], :disc)
+        to = @read(fwd_prop_tr[:to_idx], :disc)
+        @move(Sample, from, to)
+        @copy(fwd_prop_tr[:from_idx], bwd_prop_tr[:to_idx])
+        @copy(fwd_prop_tr[:to_idx], bwd_prop_tr[:from_idx])
+    end
+    move_mh_kern = OUPMMHKernel(move_proposal, (), move_inv)
+    new_tr = run_mh_20(tr, move_mh_kern, obs)
 end
