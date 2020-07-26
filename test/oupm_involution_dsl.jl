@@ -13,17 +13,16 @@ end
 @load_generated_functions()
 observe_sample_sum = UsingWorld(observe_samples_sum_kernel, :val => get_val; oupm_types=(Sample,))
 
-@testset "OUPM move involution DSL" begin
+# @testset "OUPM move involution DSL" begin
     OBS = 3.
     tr, _  = generate(observe_sample_sum, (), choicemap(
         (:kernel => :num_samples, 4), (:kernel => :observation, OBS),
     ))
 
-    function run_mh_100(tr, kern, obs)
+    function run_mh_20(tr, kern, obs)
         new_tr = tr
-        for i=1:100
+        for i=1:20
             new_tr, acc = mh(new_tr, kern; check=true, observations=obs)
-            println("Iter $i; acc=$acc")
         end
         new_tr
     end
@@ -44,28 +43,27 @@ observe_sample_sum = UsingWorld(observe_samples_sum_kernel, :val => get_val; oup
     end
 
     # invalid since it doesn't constrain the reverse of a death move!
-    # @oupm_involution invalid_bd_involution (old_tr, fwd_prop_tr) to (new_tr, bwd_prop_tr) begin
-    #     idx = @read(fwd_prop_tr[:idx], :disc)
-    #     current_num_samples = @read(old_tr[:kernel => :num_samples], :disc)
-    #     if @read(fwd_prop_tr[:do_birth], :disc)
-    #         @birth(Sample, idx)
-    #         @write(new_tr[:kernel => :num_samples], current_num_samples + 1, :disc)
-    #         new_val = @read(fwd_prop_tr[:new_val], :cont)
-    #         @write(new_tr[:world => :val => Sample(idx) => :val], new_val, :cont)
-    #         @write(bwd_prop_tr[:do_birth], false, :disc)
-    #     else
-    #         @death(Sample, idx)
-    #         @write(new_tr[:kernel => :num_samples], current_num_samples - 1, :disc)
-    #         @write(bwd_prop_tr[:do_birth], true, :disc)
-    #     end
-    #     @write(bwd_prop_tr[:idx], idx, :disc)
-    # end
+    @oupm_involution invalid_bd_involution (old_tr, fwd_prop_tr) to (new_tr, bwd_prop_tr) begin
+        idx = @read(fwd_prop_tr[:idx], :disc)
+        current_num_samples = @read(old_tr[:kernel => :num_samples], :disc)
+        if @read(fwd_prop_tr[:do_birth], :disc)
+            @birth(Sample, idx)
+            @write(new_tr[:kernel => :num_samples], current_num_samples + 1, :disc)
+            new_val = @read(fwd_prop_tr[:new_val], :cont)
+            @write(new_tr[:world => :val => Sample(idx) => :val], new_val, :cont)
+            @write(bwd_prop_tr[:do_birth], false, :disc)
+        else
+            @death(Sample, idx)
+            @write(new_tr[:kernel => :num_samples], current_num_samples - 1, :disc)
+            @write(bwd_prop_tr[:do_birth], true, :disc)
+        end
+        @write(bwd_prop_tr[:idx], idx, :disc)
+    end
 
-    # invalid_birth_death_mh_kern = OUPMMHKernel(birth_death_proposal, (), invalid_bd_involution)
-    # @test_logs (:error, ) match_mode=:any (@test_throws Exception run_mh_100(tr, invalid_birth_death_mh_kern, obs))
+    invalid_birth_death_mh_kern = OUPMMHKernel(birth_death_proposal, (), invalid_bd_involution)
+    @test_logs (:error, ) match_mode=:any (@test_throws Exception run_mh_20(tr, invalid_birth_death_mh_kern, obs))
 
     # now check a valid one!
-    println("Real run:")
     @oupm_involution bd_involution (old_tr, fwd_prop_tr) to (new_tr, bwd_prop_tr) begin
         idx = @read(fwd_prop_tr[:idx], :disc)
         do_birth = @read(fwd_prop_tr[:do_birth], :disc)
@@ -80,13 +78,13 @@ observe_sample_sum = UsingWorld(observe_samples_sum_kernel, :val => get_val; oup
             @death(Sample, idx)
             @write(new_tr[:kernel => :num_samples], current_num_samples - 1, :disc)
             
-            current_val = @read(old_tr[:world => :val => Sample(idx)], :cont)
+            current_val = @read(old_tr[:world => :val => Sample(idx) => :val], :cont)
             @write(bwd_prop_tr[:new_val], current_val, :cont)
         end
         @write(bwd_prop_tr[:do_birth], !do_birth, :disc)
         @write(bwd_prop_tr[:idx], idx, :disc)
     end
     birth_death_mh_kern = OUPMMHKernel(birth_death_proposal, (), bd_involution)
-    new_tr = run_mh_100(tr, birth_death_mh_kern, obs)
+    new_tr = run_mh_20(tr, birth_death_mh_kern, obs)
     @test get_score(new_tr) > get_score(tr)
-end
+# end

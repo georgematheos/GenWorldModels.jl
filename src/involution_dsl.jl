@@ -558,11 +558,6 @@ function jacobian_correction(transform::OUPMInvolutionDSLProgram, prev_model_tra
         # mutates the state
         transform.fn!(jacobian_pass_state)
 
-        println("input array:")
-        display(input_arr)
-        println("output array:")
-        display(output_arr)
-
         # return the output array
         output_arr
     end
@@ -641,8 +636,6 @@ function symmetric_trace_translator_run_transform(
         first_pass_results.update_spec, AllSelection())
     log_abs_determinant = jacobian_correction(
         f, prev_model_trace, forward_proposal_trace, first_pass_results, discard)
-    println("gonna generate backwards proposal using")
-    display(first_pass_results.u_back)
     backward_proposal_trace, = generate(
         q, (new_model_trace, q_args...), first_pass_results.u_back)
     return (new_model_trace, log_model_weight, backward_proposal_trace, log_abs_determinant)
