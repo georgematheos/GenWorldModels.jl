@@ -16,8 +16,5 @@ using UUIDs
 
 # include("oupm_types.jl")
 include("oupm_involution_dsl.jl")
-new_tr = run_mh_100(tr, birth_death_mh_kern, obs)
-println("new: ", get_score(new_tr))
-println("old: ", get_score(tr))
 
 end # module

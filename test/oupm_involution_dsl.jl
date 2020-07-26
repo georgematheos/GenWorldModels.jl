@@ -13,7 +13,7 @@ end
 @load_generated_functions()
 observe_sample_sum = UsingWorld(observe_samples_sum_kernel, :val => get_val; oupm_types=(Sample,))
 
-# @testset "OUPM move involution DSL" begin
+@testset "OUPM move involution DSL" begin
     OBS = 3.
     tr, _  = generate(observe_sample_sum, (), choicemap(
         (:kernel => :num_samples, 4), (:kernel => :observation, OBS),
@@ -78,6 +78,7 @@ observe_sample_sum = UsingWorld(observe_samples_sum_kernel, :val => get_val; oup
             @death(Sample, idx)
             @write(new_tr[:kernel => :num_samples], current_num_samples - 1, :disc)
             
+            # could use copy here, but want to test continuous read/write behavior
             current_val = @read(old_tr[:world => :val => Sample(idx) => :val], :cont)
             @write(bwd_prop_tr[:new_val], current_val, :cont)
         end
@@ -86,5 +87,57 @@ observe_sample_sum = UsingWorld(observe_samples_sum_kernel, :val => get_val; oup
     end
     birth_death_mh_kern = OUPMMHKernel(birth_death_proposal, (), bd_involution)
     new_tr = run_mh_20(tr, birth_death_mh_kern, obs)
-    @test get_score(new_tr) > get_score(tr)
-# end
+
+    ### Split/Merge ###
+    @gen function split_merge_proposal(tr)
+        current_num_samples = tr[:kernel => :num_samples]
+        do_split ~ bernoulli(0.5)
+        if do_split
+            solo_idx ~ uniform_discrete(1, current_num_samples)
+            deuce_idx1 ~ uniform_discrete(1, current_num_samples + 1)
+            deuce_idx2 ~ uniform_discrete(1, current_num_samples + 1)
+            if deuce_idx1 != deuce_idx2
+                old_val = tr[:world => :val => Sample(solo_idx) => :val]
+                new_val1 ~ normal(old_val, 0.5)
+                new_val2 ~ normal(old_val, 0.5)
+            end
+        else
+            solo_idx ~ uniform_discrete(1, current_num_samples - 1)
+            deuce_idx1 ~ uniform_discrete(1, current_num_samples)
+            deuce_idx2 ~ uniform_discrete(1, current_num_samples)
+            if deuce_idx1 != deuce_idx2
+                old_val1 = tr[:world => :val => Sample(deuce_idx1) => :val]
+                old_val2 = tr[:world => :val => Sample(deuce_idx2) => :val]
+                new_val ~ normal(old_val1 + old_val2, 1.)
+            end
+        end
+    end
+    @oupm_involution split_merge_involution (old_tr, fwd_prop_tr) to (new_tr, bwd_prop_tr) begin
+        deuce_idx1 = @read(fwd_prop_tr[:deuce_idx1], :disc)
+        deuce_idx2 = @read(fwd_prop_tr[:deuce_idx2], :disc)
+        do_split = @read(fwd_prop_tr[:do_split], :disc)
+        solo_idx = @read(fwd_prop_tr[:solo_idx], :disc)
+        if deuce_idx1 != deuce_idx2
+            current_num_samples = @read(old_tr[:kernel => :num_samples], :disc)
+            if do_split
+                @split(Sample, solo_idx, deuce_idx1, deuce_idx2)
+                @write(new_tr[:kernel => :num_samples], current_num_samples + 1, :disc)
+                @copy(fwd_prop_tr[:new_val1], new_tr[:world => :val => Sample(deuce_idx1) => :val])
+                @copy(fwd_prop_tr[:new_val2], new_tr[:world => :val => Sample(deuce_idx2) => :val])
+                @copy(old_tr[:world => :val => Sample(solo_idx) => :val], bwd_prop_tr[:new_val])
+            else
+                @merge(Sample, solo_idx, deuce_idx1, deuce_idx2)
+                @write(new_tr[:kernel => :num_samples], current_num_samples - 1, :disc)
+                @copy(fwd_prop_tr[:new_val], new_tr[:world => :val => Sample(solo_idx) => :val])
+                @copy(old_tr[:world => :val => Sample(deuce_idx1) => :val], bwd_prop_tr[:new_val1])
+                @copy(old_tr[:world => :val => Sample(deuce_idx2) => :val], bwd_prop_tr[:new_val2])
+            end
+        end
+        @copy(fwd_prop_tr[:deuce_idx1], bwd_prop_tr[:deuce_idx1])
+        @copy(fwd_prop_tr[:deuce_idx2], bwd_prop_tr[:deuce_idx2])
+        @write(bwd_prop_tr[:do_split], !do_split, :disc)
+        @copy(fwd_prop_tr[:solo_idx], bwd_prop_tr[:solo_idx])
+    end
+    split_merge_mh_kern = OUPMMHKernel(split_merge_proposal, (), split_merge_involution)
+    new_tr = run_mh_20(tr, split_merge_mh_kern, obs)
+end
