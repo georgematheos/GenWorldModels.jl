@@ -32,6 +32,8 @@ function Gen.get_subtrees_shallow(t::AddressFilterAddressTree)
     )
 end
 
+Gen.get_address_schema(t::Type{<:AddressFilterAddressTree}) = DynamicAddressSchema()
+
 """
     ConvertKeyAtDepthAddressTree{LT, depth, F, B} <: Gen.AddressTree{LT}
 

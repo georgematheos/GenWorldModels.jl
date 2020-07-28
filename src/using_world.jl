@@ -246,7 +246,11 @@ function _update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
     # update all the nodes in the world.  pass in the updatespec and externally_constrained_addrs
     # converted so that they use identifier representation for objects
     id_spec = to_id_repr!(world, get_subtree(main_spec, :world))
-    id_ext_const_addrs = to_id_repr(world, get_subtree(externally_constrained_addrs, :world))
+    
+    # use the original `world` object before the update to convert the externally constrained addresses,
+    # because the reverse constraints will use the id_table in its state after the reverse id table update occurs
+    id_ext_const_addrs = to_id_repr(tr.world, get_subtree(externally_constrained_addrs, :world))
+    
     world_diff = update_mgf_calls!(world, id_spec, id_ext_const_addrs)
 
     (new_kernel_tr, kernel_weight, kernel_retdiff, kernel_discard) = update(

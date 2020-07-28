@@ -194,6 +194,12 @@ macro move(ObjectType, from_idx, to_idx)
     end
 end
 
+macro save_for_reverse_regenerate(address)
+    quote _save_for_reverse_regenerate($(esc(bij_state)), $(esc(address))) end
+end
+macro regenerate(address)
+    quote _regenerate($(esc(bij_state)), $(esc(address))) end
+end
 
 # TODO make more consistent by allowing us to read any hierarchical address,
 # including return values of intermediate calls, not just the top-level call.
@@ -206,6 +212,7 @@ end
 
 mutable struct FirstPassResults
     update_spec::UpdateWithOUPMMovesSpec
+    regenerated::DynamicChoiceMap
 
     "output proposal choice map ``u'``"
     u_back::ChoiceMap
@@ -220,7 +227,7 @@ end
 
 function FirstPassResults()
     return FirstPassResults(
-        UpdateWithOUPMMovesSpec((), choicemap()), choicemap(),
+        UpdateWithOUPMMovesSpec((), DynamicAddressTree{Union{Value, SelectionLeaf}}()), choicemap(), choicemap(),
         Dict(), Dict(), Dict(), Dict(),
         DynamicSelection(), DynamicSelection())
 end
@@ -244,6 +251,15 @@ function run_first_pass(transform::OUPMInvolutionDSLProgram, model_trace, aux_tr
     state = FirstPassState(model_trace, aux_trace)
     transform.fn!(state) # TODO allow for other args to top-level transform function
     return state.results
+end
+
+function _save_for_reverse_regenerate(state::FirstPassState, address)
+    values = get_subtree(get_choices(state.model_trace), address)
+    set_subtree!(state.results.regenerated, address, values)
+end
+
+function _regenerate(state::FirstPassState, address)
+    set_subtree!(state.results.update_spec.subspec, address, AllSelection())
 end
 
 function read(state::FirstPassState, src::ModelInputTraceRetValToken, ::DiscreteAnn)
@@ -278,14 +294,14 @@ end
 
 function write(state::FirstPassState, dest::ModelOutputAddress, value, ::DiscreteAnn)
     addr = dest.addr
-    state.results.update_spec.subspec[addr] = value
+    set_subtree!(state.results.update_spec.subspec, addr, Value(value))
     return value
 end
 
 function write(state::FirstPassState, dest::ModelOutputAddress, value, ::ContinuousAnn)
     addr = dest.addr
     has_value(state.results.update_spec.subspec, addr) && error("Model address $addr already written to")
-    state.results.update_spec.subspec[addr] = value
+    set_subtree!(state.results.update_spec.subspec, addr, Value(value))
     state.results.t_cont_writes[addr] = value
     return value
 end
@@ -308,11 +324,7 @@ function copy(state::FirstPassState, src::ModelInputAddress, dest::ModelOutputAd
     from_addr, to_addr = src.addr, dest.addr
     model_choices = get_choices(state.model_trace)
     push!(state.results.t_copy_reads, from_addr)
-    if has_value(model_choices, from_addr)
-        state.results.update_spec.subspec[to_addr] = model_choices[from_addr]
-    else
-        set_submap!(state.results.update_spec.subspec, to_addr, get_submap(model_choices, from_addr))
-    end
+    set_subtree!(state.results.update_spec.subspec, to_addr, get_subtree(model_choices, from_addr))
     return nothing
 end
 
@@ -348,11 +360,7 @@ function copy(state::FirstPassState, src::AuxInputAddress, dest::ModelOutputAddr
     from_addr, to_addr = src.addr, dest.addr
     push!(state.results.u_copy_reads, from_addr)
     aux_choices = get_choices(state.aux_trace)
-    if has_value(aux_choices, from_addr)
-        state.results.update_spec.subspec[to_addr] = aux_choices[from_addr]
-    else
-        set_submap!(state.results.update_spec.subspec, to_addr, get_submap(aux_choices, from_addr))
-    end
+    set_subtree!(state.results.update_spec.subspec, to_addr, get_subtree(aux_choices, from_addr))
     return nothing
 end
 
@@ -449,6 +457,12 @@ function copy(state::JacobianPassState, src, dest)
 end
 
 function apply_oupm_move(state::JacobianPassState, move)
+    nothing
+end
+function _save_for_reverse_regenerate(::JacobianPassState, _)
+    nothing
+end
+function _regenerate(::JacobianPassState, _)
     nothing
 end
 
@@ -628,17 +642,26 @@ end
 function symmetric_trace_translator_run_transform(
         f::OUPMInvolutionDSLProgram,
         prev_model_trace::Trace, forward_proposal_trace::Trace,
-        q::GenerativeFunction, q_args::Tuple)
+        q::GenerativeFunction, q_args::Tuple; regeneration_constraints=EmptyChoiceMap())
     first_pass_results = run_first_pass(f, prev_model_trace, forward_proposal_trace)
+    ext_const_addrs = invert(addrs(first_pass_results.regenerated))
+    spec = first_pass_results.update_spec
+
+    if !isempty(regeneration_constraints)
+        subspec = merge(UnderlyingChoices(spec.subspec), regeneration_constraints)
+        spec = UpdateWithOUPMMovesSpec(spec.moves, subspec)
+    end
+
     (new_model_trace, log_model_weight, _, discard) = update(
         prev_model_trace, get_args(prev_model_trace),
         map((_) -> NoChange(), get_args(prev_model_trace)),
-        first_pass_results.update_spec, AllSelection())
+        spec, ext_const_addrs)
+
     log_abs_determinant = jacobian_correction(
         f, prev_model_trace, forward_proposal_trace, first_pass_results, discard)
     backward_proposal_trace, = generate(
         q, (new_model_trace, q_args...), first_pass_results.u_back)
-    return (new_model_trace, log_model_weight, backward_proposal_trace, log_abs_determinant)
+    return (new_model_trace, log_model_weight, backward_proposal_trace, log_abs_determinant, first_pass_results.regenerated)
 end
 
 function (translator::OUPMMHKernel)(prev_model_trace::Trace; check=false, observations=EmptyChoiceMap())
@@ -646,7 +669,7 @@ function (translator::OUPMMHKernel)(prev_model_trace::Trace; check=false, observ
     forward_proposal_trace = simulate(translator.q, (prev_model_trace, translator.q_args...,))
 
     # apply trace transform
-    (new_model_trace, log_model_weight, backward_proposal_trace, log_abs_determinant) = symmetric_trace_translator_run_transform(
+    (new_model_trace, log_model_weight, backward_proposal_trace, log_abs_determinant, regenerated_vals) = symmetric_trace_translator_run_transform(
         translator.f, prev_model_trace, forward_proposal_trace, translator.q, translator.q_args)
 
     # compute log weight
@@ -658,7 +681,7 @@ function (translator::OUPMMHKernel)(prev_model_trace::Trace; check=false, observ
         Gen.check_observations(get_choices(new_model_trace), observations)
         forward_proposal_choices = get_choices(forward_proposal_trace)
         (prev_model_trace_rt, _, forward_proposal_trace_rt, _) = symmetric_trace_translator_run_transform(
-            translator.f, new_model_trace, backward_proposal_trace, translator.q, translator.q_args)
+            translator.f, new_model_trace, backward_proposal_trace, translator.q, translator.q_args; regeneration_constraints=regenerated_vals)
         check_round_trip(
             prev_model_trace, prev_model_trace_rt,
             forward_proposal_trace, forward_proposal_trace_rt)
@@ -679,4 +702,5 @@ end
 export @oupm_involution
 export @read, @write, @copy, @tcall
 export @birth, @death, @split, @merge, @move
+export @regenerate, @save_for_reverse_regenerate
 export OUPMInvolutionDSLProgram, OUPMMHKernel

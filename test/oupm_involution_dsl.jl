@@ -156,4 +156,50 @@ observe_sample_sum = UsingWorld(observe_samples_sum_kernel, :val => get_val; oup
     end
     move_mh_kern = OUPMMHKernel(move_proposal, (), move_inv)
     new_tr = run_mh_20(tr, move_mh_kern, obs)
+
+    ### Regenerating ###
+    @gen function bd_prop_regen(model_tr)
+        do_birth ~ bernoulli(0.5)
+        current_num_samples = model_tr[:kernel => :num_samples]
+        if do_birth
+            idx ~ uniform_discrete(1, current_num_samples + 1)
+        else
+            idx ~ uniform_discrete(1, current_num_samples)
+        end
+    end
+    @oupm_involution bd_inv_regen (old_tr, fwd_prop_tr) to (new_tr, bwd_prop_tr) begin
+        idx = @read(fwd_prop_tr[:idx], :disc)
+        do_birth = @read(fwd_prop_tr[:do_birth], :disc)
+        current_num_samples = @read(old_tr[:kernel => :num_samples], :disc)
+        if do_birth
+            @birth(Sample, idx)
+            @write(new_tr[:kernel => :num_samples], current_num_samples + 1, :disc)
+            @regenerate(:world => :val => Sample(idx))
+        else
+            @death(Sample, idx)
+            @write(new_tr[:kernel => :num_samples], current_num_samples - 1, :disc)
+            @save_for_reverse_regenerate(:world => :val => Sample(idx))
+        end
+        @write(bwd_prop_tr[:do_birth], !do_birth, :disc)
+        @write(bwd_prop_tr[:idx], idx, :disc)
+    end
+    bd_regen_mh_kern = OUPMMHKernel(bd_prop_regen, (), bd_inv_regen)
+    new_tr = run_mh_20(tr, bd_regen_mh_kern, obs)
+
+    # now do some simple checks on the acceptance ratio
+    prop_tr, _ = generate(bd_prop_regen, (tr,), choicemap((:do_birth, true)))
+    (new_tr, weight, bwd_prop_tr, log_abs_det) = GenWorldModels.symmetric_trace_translator_run_transform(bd_inv_regen, tr, prop_tr, bd_prop_regen, ())
+    num = tr[:kernel => :num_samples]
+    original_sum = sum(tr[:kernel => :samples])
+    new_val = new_tr[:world => :val => Sample(prop_tr[:idx])]
+    println("original sum: $original_sum | original num: $num | new val: $new_val")
+    num_change_weight = logpdf(poisson, num+1, 5) - logpdf(poisson, num, 5)
+    obsprob_change_weight = logpdf(normal, original_sum + new_val, OBS, 1.) - logpdf(normal, original_sum, OBS, 1.)
+    expected_weight = num_change_weight + obsprob_change_weight
+    @test isapprox(weight, expected_weight)
+    @test log_abs_det == 0.
+
+    (new_tr, weight, bwd_trace, log_abs_det) = GenWorldModels.symmetric_trace_translator_run_transform(bd_inv_regen, new_tr, bwd_prop_tr, bd_prop_regen, ())
+    @test isapprox(weight, -expected_weight)
+    @test log_abs_det == 0.
 end
