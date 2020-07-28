@@ -14,7 +14,7 @@ include("simple_dependency_updates.jl")
 include("world_args.jl")
 include("randomized_dependency_updates.jl")
 
-# include("oupm_types.jl")
+include("oupm_types.jl")
 include("oupm_involution_dsl.jl")
 
 end # module
