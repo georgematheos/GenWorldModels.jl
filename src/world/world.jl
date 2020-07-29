@@ -21,9 +21,14 @@ include("call.jl") # `Call` type
 # special addresses for world args and getting the index of a OUPM object
 const _world_args_addr = :args
 const _get_index_addr = :index
-@inline function is_mgf_call(c::Call)
-    addr(c) isa Symbol && addr(c) !== _world_args_addr && addr(c) !== _get_index_addr
-end
+const _get_origin_addr = :origin
+const _get_abstract_addr = :abstract
+const _special_addrs = (_world_args_addr, _get_index_addr, _get_origin_addr, _get_abstract_addr)
+is_mgf_call(c::Call{_world_args_addr}) = false
+is_mgf_call(c::Call{_get_index_addr}) = false
+is_mgf_call(c::Call{_get_origin_addr}) = false
+is_mgf_call(c::Call{_get_abstract_addr}) = false
+is_mgf_call(c::Call) = true
 
 # data structures
 include("data_structures/traces.jl") # `Traces` data structure to store subtraces
@@ -78,6 +83,10 @@ function World{addrs, GenFnTypes, WorldArgnames}(gen_fns, world_args::NamedTuple
 end
 
 function World(addrs::NTuple{n, Symbol}, gen_fns::NTuple{n, Gen.GenerativeFunction}, world_args::NamedTuple{Names}, oupm_types::Tuple) where {n, Names}
+    for a in addrs
+        @assert !(a in _special_addrs) "Cannot use reserved address $a as an MGF address."
+    end
+
     World{addrs, typeof(gen_fns), Names}(gen_fns, world_args, oupm_types)
 end
 
@@ -128,68 +137,28 @@ end
 @inline get_all_calls_which_look_up(world::World, call) = get_all_calls_which_look_up(world.lookup_counts, call)
 @inline get_trace(world::World, call::Call) = get_trace(world.traces, call)
 @inline total_score(world::World) = world.total_score
+
 @generated function get_val(world::World, call::Call{call_addr}) where {call_addr}
     if call_addr == _world_args_addr
         quote world.world_args[key(call)] end
     elseif call_addr == _get_index_addr
-        quote get_idx(world.id_table, key(call)) end
-    elseif call_addr isa Type{<:OUPMType}
-        quote call_addr(get_id(world.id_table, call_addr, key(call))) end
-    else
+        quote world.id_table[key(call)].idx end
+    elseif call_addr == _get_origin_addr
+        quote world.id_table[key(call)].origin end
+    elseif call_addr == _get_abstract_addr
+        quote get_abstract(world, key(call)) end
+    else # is mgf call
         quote get_retval(get_trace(world, call)) end
     end
 end
 @generated function has_val(world::World, call::Call{call_addr}) where {call_addr}
     if call_addr == _world_args_addr
         quote haskey(world.world_args, key(call)) end
-    elseif call_addr == _get_index_addr
-        quote has_id(world.id_table, key(call)) end
-    elseif call_addr isa Type{<:OUPMType}
-        quote has_idx(world.id_table, call_addr, key(call)) end
+    elseif call_addr == _get_index_addr || call_addr == _get_origin_addr
+        quote haskey(world.id_table, key(call)) end
     else
         quote has_trace(world.traces, call) end
     end
-end
-
-@inline convert_key_to_id_form(world, key) = key
-@inline function convert_key_to_id_form(world, key::OUPMType{Int})
-    type = oupm_type(key)
-    id = get_id(world.id_table, type, key.idx_or_id)
-    type(id) 
-end
-
-@inline convert_key_to_id_form!(world, key) = key
-@inline function convert_key_to_id_form!(world, key::OUPMType{Int})
-    type = oupm_type(key)
-    idx = key.idx_or_id
-    if has_idx(world.id_table, type, idx)
-        id = get_id(world.id_table, type, idx)
-    else
-        id = generate_id_for_call!(world, Call(type, idx))
-    end
-    return type(id)
-end
-
-@inline convert_key_to_idx_form(world, key) = key
-@inline function convert_key_to_idx_form(world, key::OUPMType{UUID})
-    type = oupm_type(key)
-    idx = get_idx(world.id_table, type, key.idx_or_id)
-    type(idx)
-end
-
-"""
-    generate_id_for_call!(world, call)
-
-Given a `call` whose address is an open universe type `T`, and whose
-key is an index `idx`, where there is currently no identifier associated
-with `T(idx)` in the world, generate an identifier for this.
-"""
-function generate_id_for_call!(world::World, call::Call)
-    T = addr(call)
-    (world.id_table, id) = add_identifier_for(world.id_table, T, key(call))
-    note_new_call!(world, call)
-    note_new_call!(world, Call(_get_index_addr, T(id)))
-    return id
 end
 
 """
@@ -219,10 +188,10 @@ function generate_value!(world, call, constraints)
 
     return weight
 end
-function generate_value!(world, call::Call{<:OUPMType}, ::EmptyAddressTree)
+function generate_value!(world, call::Call{_get_abstract_addr}, ::EmptyAddressTree)
     @assert !(world.state isa NoChangeWorldState)
     @assert !has_val(world, call)
-    generate_id_for_call!(world, call)
+    generate_abstract_object!(world, key(call))
     return 0.
 end
 

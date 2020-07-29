@@ -1,40 +1,41 @@
 """
-    OUPMTypeIdxChange
+    OUPMObject{T}
 
-Diff for an index-form OUPMType which has had its index change value.
+An open universe object whose object type has name given by the symbol `T`.
 """
-struct OUPMTypeIdxChange <: Gen.Diff end
-
-"""
-    OUPMType{UUID}
-
-Abstract supertype for open universe types in "identifier form".
-
-    OUPMType{Int}
-Abstract supertype for open universe types in "index form".
-"""
-abstract type OUPMType{T} end
-
-"""
-    oupm_type(::OUPMType)
-
-Get the open universe type for an open universe object.
-
-# Example
-```julia
-julia> @type AudioSource
-AudioSource
-
-julia> oupm_type(AudioSource{Int}(1))
-AudioSource
-```
-"""
-function oupm_type(t::OUPMType)
-    error("No function `oupm_type` found for $t::$(typeof(t)). Make sure oupm types are declared with @type.")
+abstract type OUPMObject{T} end
+struct AbstractOUPMObject{T} <: OUPMObject{T}
+    id::Symbol
 end
-oupm_type(t::Diffed{<:OUPMType, NoChange}) = Diffed(oupm_type(strip_diff(t)), NoChange())
-oupm_type(t::Diffed{<:OUPMType, OUPMTypeIdxChange}) = Diffed(oupm_type(strip_diff(t)), NoChange())
-oupm_type(t::Diffed{<:OUPMType, UnknownChange}) = Diffed(oupm_type(strip_diff(t)), UnknownChange())
+struct ConcreteIndexOUPMObject{T, OriginType} <: OUPMObject{T}
+    origin::OriginType
+    idx::Int
+    function ConcreteIndexOUPMObject{T}(origin::OT, idx::Int) where {T, OT <: Tuple{Vararg{<:OUPMObject}}}
+        new{T, OT}(origin, idx)
+    end
+end
+(OUPMObject{T})(origin::Tuple, idx::Int) where {T} = ConcreteIndexOUPMObject{T}(origin, idx)
+(OUPMObject{T})(idx::Int) where {T} = ConcreteIndexOUPMObject{T}((), idx)
+function ConcreteIndexOUPMObject{T}(origin::OT, idx::Int) where {T, OT}
+    error("Tried to create a $T with origin $origin which is not a tuple of OUPMObjects.")
+end
+
+function Base.show(io::IO, obj::ConcreteIndexOUPMObject{T}) where {T}
+    print(io, T)
+    print(io, "(")
+    if obj.origin !== ()
+        print(io, obj.origin)
+        print(io, ", ")
+    end
+    print(io, obj.idx)
+    print(io, ")")
+end
+function Base.show(io::IO, obj::AbstractOUPMObject{T}) where {T}
+    print(io, T)
+    print(io, "(")
+    print(io, obj.id)
+    print(io, ")")
+end
 
 """
     @type TypeName
@@ -43,55 +44,46 @@ Declares the existance of open universe type `TypeName`.
 """
 macro type(name::Symbol)
     quote
-        struct $(esc(name)){T} <: OUPMType{T}
-            idx_or_id::T
-            $(esc(name))(x::Int) = new{Int}(x)
-            $(esc(name))(x::UUID) = new{UUID}(x)
-        end
-        $(@__MODULE__).oupm_type(::$(esc(name))) = $(esc(name))
-        $(esc(name))(d::Diffed{Int, Gen.NoChange}) = Gen.Diffed($(esc(name))(Gen.strip_diff(d)), NoChange())
-        $(esc(name))(d::Diffed{Int, Gen.UnknownChange}) = Gen.Diffed($(esc(name))(Gen.strip_diff(d)), OUPMTypeIdxChange())
+        $(esc(name)) = OUPMObject{$(QuoteNode(name))}
         $(esc(name)) # the "return" from @type should be the type
     end
 end
 
-idx(t::OUPMType{Int}) = t.idx_or_id
-idx(d::Diffed{<:OUPMType{Int}, UnknownChange}) = Diffed(idx(strip_diff(d)), UnknownChange())
-idx(d::Diffed{<:OUPMType{Int}, OUPMTypeIdxChange}) = Diffed(idx(strip_diff(d)), UnknownChange())
-idx(d::Diffed{<:OUPMType{Int}, NoChange}) = Diffed(idx(strip_diff(d)), NoChange())
 
-abstract type OUPMMove end
-struct BirthMove <: OUPMMove
-    type::Type{<:OUPMType}
-    idx::Int
-end
-struct DeathMove <: OUPMMove
-    type::Type{<:OUPMType}
-    idx::Int
-end
-struct MergeMove <: OUPMMove
-    type::Type{<:OUPMType}
-    to_idx::Int
-    from_idx1::Int
-    from_idx2::Int
-end
-struct SplitMove <: OUPMMove
-    type::Type{<:OUPMType}
-    from_idx::Int
-    to_idx1::Int
-    to_idx2::Int
-end
-struct MoveMove <: OUPMMove
-    type::Type{<:OUPMType}
-    from_idx::Int
-    to_idx::Int
-end
+# TODO: below here
 
-struct UpdateWithOUPMMovesSpec <: Gen.CustomUpdateSpec
-    moves::Tuple{Vararg{<:OUPMMove}}
-    subspec::Gen.UpdateSpec
-end
+# abstract type OUPMMove end
+# struct BirthMove <: OUPMMove
+#     type::Type{<:OUPMType}
+#     idx::Int
+# end
+# struct DeathMove <: OUPMMove
+#     type::Type{<:OUPMType}
+#     idx::Int
+# end
+# struct MergeMove <: OUPMMove
+#     type::Type{<:OUPMType}
+#     to_idx::Int
+#     from_idx1::Int
+#     from_idx2::Int
+# end
+# struct SplitMove <: OUPMMove
+#     type::Type{<:OUPMType}
+#     from_idx::Int
+#     to_idx1::Int
+#     to_idx2::Int
+# end
+# struct MoveMove <: OUPMMove
+#     type::Type{<:OUPMType}
+#     from_idx::Int
+#     to_idx::Int
+# end
 
-export @type
-export BirthMove, DeathMove, SplitMove, MergeMove, MoveMove
-export UpdateWithOUPMMovesSpec
+# struct UpdateWithOUPMMovesSpec <: Gen.CustomUpdateSpec
+#     moves::Tuple{Vararg{<:OUPMMove}}
+#     subspec::Gen.UpdateSpec
+# end
+
+export @type, OUPMObject, AbstractOUPMObject, ConcreteIndexOUPMObject
+# export BirthMove, DeathMove, SplitMove, MergeMove, MoveMove
+# export UpdateWithOUPMMovesSpec

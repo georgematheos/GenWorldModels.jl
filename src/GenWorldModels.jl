@@ -3,7 +3,6 @@ module GenWorldModels
 using Gen
 using FunctionalCollections
 using DataStructures
-using UUIDs
 
 include("oupm_types.jl") # exports OUPM-related items
 
@@ -18,7 +17,7 @@ export lookup_or_generate, UsingWorld, World
 
 include("involution_dsl.jl")
 
-# don't export the macros; users can import them if needed
-include("macros.jl")
+# # don't export the macros; users can import them if needed
+# include("macros.jl")
 
 end

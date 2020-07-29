@@ -1,4 +1,5 @@
-const CallAddr = Union{Symbol, Type{<:OUPMType}}
+# the type for call addresses
+const CallAddr = Symbol
 
 """
     Call
