@@ -161,7 +161,8 @@ function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; c
     world_args, kernel_args = extract_world_args(gen_fn, args)
 
     world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args, gen_fn.oupm_types)
-    begin_generate!(world, get_submap(constraints, :world))
+    world_constraints = to_id_repr!(world, get_submap(constraints, :world))
+    begin_generate!(world, world_constraints)
     kernel_tr, kernel_weight = generate(gen_fn.kernel, (world, kernel_args...), get_submap(constraints, :kernel))
     world_weight = end_generate!(world, check_all_constraints_used)
     

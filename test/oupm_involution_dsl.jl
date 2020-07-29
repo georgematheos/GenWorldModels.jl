@@ -12,7 +12,7 @@ end
 end
 @load_generated_functions()
 observe_sample_sum = UsingWorld(observe_samples_sum_kernel, :val => get_val; oupm_types=(Sample,))
-
+#=
 @testset "OUPM move involution DSL" begin
     OBS = 3.
     tr, _  = generate(observe_sample_sum, (), choicemap(
@@ -202,4 +202,20 @@ observe_sample_sum = UsingWorld(observe_samples_sum_kernel, :val => get_val; oup
     (new_tr, weight, bwd_trace, log_abs_det) = GenWorldModels.symmetric_trace_translator_run_transform(bd_inv_regen, new_tr, bwd_prop_tr, bd_prop_regen, ())
     @test isapprox(weight, -expected_weight)
     @test log_abs_det == 0.
+end
+=#
+@testset "num change without OUPM move" begin
+    tr, _ = generate(observe_sample_sum, (), choicemap(
+        (:kernel => :num_samples, 2),
+        (:world => :val => Sample(1) => :val, 0.4 ))
+    )
+    OBS = tr[:kernel => :observation]
+    for _=1:5
+        new_tr, weight, _ = regenerate(tr, (), (), select(:kernel => :num_samples))
+        new_sum = sum(new_tr[:kernel => :samples])
+        old_sum = sum(tr[:kernel => :samples])
+        obsscore_diff = logpdf(normal, new_sum, OBS, 1.) - logpdf(normal, old_sum, OBS, 1.)
+        @test isapprox(weight, obsscore_diff)
+        tr = new_tr
+    end
 end

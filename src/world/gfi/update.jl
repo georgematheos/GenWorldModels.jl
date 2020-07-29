@@ -523,17 +523,6 @@ function end_update!(world::World, kernel_discard::ChoiceMap, check_constrained_
     return retval
 end
 
-"""
-    lookup_or_generate_during_update!(world, call)
-
-This should be called when the world is in an update state, and one of the following occurs:
-- There is a call to `Gen.generate` for `call`; in this case we should have `reason_for_call = :generate`
-- There is a call to `Gen.update` for what used to be a different key,
-but is being updated so it is now a lookup for `call`.  In this case we should have
-`reason_for_call = :key_change`
-- There is a call to `Gen.update` for a lookup for a key which is diffed with a `ToBeUpdatedDiff`
-in the world.  In this case we should have `reason_for_call = :to_be_updated`
-"""
 function lookup_or_generate_during_world_update!(world, call, reason_for_call)
     no_val = !has_val(world, call)
     if no_val && is_mgf_call(call)
@@ -576,6 +565,17 @@ function lookup_or_generate_during_kernel_update!(world, call)
     return get_val(world, call)
 end
 
+"""
+    lookup_or_generate_during_update!(world, call)
+
+This should be called when the world is in an update state, and one of the following occurs:
+- There is a call to `Gen.generate` for `call`; in this case we should have `reason_for_call = :generate`
+- There is a call to `Gen.update` for what used to be a different key,
+but is being updated so it is now a lookup for `call`.  In this case we should have
+`reason_for_call = :key_change`
+- There is a call to `Gen.update` for a lookup for a key which is diffed with a `ToBeUpdatedDiff`
+in the world.  In this case we should have `reason_for_call = :to_be_updated`
+"""
 function lookup_or_generate_during_update!(world, call, reason_for_call)
     if world.state.world_update_complete
         lookup_or_generate_during_kernel_update!(world, call)
