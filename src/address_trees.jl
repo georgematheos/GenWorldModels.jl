@@ -77,44 +77,39 @@ function Gen.get_subtrees_shallow(t::ConvertKeyAtDepthAddressTree{T, depth}) whe
     )
 end
 
-# TODO: real implementation!
-to_id_repr(world, tree) = tree
-to_id_repr!(world, tree) = tree
-to_idx_repr(world, tree) = tree
+"""
+    to_abstract_repr(world, tree)
 
-# """
-#     to_id_repr(world, tree)
+Convert the given address tree for the world where all MGF calls use the concrete representation
+to have all the MGF keys use abstract representation instead.
+"""
+function to_abstract_repr(world::World, tree::Gen.AddressTree{LT}) where {LT}
+    to_abst(key) = convert_to_abstract(world, key)
+    to_conc(key) = convert_to_concrete(world, key)
+    ConvertKeyAtDepthAddressTree{LT, 2, typeof(to_abst), typeof(to_conc)}(tree, to_abst, to_conc)
+end
 
-# Convert the given address tree for the world where all MGF calls use idx representation
-# to have all the MGF keys use id representation instead.
-# """
-# function to_id_repr(world::World, tree::Gen.AddressTree{LT}) where {LT}
-#     to_id(key) = convert_key_to_id_form(world, key)
-#     to_idx(key) = convert_key_to_idx_form(world, key)
-#     ConvertKeyAtDepthAddressTree{LT, 2, typeof(to_id), typeof(to_idx)}(tree, to_id, to_idx)
-# end
+"""
+    to_concrete_repr(world, tree)
 
-# """
-#     to_idx_repr(world, tree)
+Convert the given address tree for the world where all MGF calls use abstract representation
+to have all the MGF keys use concrete representation instead.
+"""
+function to_concrete_repr(world::World, tree::Gen.AddressTree{LT}) where {LT}
+    to_abst(key) = convert_to_abstract(world, key)
+    to_conc(key) = convert_to_concrete(world, key)
+    ConvertKeyAtDepthAddressTree{LT, 2, typeof(to_conc), typeof(to_abst)}(tree, to_conc, to_abst)
+end
 
-# Convert the given address tree for the world where all MGF calls use id representation
-# to have all the MGF keys use idx representation instead.
-# """
-# function to_idx_repr(world::World, tree::Gen.AddressTree{LT}) where {LT}
-#     to_id(key) = convert_key_to_id_form(world, key)
-#     to_idx(key) = convert_key_to_idx_form(world, key)
-#     ConvertKeyAtDepthAddressTree{LT, 2, typeof(to_idx), typeof(to_id)}(tree, to_idx, to_id)
-# end
+"""
+    to_abstract_repr!(world, tree)
 
-# """
-#     to_id_repr!(world, tree)
-
-# Convert the given address tree for the world where all MGF calls use idx representation
-# to have all the MGF keys use id representation instead; lazily generate an ID for any
-# indices for which there is currently no index in the world.
-# """
-# function to_id_repr!(world::World, tree::Gen.AddressTree{LT}) where {LT}
-#     to_id!(key) = convert_key_to_id_form!(world, key)
-#     to_idx(key) = convert_key_to_idx_form(world, key)
-#     ConvertKeyAtDepthAddressTree{LT, 2, typeof(to_id!), typeof(to_idx)}(tree, to_id!, to_idx)
-# end
+Convert the given address tree for the world where all MGF calls use concrete representation
+to have all the MGF keys use id representation instead; lazily generate an abstract form in the world for any
+concrete object for which there is currently no abstract form in the world.
+"""
+function to_abstract_repr!(world::World, tree::Gen.AddressTree{LT}) where {LT}
+    to_abst!(key) = convert_to_abstract!(world, key)
+    to_conc(key) = convert_to_concrete(world, key)
+    ConvertKeyAtDepthAddressTree{LT, 2, typeof(to_abst!), typeof(to_conc)}(tree, to_abst!, to_conc)
+end

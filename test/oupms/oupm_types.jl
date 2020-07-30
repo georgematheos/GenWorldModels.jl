@@ -1,6 +1,3 @@
-@type Timestep
-@type Blip
-
 @testset "oupm type construction" begin
     @test Blip(1) isa OUPMObject{:Blip}
     @test Blip(1) isa ConcreteIndexOUPMObject{:Blip}

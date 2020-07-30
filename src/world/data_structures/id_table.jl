@@ -76,13 +76,6 @@ function Base.show(io::IO, table::IDTable)
     println("--------------------------------------------")
 end
 
-function concrete_origin_error(concrete::ConcreteIndexOUPMObject)
-    error("""
-        Attempted to perform an ID table operation for $concrete which may only be performed for
-        a fully abstract object, or an object with concrete index but fully abstract origin.
-    """)
-end
-
 get_concrete(table::IDTable, abstract::AbstractOUPMObject) = table.abstract_to_concrete[abstract]
 @inline function get_abstract(table::IDTable, concrete::ConcreteIndexAbstractOriginOUPMObject{T}) where {T}
     table.concrete_to_abstract[concrete]

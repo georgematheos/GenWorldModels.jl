@@ -51,6 +51,13 @@ macro type(name::Symbol)
     end
 end
 
+function concrete_origin_error(concrete::ConcreteIndexOUPMObject)
+    @assert !(concrete isa ConcreteIndexAbstractOriginOUPMObject) "This error should never be thrown for an object with fully abstract origin!"
+    error("""
+        Attempted to perform an operation for $concrete which may only be performed for
+        a fully abstract object, or an object with concrete index but fully abstract origin.
+    """)
+end
 
 # TODO: below here
 

@@ -82,4 +82,23 @@ end
     @test get_score(tr) == 0.
 end
 
+@testset "choicemap for model with OUPM objects" begin
+    @dist _get_size(world, blip::Blip) = normal(100, 5)
+    @gen function _kern(world)
+        b1 = Blip(1)
+        b2 ~ lookup_or_generate(world[:abstract][Blip(2)])
+        size1 ~ lookup_or_generate(world[:size][b1])
+        size2 ~ lookup_or_generate(world[:size][b2])
+        return size1 + size2
+    end
+    get_sizes = UsingWorld(_kern, :size => _get_size)
+
+    tr = simulate(get_sizes, ())
+    ch = get_choices(tr)
+    collected_submap_keys = map(x->x[1], collect(get_submaps_shallow(get_submap(ch, :world => :size))))
+    @test collected_submap_keys == [Blip(1), Blip(2)] || collected_submap_keys == [Blip(2), Blip(1)]
+    @test has_value(ch, :world => :size => Blip(1))
+    @test has_value(ch, :world => :size => Blip(2))
+end
+
 end

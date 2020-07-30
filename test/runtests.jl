@@ -16,8 +16,12 @@ using Test
 # include("examples/factorial.jl")
 # include("examples/scene_decoration.jl")
 
-# # OUPM functionality testing
-include("oupms/oupm_types.jl")
+# OUPM functionality testing
+# a couple types used in several test files:
+@type Timestep
+@type Blip
+    
+# include("oupms/oupm_types.jl")
 include("oupms/simple_oupmtype_usage.jl")
 # include("oupms/simple_oupm_moves.jl")
 # include("oupms/oupm_involution_dsl.jl")

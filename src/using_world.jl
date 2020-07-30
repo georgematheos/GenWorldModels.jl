@@ -19,22 +19,7 @@ function Gen.get_choices(tr::UsingWorldTrace)
     full_choices = StaticChoiceMap(
         (
             kernel=get_choices(tr.kernel_tr),
-            world=to_idx_repr(tr.world, get_choices(tr.world))
-        )
-    )
-    
-    # return a choicemap which filters out all the choices addressed with `metadata_addr`,
-    # since these are just used for internal tracking and should not be exposed
-    AddressFilterChoiceMap(
-        full_choices,
-        addr -> addr != metadata_addr(tr.world)
-    )
-end
-function get_id_choices(tr::UsingWorldTrace)
-    full_choices = StaticChoiceMap(
-        (
-            kernel=get_choices(tr.kernel_tr),
-            world=get_choices(tr.world)
+            world=to_concrete_repr(tr.world, get_choices(tr.world))
         )
     )
     
@@ -163,7 +148,7 @@ function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; c
     world_args, kernel_args = extract_world_args(gen_fn, args)
 
     world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
-    world_constraints = to_id_repr!(world, get_submap(constraints, :world))
+    world_constraints = to_abstract_repr!(world, get_submap(constraints, :world))
     begin_generate!(world, world_constraints)
     kernel_tr, kernel_weight = generate(gen_fn.kernel, (world, kernel_args...), get_submap(constraints, :kernel))
     world_weight = end_generate!(world, check_all_constraints_used)
@@ -248,11 +233,11 @@ function _update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
 
     # update all the nodes in the world.  pass in the updatespec and externally_constrained_addrs
     # converted so that they use identifier representation for objects
-    id_spec = to_id_repr!(world, get_subtree(main_spec, :world))
+    id_spec = to_abstract_repr!(world, get_subtree(main_spec, :world))
     
     # use the original `world` object before the update to convert the externally constrained addresses,
     # because the reverse constraints will use the id_table in its state after the reverse id table update occurs
-    id_ext_const_addrs = to_id_repr(tr.world, get_subtree(externally_constrained_addrs, :world))
+    id_ext_const_addrs = to_abstract_repr(tr.world, get_subtree(externally_constrained_addrs, :world))
     
     world_diff = update_mgf_calls!(world, id_spec, id_ext_const_addrs)
 
@@ -267,7 +252,7 @@ function _update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
     weight = kernel_weight + world_weight
     discard = StaticChoiceMap(
         (
-            world=to_idx_repr(tr.world, world_discard), # use the id_table from the trace's world, so we have the pre-update idx association
+            world=to_concrete_repr(tr.world, world_discard), # use the id_table from the trace's world, so we have the pre-update idx association
             kernel=kernel_discard
         )
     )
