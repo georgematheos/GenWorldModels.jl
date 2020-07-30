@@ -3,8 +3,8 @@
 module Aircrafts
 using Gen
 
-include("../src/WorldModels.jl")
-using .WorldModels
+include("../src/GenWorldModels.jl")
+using .GenWorldModels
 
 @gen function position_prior()
     return 0
@@ -41,6 +41,7 @@ measure_aircrafts_at_times = Map(measure_aircraft_at_time)
 
 @gen function kernel(world, time_to_measure_at)
     num_aircrafts ~ poisson(5)
+    # eg. "lookup aircraft 1 @ time 5 and aircraft 2 @ time 5"
     measurements ~ measure_aircrafts_at_times(fill(world, num_aircrafts), collect(1:num_aircrafts), fill(time_to_measure_at, num_aircrafts))
     return measurements
 end
@@ -51,4 +52,5 @@ get_measurements_at_time = UsingWorld(kernel, :measurements => take_measurement,
 measurements_at_time_5 = get_measurements_at_time(5)
 
 tr, _ = generate(get_measurements_at_time, (3,), choicemap((:kernel => :num_aircrafts, 3)))
+display(get_choices(tr))
 end

@@ -6,12 +6,22 @@ to generate & update such that the programs should have the same semantics.
 The tests will check that UsingWorld matches the behavior of Unfold.
 =#
 
+function Base.reduce(op, itr::Diffed; init)
+    reduced = reduce(op, strip_diff(itr); init=init)
+    if get_diff(itr) == NoChange()
+        Diffed(reduced, NoChange())
+    else
+        Diffed(reduced, UnknownChange())
+    end
+end
+
 ####################################
 # Static UsingWorld implementation #
 ####################################
 
 @gen (static, diffs) function num_vals(world, t::Tuple{})
-    num ~ poisson(150)
+    mean ~ lookup_or_generate(world[:args][:num_values_mean])
+    num ~ poisson(mean)
     return num
 end
 
@@ -28,7 +38,7 @@ lookup_random_values = Map(lookup_random_value)
     num_lookups ~ poisson(2)
     num_vals ~ lookup_or_generate(world[:num_vals][()])
     vals ~ lookup_random_values(fill(world, num_lookups), fill(num_vals, num_lookups))
-    total = reduce(+, strip_diff(vals); init=0.)
+    total = reduce(+, vals; init=0.)
     val ~ normal(total, 1)
     return val
 end
@@ -43,7 +53,7 @@ end
     return vals
 end
 
-sample_vals_world = UsingWorld(sample_vals_static_kernel, :num_vals => num_vals, :vals => sample_val_static)
+sample_vals_world = UsingWorld(sample_vals_static_kernel, :num_vals => num_vals, :vals => sample_val_static; world_args=(:num_values_mean,))
 @load_generated_functions()
 
 ##########################
@@ -127,7 +137,7 @@ function generate_world_trace(indices_to_sample, deps, vals, num_nodes)
     end
 
     # we are constraining all the calls, but we might not generate all of them, so turn off `check_all_constraints_used`
-    return generate(sample_vals_world, (indices_to_sample,), using_world_constraints; check_all_constraints_used=false)
+    return generate(sample_vals_world, (150, indices_to_sample,), using_world_constraints; check_all_constraints_used=false)
 end
 
 function generate_dynamic_trace(indices_to_sample, deps, vals, num_nodes)
@@ -192,7 +202,6 @@ function generate_updated_dep_struct(dep_struct_trace, new_num_vals)
             end
         end
     end
-    
     (new_dep_struct_trace, _, _) = regenerate(dep_struct_trace, (new_num_vals,), (UnknownChange(),), selection)
 
     return new_dep_struct_trace
@@ -264,7 +273,7 @@ function update_world_trace(old_world_trace, new_deps, new_vals, new_indices_to_
         end
     end
 
-    new_tr, weight, retdiff, discard = update(old_world_trace, (new_indices_to_sample,), (UnknownChange(),), constraints; check_no_constrained_calls_deleted=false)
+    new_tr, weight, retdiff, discard = update(old_world_trace, (150, new_indices_to_sample,), (NoChange(), UnknownChange(),), constraints, Gen.AllSelection(); check_no_constrained_calls_deleted=false)
     return (new_tr, weight)
 end
 
@@ -321,20 +330,24 @@ function perform_random_update_and_run_tests(dep_struct_trace, using_world_trace
         println(ord_old)
 
         println("OLD TRACE SCORES:")
-        for (call, tr) in using_world_trace.world.subtraces
-            println("$call score: ", get_score(tr))
-        end
-
-        println("CURRENT TRACE SCORES:")
-        for (call, tr) in new_using_world_trace.world.subtraces
+        for (call, tr) in GenWorldModels.all_traces(using_world_trace.world.traces)
             println("$call score: ", get_score(tr))
         end
 
         gend_world_trace, _ = generate_world_trace(new_indices_to_sample, new_deps, new_vals, new_num_vals)
-        println("GENERATED WORLD TRACE SCORES:")
-        for (call, tr) in gend_world_trace.world.subtraces
-            println("$call score: ", get_score(tr))
+
+        println("DIFFERENCE IN TRACE SCORES BETWEEN GENERATED AND UPDATED:")
+        tot_diff = 0.
+        for (call, gend_tr) in GenWorldModels.all_traces(gend_world_trace.world.traces)
+            upd_tr = GenWorldModels.get_trace(new_using_world_trace.world.traces, call)
+            gscore = get_score(gend_tr)
+            uscore = get_score(upd_tr)
+            if !isapprox(gscore, uscore )
+                tot_diff += gscore - uscore
+                println("DIFF FOR $call : Generated=$gscore, Updated=$uscore")
+            end
         end
+        println("total difference in Gen'd and Up'd scores is $tot_diff")
 
         # println("new world trace:")
         # display(get_choices(new_using_world_trace))

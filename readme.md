@@ -17,8 +17,8 @@ which can generate the measurement for any time, as follows.
 
 
 ```julia
-include("src/WorldModels.jl")
-using .WorldModels
+using Gen
+using GenWorldModels
 
 @gen function take_measurement(world, (aircraft_index, time))
     position ~ lookup_or_generate(world[:positions][(aircraft_index, time)])

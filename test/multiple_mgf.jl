@@ -1,25 +1,29 @@
+using GenWorldModels: @w, @UsingWorld
+
 @gen (static, diffs) function a(world, idx)
-    b_val ~ lookup_or_generate(world[:b][idx])
+    b_val ~ @w b[idx]
+    # same as `b_val ~ lookup_or_generate(world[:b][idx])`
     val ~ normal(b_val, 0.05)
     return val
 end
+
 @gen function b(world, idx)
     if idx == 1
         val ~ normal(0, 1)
     else
-        a_val ~ lookup_or_generate(world[:a][idx - 1])
+        a_val ~ @w a[idx - 1]
         val ~ normal(a_val, 1)
     end
     return val
 end
 @gen (static, diffs) function ab_kernel(world)
     idx ~ uniform_discrete(1, 4)
-    a_val ~ lookup_or_generate(world[:a][idx])
-    b_val ~ lookup_or_generate(world[:b][idx])
+    a_val ~ @w a[idx]
+    b_val ~ @w b[idx]
     sum = a_val + b_val
     return sum
 end
-ab = UsingWorld(ab_kernel, :a => a, :b => b)
+ab = @UsingWorld(ab_kernel, a, b)
 @load_generated_functions()
 
 @testset "multiple memoized generative functions" begin
