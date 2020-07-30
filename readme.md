@@ -5,6 +5,9 @@ This combinator makes it easier to write open-universe Gen models with
 memoization and lazy evaluation in a way which supports asymptotically efficient
 MCMC.
 
+Note that there is also support for Open Universe Probability Model inference primitives
+which are not documented yet.
+
 ### Use
 The `UsingWorld` wraps a "kernel" generative function, and provides
 the kernel access to a sort of state which can track values for calls
