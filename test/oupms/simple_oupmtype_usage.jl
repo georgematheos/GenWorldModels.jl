@@ -63,4 +63,23 @@ end
     @test get_score(tr) == 0.
 end
 
+@testset "simple lookup_or_generate conversion -- including auto origin -> abstract" begin
+    @gen function _origin_convert(world)
+        t3 ~ lookup_or_generate(world[:abstract][Timestep(3)])
+        blip ~ lookup_or_generate(world[:abstract][Blip((Timestep(1), Timestep(2), t3), 1)])
+        idx ~ lookup_or_generate(world[:index][blip])
+        origin ~ lookup_or_generate(world[:origin][blip])
+        concrete1 ~ lookup_or_generate(world[:concrete][origin[1]])
+        concrete2 ~ lookup_or_generate(world[:concrete][origin[2]])
+        return ((concrete1, concrete2, idx), blip, origin, t3)
+    end
+    origin_convert = UsingWorld(_origin_convert)
+    tr = simulate(origin_convert, ())
+    @test get_retval(tr)[1] == (Timestep(1), Timestep(2), 1)
+    @test get_retval(tr)[2] isa AbstractOUPMObject{:Blip}
+    @test get_retval(tr)[3] isa Tuple{AbstractOUPMObject{:Timestep}, AbstractOUPMObject{:Timestep}, AbstractOUPMObject{:Timestep}}
+    @test get_retval(tr)[3][3] == get_retval(tr)[4]
+    @test get_score(tr) == 0.
+end
+
 end

@@ -195,13 +195,24 @@ end
 # Static Gen functions underlying special-case trace types #
 ############################################################
 
+function substitute_indices(og_list, indices, subs)
+    lst = collect(OUPMObject, og_list)
+    j=1
+    for i in indices
+        lst[i] = subs[j]
+        j+=1
+    end
+    Tuple(lst)
+end
+
 @gen (static, diffs) function convert_key_to_abstract(mgf_call)
     obj = key(mgf_call)
+    wrld = world(mgf_call)
     concrete_indices = findall(x -> x isa ConcreteIndexOUPMObject, obj.origin)
-    newly_abstract_objs ~ Map(lookup_or_generate)([world[:abstract][obj.origin[i]] for i in concrete_indices])
-    abstract_origin = Tuple(reverse(i in concrete_indices ? pop!(newly_abstract_objs) : obj.origin[i] for i=length(obj.origin):-1:1))
+    newly_abstract_objs ~ Map(lookup_or_generate)([wrld[:abstract][obj.origin[i]] for i in concrete_indices])
+    abstract_origin = substitute_indices(obj.origin, concrete_indices, newly_abstract_objs)
     to_lookup_obj::ConcreteIndexAbstractOriginOUPMObject = ConcreteIndexOUPMObject{typename(obj)}(abstract_origin, obj.idx)
-    abstract_obj ~ lookup_or_generate(world[:abstract][to_lookup_obj])
+    abstract_obj ~ lookup_or_generate(wrld[:abstract][to_lookup_obj])
     return abstract_obj
 end
 
