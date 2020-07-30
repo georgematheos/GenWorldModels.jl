@@ -23,12 +23,14 @@ const _world_args_addr = :args
 const _get_index_addr = :index
 const _get_origin_addr = :origin
 const _get_abstract_addr = :abstract
-const _special_addrs = (_world_args_addr, _get_index_addr, _get_origin_addr, _get_abstract_addr)
+const _get_concrete_addr = :concrete
+const _special_addrs = (_world_args_addr, _get_index_addr, _get_origin_addr, _get_abstract_addr, _get_concrete_addr)
 const _NonMGFCall = Union{(Call{a} for a in _special_addrs)...}
 is_mgf_call(c::Call{_world_args_addr}) = false
 is_mgf_call(c::Call{_get_index_addr}) = false
 is_mgf_call(c::Call{_get_origin_addr}) = false
 is_mgf_call(c::Call{_get_abstract_addr}) = false
+is_mgf_call(c::Call{_get_concrete_addr}) = false
 is_mgf_call(c::Call) = true
 
 # data structures
@@ -146,7 +148,7 @@ end
         quote world.id_table[key(call)].idx end
     elseif call_addr == _get_origin_addr
         quote world.id_table[key(call)].origin end
-    elseif call_addr == _get_abstract_addr
+    elseif call_addr in (_get_abstract_addr, _get_concrete_addr)
         quote world.id_table[key(call)] end
     else # is mgf call
         quote get_retval(get_trace(world, call)) end
@@ -155,7 +157,7 @@ end
 @generated function has_val(world::World, call::Call{call_addr}) where {call_addr}
     if call_addr == _world_args_addr
         quote haskey(world.world_args, key(call)) end
-    elseif call_addr in (_get_index_addr, _get_origin_addr, _get_abstract_addr)
+    elseif call_addr in (_get_index_addr, _get_origin_addr, _get_abstract_addr, _get_concrete_addr)
         quote haskey(world.id_table, key(call)) end
     else
         quote has_trace(world.traces, call) end

@@ -10,6 +10,7 @@ function generate_abstract_object!(world::World, obj::ConcreteIndexAbstractOrigi
     (world.id_table, abstract) = generate_abstract_for(world.id_table, obj)
     note_new_call!(world, Call(_get_index_addr, abstract))
     note_new_call!(world, Call(_get_origin_addr, abstract))
+    note_new_call!(world, Call(_get_concrete_addr, abstract))
     note_new_call!(world, Call(_get_abstract_addr, obj))
     return abstract
 end
