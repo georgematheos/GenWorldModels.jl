@@ -121,7 +121,7 @@ abstract form associated with the concrete object.
 function generate_abstract_for(table::IDTable, concrete::ConcreteIndexAbstractOriginOUPMObject{T}) where {T}
     id = gensym()
     abstract = AbstractOUPMObject{T}(id)
-    return assoc(table, concrete, abstract)
+    return (assoc(table, concrete, abstract), abstract)
 end
 
 """

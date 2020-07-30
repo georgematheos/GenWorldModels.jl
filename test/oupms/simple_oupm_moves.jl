@@ -1,3 +1,5 @@
+### this file uses the following model from `simple_oupmtype_usage.jl`:
+#=
 @type AudioSource
 
 @gen (static) function get_volume(world::World, source::AudioSource{UUID})
@@ -19,31 +21,11 @@ end
 
 get_vols_and_inds = UsingWorld(
     _vol_ind_kernel,
-    :volume => get_volume;
-    oupm_types=(AudioSource,)
+    :volume => get_volume
 )
+=#
 
-@testset "simple OUPM use in UsingWorld & OUPM moves" begin
-
-@testset "simple lookup_or_generate conversion" begin
-    @gen function _simple_convert(world)
-        src ~ lookup_or_generate(world[AudioSource][1])
-        idx ~ lookup_or_generate(world[:index][src])
-        return (idx, src)
-    end
-    simple_convert = UsingWorld(_simple_convert; oupm_types=(AudioSource,))
-
-    tr = simulate(simple_convert, ())
-    @test get_retval(tr)[1] == 1
-    @test get_retval(tr)[2] isa AudioSource{UUID}
-end
-@testset "automatic conversion at lookup_or_generate for generate" begin
-    tr = simulate(get_vols_and_inds, ())
-    inds_to_vols = get_retval(tr)
-    for ((out_index, _), in_index) in zip(inds_to_vols, tr[:kernel => :samples])
-        @test out_index == in_index
-    end
-end
+@testset "simple OUPM moves" begin
 
 @testset "simple regenerate in `UsingWorld` with idx object in address" begin
     tr = simulate(get_vols_and_inds, ())

@@ -11,7 +11,7 @@ function generate_abstract_object!(world::World, obj::ConcreteIndexAbstractOrigi
     note_new_call!(world, Call(_get_index_addr, abstract))
     note_new_call!(world, Call(_get_origin_addr, abstract))
     note_new_call!(world, Call(_get_abstract_addr, obj))
-    return id
+    return abstract
 end
 
 # TODO: all origin-->abstract origin should occur in `lookup_or_generate`!

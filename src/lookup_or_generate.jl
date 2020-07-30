@@ -195,7 +195,8 @@ end
 # Static Gen functions underlying special-case trace types #
 ############################################################
 
-@gen (static, diffs) function convert_to_abstract(obj)
+@gen (static, diffs) function convert_key_to_abstract(mgf_call)
+    obj = key(mgf_call)
     concrete_indices = findall(x -> x isa ConcreteIndexOUPMObject, obj.origin)
     newly_abstract_objs ~ Map(lookup_or_generate)([world[:abstract][obj.origin[i]] for i in concrete_indices])
     abstract_origin = Tuple(reverse(i in concrete_indices ? pop!(newly_abstract_objs) : obj.origin[i] for i=length(obj.origin):-1:1))
@@ -223,7 +224,7 @@ end
     ToAbstractLookupOrGenerateTrace
 """
 struct ToAbstractLookupOrGenerateTrace <: LookupOrGenerateTrace
-    tr::Gen.get_trace_type(convert_to_abstract)
+    tr::Gen.get_trace_type(convert_key_to_abstract)
 end
 
 Gen.get_retval(tr::ToAbstractLookupOrGenerateTrace) = get_retval(tr.tr)
@@ -249,14 +250,14 @@ end
 end
 
 @inline function Gen.generate(::LookupOrGenerate, args::Tuple{ConcToAbsMGFCall}, ::EmptyChoiceMap)
-    tr, weight = generate(convert_to_abstract, args, EmptyChoiceMap())
+    tr, weight = generate(convert_key_to_abstract, args, EmptyChoiceMap())
     (ToAbstractLookupOrGenerateTrace(tr), weight)
 end
 @inline function Gen.propose(::LookupOrGenerate, args::Tuple{ConcToAbsMGFCall})
-    propose(convert_to_abstract, args)
+    propose(convert_key_to_abstract, args)
 end
 @inline function Gen.assess(::LookupOrGenerate, args::Tuple{ConcToAbsMGFCall}, ::EmptyChoiceMap)
-    assess(convert_to_abstract, args, EmptyChoiceMap())
+    assess(convert_key_to_abstract, args, EmptyChoiceMap())
 end
 @inline function Gen.update(
     tr::ToAbstractLookupOrGenerateTrace,
