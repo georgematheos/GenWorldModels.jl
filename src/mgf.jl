@@ -104,7 +104,7 @@ function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateAddr
     diff = get_diff(mgf)[key] # may be a nochange, if !has_diff_for_index(get_diff(mgf), key)
     # unless this is either NoChange or ToBeUpdated, we want to make sure `update` knows that this is just
     # a normal diff which comes from a value change, and doesn't need to trigger special update behavior
-    if diff !== NoChange() && diff !== ToBeUpdatedDiff() && diff !== IDAssociationChanged()
+    if diff !== NoChange() && diff !== ToBeUpdatedDiff()# && diff !== IDAssociationChanged()
         diff = MGFCallValChangeDiff(diff)
     end
 
@@ -136,7 +136,7 @@ Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, NoChange}, key) = Diffed
 
 ### Overwrite this method for the case where we need idx --> id conversion so we can check if the associated id has changed ###
 struct WorldDiffedNoKeyChange <: Gen.Diff end
-function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateAddrDiff}, key::OUPMType{Int})
+function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateAddrDiff}, key::ConcreteIndexOUPMObject)
     Diffed(strip_diff(mgf)[key], WorldDiffedNoKeyChange())
 end
 

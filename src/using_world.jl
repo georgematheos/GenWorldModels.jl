@@ -51,18 +51,16 @@ struct UsingWorld{num_world_args, num_mgfs, V, Tr} <: Gen.GenerativeFunction{V, 
     mgf_addrs::NTuple{num_mgfs, Symbol}
     memoized_gen_fns::NTuple{num_mgfs, GenerativeFunction}
     world_arg_addrs::NTuple{num_world_args, Symbol}
-    oupm_types::Tuple
 end
 function UsingWorld(
     kernel::GenerativeFunction,
     addr_to_gen_fn::Vararg{Pair{Symbol, <:GenerativeFunction}};
-    world_args=(),
-    oupm_types=()
+    world_args=()
 )
     mgf_addrs = Tuple([addr for (addr, gen_fn) in addr_to_gen_fn])
     @assert all(mgf_addrs .!= :kernel) ":kernel may not be a memoized generative function address"
     gen_fns = Tuple([gen_fn for (addr, gen_fn) in addr_to_gen_fn])
-    UsingWorld(kernel, mgf_addrs, gen_fns, world_args, oupm_types)
+    UsingWorld(kernel, mgf_addrs, gen_fns, world_args)
 end
 
 function Base.getindex(tr::UsingWorldTrace, addr::Pair)
@@ -76,15 +74,19 @@ function Base.getindex(tr::UsingWorldTrace, addr::Pair)
         try 
             if rest isa Pair
                 key, remaining = rest
-                key = convert_key_to_id_form(tr.world, key)
+              #  key = convert_key_to_id_form(tr.world, key)
                 return get_trace(tr.world, Call(mgf_addr, key))[remaining]
             else
-                key = convert_key_to_id_form(tr.world, rest)
+                key = rest #  key = convert_key_to_id_form(tr.world, rest) 
                 return get_trace(tr.world, Call(mgf_addr, key))[]
             end
-        catch
+        catch e
             key = rest isa Pair ? rest[1] : rest
-            error("No lookup for $(mgf_addr => key) found in the world.")
+            if e isa KeyError
+                error("No lookup for $(mgf_addr => key) found in the world.")
+            else
+                throw(e)
+            end
         end
     else
         error("Invalid address")
@@ -160,7 +162,7 @@ end
 function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; check_proper_usage=true, check_all_constraints_used=true)
     world_args, kernel_args = extract_world_args(gen_fn, args)
 
-    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args, gen_fn.oupm_types)
+    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
     world_constraints = to_id_repr!(world, get_submap(constraints, :world))
     begin_generate!(world, world_constraints)
     kernel_tr, kernel_weight = generate(gen_fn.kernel, (world, kernel_args...), get_submap(constraints, :kernel))
@@ -180,7 +182,7 @@ end
 function Gen.simulate(gen_fn::UsingWorld, args::Tuple; check_proper_usage=true, check_all_constraints_used=true)
     world_args, kernel_args = extract_world_args(gen_fn, args)
 
-    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args, gen_fn.oupm_types)
+    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
     begin_simulate!(world)
     kernel_tr = simulate(gen_fn.kernel, (world, kernel_args...))
     end_simulate!(world, check_all_constraints_used)
@@ -198,7 +200,7 @@ end
 function Gen.propose(gen_fn::UsingWorld, args::Tuple)
     world_args, kernel_args = extract_world_args(gen_fn, args)
 
-    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args, gen_fn.oupm_types)
+    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
     begin_propose!(world)
     kernel_choices, kernel_weight, retval = propose(gen_fn.kernel, (world, kernel_args...))
     world_choices, world_weight = end_propose!(world)
@@ -214,7 +216,7 @@ end
 function Gen.assess(gen_fn::UsingWorld, args::Tuple, choices::ChoiceMap)
     world_args, kernel_args = extract_world_args(gen_fn, args)
 
-    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args, gen_fn.oupm_types)
+    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
     begin_assess!(world, get_submap(choices, :world))
     kernel_weight, retval = assess(gen_fn.kernel, (world, kernel_args...), get_submap(choices, :kernel))
     world_weight = end_assess!(world)
@@ -281,13 +283,13 @@ end
 )
     _update(tr, args, argdiffs, spec, (), externally_constrained_addrs, check_no_constrained_calls_deleted)
 end
-@inline function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
-    spec::UpdateWithOUPMMovesSpec, externally_constrained_addrs::Selection;
-    check_no_constrained_calls_deleted=true
-)
-    (new_tr, weight, retdiff, discard) = _update(tr, args, argdiffs, spec.subspec, spec.moves, externally_constrained_addrs, check_no_constrained_calls_deleted)
-    reverse_update_spec = UpdateWithOUPMMovesSpec(reverse_moves(spec.moves), discard)
-    return (new_tr, weight, retdiff, reverse_update_spec)
-end
+# @inline function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
+#     spec::UpdateWithOUPMMovesSpec, externally_constrained_addrs::Selection;
+#     check_no_constrained_calls_deleted=true
+# )
+#     (new_tr, weight, retdiff, discard) = _update(tr, args, argdiffs, spec.subspec, spec.moves, externally_constrained_addrs, check_no_constrained_calls_deleted)
+#     reverse_update_spec = UpdateWithOUPMMovesSpec(reverse_moves(spec.moves), discard)
+#     return (new_tr, weight, retdiff, reverse_update_spec)
+# end
 
 # TODO: gradients?

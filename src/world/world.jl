@@ -24,6 +24,7 @@ const _get_index_addr = :index
 const _get_origin_addr = :origin
 const _get_abstract_addr = :abstract
 const _special_addrs = (_world_args_addr, _get_index_addr, _get_origin_addr, _get_abstract_addr)
+const _NonMGFCall = Union{(Call{a} for a in _special_addrs)...}
 is_mgf_call(c::Call{_world_args_addr}) = false
 is_mgf_call(c::Call{_get_index_addr}) = false
 is_mgf_call(c::Call{_get_origin_addr}) = false
@@ -64,7 +65,7 @@ end
 
 World(w::World{A,G,N}) where {A,G,N} = World{A,G,N}(w.gen_fns, w.state, w.traces, w.world_args, w.lookup_counts, w.call_sort, w.id_table, w.total_score, w.metadata_addr)
 
-function World{addrs, GenFnTypes, WorldArgnames}(gen_fns, world_args::NamedTuple{WorldArgnames}, oupm_types::Tuple) where {addrs, GenFnTypes, WorldArgnames}
+function World{addrs, GenFnTypes, WorldArgnames}(gen_fns, world_args::NamedTuple{WorldArgnames}) where {addrs, GenFnTypes, WorldArgnames}
     w = World{addrs, GenFnTypes, WorldArgnames}(
         gen_fns,
         NoChangeWorldState(),
@@ -72,7 +73,7 @@ function World{addrs, GenFnTypes, WorldArgnames}(gen_fns, world_args::NamedTuple
         world_args,
         LookupCounts(),
         CallSort(),
-        IDTable(oupm_types),
+        IDTable(),
         0.
     )
     # note a call for every world arg
@@ -82,12 +83,12 @@ function World{addrs, GenFnTypes, WorldArgnames}(gen_fns, world_args::NamedTuple
     return w
 end
 
-function World(addrs::NTuple{n, Symbol}, gen_fns::NTuple{n, Gen.GenerativeFunction}, world_args::NamedTuple{Names}, oupm_types::Tuple) where {n, Names}
+function World(addrs::NTuple{n, Symbol}, gen_fns::NTuple{n, Gen.GenerativeFunction}, world_args::NamedTuple{Names}) where {n, Names}
     for a in addrs
         @assert !(a in _special_addrs) "Cannot use reserved address $a as an MGF address."
     end
 
-    World{addrs, typeof(gen_fns), Names}(gen_fns, world_args, oupm_types)
+    World{addrs, typeof(gen_fns), Names}(gen_fns, world_args)
 end
 
 # TODO: Could make this more informative by showing what calls it has in it
@@ -146,7 +147,7 @@ end
     elseif call_addr == _get_origin_addr
         quote world.id_table[key(call)].origin end
     elseif call_addr == _get_abstract_addr
-        quote get_abstract(world, key(call)) end
+        quote world.id_table[key(call)] end
     else # is mgf call
         quote get_retval(get_trace(world, call)) end
     end
@@ -154,7 +155,7 @@ end
 @generated function has_val(world::World, call::Call{call_addr}) where {call_addr}
     if call_addr == _world_args_addr
         quote haskey(world.world_args, key(call)) end
-    elseif call_addr == _get_index_addr || call_addr == _get_origin_addr
+    elseif call_addr in (_get_index_addr, _get_origin_addr, _get_abstract_addr)
         quote haskey(world.id_table, key(call)) end
     else
         quote has_trace(world.traces, call) end
@@ -216,6 +217,7 @@ function lookup_or_generate!(world::World, call::Call; reason_for_call=:generate
 end
 
 include("world_diffs.jl")
+include("id_interface.jl") # wrappers for conversion abstract <--> concrete; methods to generate abstract objects
 include("gfi/generate.jl")
 include("gfi/assess.jl")
 include("gfi/propose.jl")

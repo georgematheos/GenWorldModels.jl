@@ -122,11 +122,7 @@ function remove_call!(world, call)
     return get_choices(tr)
 end
 
-remove_call!(world, call::Call{_world_args_addr}) = EmptyAddressTree()
-remove_call!(world, call::Call{_get_index_addr}) = EmptyAddressTree()
-function remove_call!(world, call::Call{<:OUPMType})
-    EmptyAddressTree() # TODO: remove the id/idx pairing from the ID table
-end
+remove_call!(_, ::_NonMGFCall) = EmptyAddressTree()
 
 
 ##########################

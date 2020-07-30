@@ -19,6 +19,7 @@ end
 function ConcreteIndexOUPMObject{T}(origin::OT, idx::Int) where {T, OT}
     error("Tried to create a $T with origin $origin which is not a tuple of OUPMObjects.")
 end
+const ConcreteIndexAbstractOriginOUPMObject{T} = ConcreteIndexOUPMObject{T, Tuple{Vararg{<:AbstractOUPMObject}}}
 
 function Base.show(io::IO, obj::ConcreteIndexOUPMObject{T}) where {T}
     print(io, T)
@@ -36,6 +37,7 @@ function Base.show(io::IO, obj::AbstractOUPMObject{T}) where {T}
     print(io, obj.id)
     print(io, ")")
 end
+typename(::OUPMObject{T}) where {T} = T
 
 """
     @type TypeName
