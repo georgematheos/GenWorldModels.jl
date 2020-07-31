@@ -240,3 +240,10 @@ present.)  I think it is fine to do this as part of the normal `note_lookup_remo
 Another place we may need to remove tables is when performing an OUPM move.  When we do this,
 some concrete objects and some abstracts may become "uninstantiated" in that they no longer correspond
 to any object of the other type.  We should remove the lookups for these at this time.
+
+## TODOs
+- `lookup_or_generate` conversion
+- choicemap/discard/externally_constrained_addrs/update_spec conversion
+- proper lookup table tracking
+- something with diffs, probably
+- OUPM moves

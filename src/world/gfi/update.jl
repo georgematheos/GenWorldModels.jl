@@ -3,6 +3,8 @@ include("../oupm_updates.jl")
 # NOTE: The algorithm for updating the world is described and explained in pseudocode
 # and in english in `update_algorithm.md`.
 
+struct WorldUpdateDiff <: Gen.Diff end
+
 ####################
 # UpdateWorldState #
 ####################
@@ -263,7 +265,7 @@ function run_gen_update!(world, call, spec, ext_const_addrs)
     new_tr, weight, retdiff, discard = Gen.update(
         old_tr,
         (world, key(call)),
-        (WorldUpdateDiff(world), NoChange()),
+        (WorldUpdateDiff(), NoChange()),
         spec,
         ext_const_addrs
     )
@@ -460,8 +462,6 @@ end
 
 Update all the calls in the `world` according to the given update spec,
 with weight determined by the given `ext_const_addrs`.
-Returns the `WorldUpdateDiff` object reflecting the changes
-to the memoized generative functions.
 """
 function update_mgf_calls!(world::World, spec::Gen.UpdateSpec, ext_const_addrs::Gen.Selection)
     world.state.spec = spec
@@ -475,8 +475,6 @@ function update_mgf_calls!(world::World, spec::Gen.UpdateSpec, ext_const_addrs::
     # note that we are done updating the world, and are
     # now in the process of updating the kernel
     world.state.world_update_complete = true
-
-    return WorldUpdateDiff(world)
 end
 
 """

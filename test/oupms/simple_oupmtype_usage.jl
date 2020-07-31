@@ -83,7 +83,7 @@ end
 end
 
 @testset "choicemap for model with OUPM objects" begin
-    @dist _get_size(world, blip::Blip) = normal(100, 5)
+    @gen _get_size(world, blip::Blip) = {:val} ~ normal(100, 5)
     @gen function _kern(world)
         b1 = Blip(1)
         b2 ~ lookup_or_generate(world[:abstract][Blip(2)])
@@ -97,8 +97,18 @@ end
     ch = get_choices(tr)
     collected_submap_keys = map(x->x[1], collect(get_submaps_shallow(get_submap(ch, :world => :size))))
     @test collected_submap_keys == [Blip(1), Blip(2)] || collected_submap_keys == [Blip(2), Blip(1)]
-    @test has_value(ch, :world => :size => Blip(1))
-    @test has_value(ch, :world => :size => Blip(2))
+    @test has_value(ch, :world => :size => Blip(1) => :val)
+    @test has_value(ch, :world => :size => Blip(2) => :val)
+
+    new_tr, weight, _, discard = update(tr, (), (), choicemap((:world => :size => Blip(1) => :val, 100.3)), AllSelection())
+    @test new_tr[:world => :size => Blip(1)] == 100.3
+    oldval = tr[:world => :size => Blip(1)]
+    @test discard == choicemap((:world => :size => Blip(1) => :val, oldval))
+    @test isapprox(weight, logpdf(normal, 100.3, 100, 5) - logpdf(normal, oldval, 100, 5))
+
+    new_tr, weight, _, _ = update(tr, (), (), choicemap((:world => :size => Blip(1) => :val, 100.3)), invert(select(:world => :size => :Blip(1))))
+    @test new_tr[:world => :size => Blip(1)] == 100.3
+    @test isapprox(weight, logpdf(normal, 100.3, 100, 5))
 end
 
 end

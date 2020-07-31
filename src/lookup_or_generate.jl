@@ -313,7 +313,7 @@ end
 @inline function Gen.update(
     tr::AutoKeyConversionLookupOrGenerateTrace,
     args::Tuple{ConcreteKeyMGFCall},
-    argdiffs::Tuple{<:Gen.Diff}, spec::Gen.UpdateSpec, ext_const_addrs::Gen.Selection
+    argdiffs::Tuple{<:Gen.Diff}, spec::EmptyAddressTree, ext_const_addrs::Gen.Selection
 )
     new_tr, weight, retdiff, discard = update(tr.tr, args, argdiffs, spec, ext_const_addrs)
     (AutoKeyConversionLookupOrGenerateTrace(new_tr), weight, retdiff, discard)
@@ -353,7 +353,8 @@ end
     end
     return Gen.update(tr, args, (diff,), EmptyChoiceMap(), s)
 end
-@inline function Gen.update(tr::AutoKeyConversionLookupOrGenerateTrace, args::Tuple{MemoizedGenerativeFunctionCall}, argdiffs::Tuple{UnknownChange}, ::EmptyChoiceMap, s::Selection)
+
+function _autokeyconvert_unknownchange_update(tr, args, s)
     new_call = args[1]
     old_call = get_args(tr)[1]
     if key(old_call) != key(new_call)
@@ -368,4 +369,11 @@ end
         diff = WorldDiffedNoKeyChange()
     end
     return Gen.update(tr, args, (diff,), EmptyChoiceMap(), s)
+end
+
+@inline function Gen.update(tr::AutoKeyConversionLookupOrGenerateTrace, args::Tuple{MemoizedGenerativeFunctionCall}, ::Tuple{UnknownChange}, ::EmptyChoiceMap, s::Selection)
+    _autokeyconvert_unknownchange_update(tr, args, s)
+end
+@inline function Gen.update(tr::AutoKeyConversionLookupOrGenerateTrace, args::Tuple{ConcreteKeyMGFCall}, ::Tuple{UnknownChange}, ::EmptyChoiceMap, s::Selection)
+    _autokeyconvert_unknownchange_update(tr, args, s)
 end
