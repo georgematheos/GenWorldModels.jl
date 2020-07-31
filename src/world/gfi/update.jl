@@ -182,9 +182,10 @@ function run_subtrace_updates!(world)
                 fringe_top = world.call_sort[call]
             end
             world.state.fringe_bottom = world.call_sort[call]
-            update_or_generate!(world, call)
+            update_or_generate!(world, call; called_from_top=true)
         end
     end
+    reorder_update_cycle!(world)
 end
 
 """
@@ -218,7 +219,7 @@ end
 This function also performs the needed bookkeeping for the update algorithm
 to update the dependency structure.
 """
-function update_or_generate!(world, call)
+function update_or_generate!(world, call; called_from_top=false)
     if call in world.state.call_stack
         error("This update will induce a cycle in the topological ordering of the calls in the world!  Call $call will need to have been generated in order to generate itself.")
     end
@@ -236,7 +237,7 @@ function update_or_generate!(world, call)
         run_gen_generate!(world, call, spec)
         pop!(world.state.call_stack)
         retdiff = UnknownChange()
-    elseif there_is_spec_for_call || dependency_has_argdiffs
+    elseif there_is_spec_for_call || dependency_has_argdiffs || !called_from_top
         push!(world.state.call_stack, call)
         ext_const_addrs = get_subtree(world.state.externally_constrained_addrs, addr(call) => key(call))
         retdiff = run_gen_update!(world, call, spec, ext_const_addrs)
