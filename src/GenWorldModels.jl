@@ -6,7 +6,6 @@ using DataStructures
 
 include("oupm_types.jl") # exports OUPM-related items
 
-include("index_diff.jl")
 include("world/world.jl")
 include("mgf.jl")
 include("lookup_or_generate.jl")

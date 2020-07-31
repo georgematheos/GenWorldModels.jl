@@ -45,13 +45,12 @@ end
     end
 end
 
-println("reminder to add back the test for `to_abstract_repr` and `to_concrete_repr`!")
 @testset "to_abstract_repr and to_concrete_repr" begin
     world = World((), (), NamedTuple())
-    a11 = GenWorldModels.generate_abstract_object!(IDTestType1(1))
-    a12 = GenWorldModels.generate_abstract_object!(IDTestType1(2))
-    a21 = GenWorldModels.generate_abstract_object!(IDTestType2(1))
-    a25 = GenWorldModels.generate_abstract_object!(IDTestType2(5))
+    a11 = GenWorldModels.generate_abstract_object!(world, IDTestType1(1))
+    a12 = GenWorldModels.generate_abstract_object!(world, IDTestType1(2))
+    a21 = GenWorldModels.generate_abstract_object!(world, IDTestType2(1))
+    a25 = GenWorldModels.generate_abstract_object!(world, IDTestType2(5))
 
     id_choicemap = choicemap(
         (:vol => a11 => :val, 11),

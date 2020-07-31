@@ -66,8 +66,3 @@ The automatic conversions are negotiated via calls to "get abstract", so I don't
 
 Note that I think all update calls involving a keychange could be implemented simply by generating a new trace and discarding the old one,
 then returning `UnknownChange()` or `NoChange()` depending whether the retvals of the old and new traces match.
-
-# current status
-I have implemented this in the `mgf.jl` file, but I have not made sure `lookup_or_generate.jl` is compatible with this
-in its current state.  I suspect that I may be able to simplify some of the logic for communicating with the
-`world/update.jl` file now that I have improved my understanding of this diff propagation.

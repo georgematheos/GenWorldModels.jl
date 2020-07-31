@@ -59,10 +59,10 @@ function Base.getindex(tr::UsingWorldTrace, addr::Pair)
         try 
             if rest isa Pair
                 key, remaining = rest
-              #  key = convert_key_to_id_form(tr.world, key)
+                key = convert_to_abstract(tr.world, key)
                 return get_trace(tr.world, Call(mgf_addr, key))[remaining]
             else
-                key = rest #  key = convert_key_to_id_form(tr.world, rest) 
+                key = convert_to_abstract(tr.world, rest) 
                 return get_trace(tr.world, Call(mgf_addr, key))[]
             end
         catch e
@@ -239,10 +239,10 @@ function _update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
     # because the reverse constraints will use the id_table in its state after the reverse id table update occurs
     id_ext_const_addrs = to_abstract_repr(tr.world, get_subtree(externally_constrained_addrs, :world))
     
-    world_diff = update_mgf_calls!(world, id_spec, id_ext_const_addrs)
+    update_mgf_calls!(world, id_spec, id_ext_const_addrs)
 
     (new_kernel_tr, kernel_weight, kernel_retdiff, kernel_discard) = update(
-        tr.kernel_tr, (world, kernel_args...), (world_diff, argdiffs...), get_subtree(main_spec, :kernel), get_subtree(externally_constrained_addrs, :kernel)
+        tr.kernel_tr, (world, kernel_args...), (WorldUpdateDiff(), argdiffs...), get_subtree(main_spec, :kernel), get_subtree(externally_constrained_addrs, :kernel)
     )
 
     world_weight, world_discard = end_update!(world, kernel_discard, check_no_constrained_calls_deleted)

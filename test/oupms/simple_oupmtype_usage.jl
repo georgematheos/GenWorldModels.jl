@@ -106,7 +106,7 @@ end
     @test discard == choicemap((:world => :size => Blip(1) => :val, oldval))
     @test isapprox(weight, logpdf(normal, 100.3, 100, 5) - logpdf(normal, oldval, 100, 5))
 
-    new_tr, weight, _, _ = update(tr, (), (), choicemap((:world => :size => Blip(1) => :val, 100.3)), invert(select(:world => :size => :Blip(1))))
+    new_tr, weight, _, _ = update(tr, (), (), choicemap((:world => :size => Blip(1) => :val, 100.3)), invert(select(:world => :size => Blip(1))))
     @test new_tr[:world => :size => Blip(1)] == 100.3
     @test isapprox(weight, logpdf(normal, 100.3, 100, 5))
 end

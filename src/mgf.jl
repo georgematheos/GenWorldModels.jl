@@ -61,9 +61,11 @@ Base.getindex(mgf::MemoizedGenerativeFunction, key) = MemoizedGenerativeFunction
 ###########################################
 
 struct KeyChangedDiff <: Gen.Diff
-    keydiff::Gen.Diff
+    diff::Gen.Diff
 end
-struct ValueChangedDiff <: Gen.Diff end
+struct ValueChangedDiff <: Gen.Diff
+    diff::Gen.Diff
+end
 struct ToBeUpdatedDiff <: Gen.Diff end
 
 ### world[addr] diffs ###
@@ -94,12 +96,12 @@ end
 function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key)
     mgf = strip_diff(mgf)
     wrld = world(mgf)
-    c = call(mgf)
+    c = Call(addr(mgf), key)
+
     if haskey(wrld.state.diffs, c)
-        Diffed(mgf[key], ValueChangedDiff())
+        Diffed(mgf[key], ValueChangedDiff(wrld.state.diffs[c]))
     else
-        already_updated = wrld.state.world_update_complete || (wrld.call_sort[c] < wrld.state.fringe_bottom || c in wrld.state.visited)
-        if already_updated
+        if already_updated(wrld, c)
             Diffed(mgf[key], NoChange())
         else
             Diffed(mgf[key], ToBeUpdatedDiff())
@@ -111,9 +113,9 @@ end
 function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction{<:Any, _get_abstract_addr}, WorldUpdateDiff}, key)
     mgf = strip_diff(mgf)
     wrld = world(mgf)
-    c = call(mgf)
+    c = Call(addr(mgf), key)
     if haskey(wrld.state.diffs, c)
-        Diffed(mgf[key], ValueChangedDiff())
+        Diffed(mgf[key], ValueChangedDiff(wrld.state.diffs[c]))
     else
         if has_val(wrld, c)
             Diffed(mgf[key], NoChange())
@@ -126,6 +128,7 @@ end
 function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction{<:Any, _get_abstract_addr}, WorldUpdateDiff}, key::Diffed)
     Diffed(strip_diff(mgf)[strip_diff(key)], KeyChangedDiff(get_diff(key)))
 end
+Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction{<:Any, _get_abstract_addr}, WorldUpdateDiff}, key::Diffed{<:Any, NoChange}) = mgf[strip_diff(key)]
 
 ###################################################
 # Diffs for `world`, `key`, and `addr` of MGFCall #
@@ -143,7 +146,7 @@ end
 key(call::Diffed{<:MemoizedGenerativeFunctionCall, NoChange}) = Diffed(key(strip_diff(call)), NoChange())
 key(call::Diffed{<:MemoizedGenerativeFunctionCall, ValueChangedDiff}) = Diffed(key(strip_diff(call)), NoChange())
 key(call::Diffed{<:MemoizedGenerativeFunctionCall, ToBeUpdatedDiff}) = Diffed(key(strip_diff(call)), NoChange())
-key(call::Diffed{<:MemoizedGenerativeFunctionCall, MGFCallKeyChangeDiff}) = Diffed(key(strip_diff(call)), get_diff(call).keydiff)
+key(call::Diffed{<:MemoizedGenerativeFunctionCall, KeyChangedDiff}) = Diffed(key(strip_diff(call)), get_diff(call).diff)
 
 # if diffed with a different diff, we have to put UnknownChange for the key
 key(call::Diffed{<:MemoizedGenerativeFunctionCall}) = Diffed(key(strip_diff(call)), UnknownChange())

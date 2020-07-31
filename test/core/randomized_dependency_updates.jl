@@ -336,6 +336,8 @@ function perform_random_update_and_run_tests(dep_struct_trace, using_world_trace
 
         gend_world_trace, _ = generate_world_trace(new_indices_to_sample, new_deps, new_vals, new_num_vals)
 
+        println("in gen'd trace, num calls is $(gend_world_trace[:world => :num_vals => ()]); in up'd trace it is $(new_using_world_trace[:world => :num_vals => ()])")
+
         println("DIFFERENCE IN TRACE SCORES BETWEEN GENERATED AND UPDATED:")
         tot_diff = 0.
         for (call, gend_tr) in GenWorldModels.all_traces(gend_world_trace.world.traces)
@@ -345,6 +347,25 @@ function perform_random_update_and_run_tests(dep_struct_trace, using_world_trace
             if !isapprox(gscore, uscore )
                 tot_diff += gscore - uscore
                 println("DIFF FOR $call : Generated=$gscore, Updated=$uscore")
+                println("generated subtrace choices:")
+                display(get_choices(gend_tr))
+                println("updated subtrace choices")
+                display(get_choices(upd_tr))
+
+                println("gen'd trace dependency values:")
+                for (i, submap) in get_submaps_shallow(get_submap(get_choices(gend_tr), :vals))
+                    idx = submap[:lookup]
+                    val = gend_tr[:vals => i => :looked_up_val]
+                    worldval = gend_world_trace[:world => :vals => idx]
+                    println("  $idx => looked up: $val ; val in world = $worldval")
+                end
+                println("up'd trace dependency values:")
+                for (i, submap) in get_submaps_shallow(get_submap(get_choices(upd_tr), :vals))
+                    idx = submap[:lookup]
+                    val = upd_tr[:vals => i => :looked_up_val]
+                    worldval = new_using_world_trace[:world => :vals => idx]
+                    println("  $idx => looked up: $val ; val in world = $worldval")
+                end
             end
         end
         println("total difference in Gen'd and Up'd scores is $tot_diff")

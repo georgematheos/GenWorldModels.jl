@@ -208,9 +208,9 @@ it could alter the dependency structure/lookup counts of the world, `lookup_or_g
 should be called.
 Will return the value that the given `call` returns after the generation/execution.
 """
-function lookup_or_generate!(world::World, call::Call; reason_for_call=:generate)    
+function lookup_or_generate!(world::World, call::Call, is_new_lookup)    
     if world.state isa UpdateWorldState
-        lookup_or_generate_during_update!(world, call, reason_for_call)
+        lookup_or_generate_during_update!(world, call, is_new_lookup)
     elseif world.state isa GenerateWorldState
         lookup_or_generate_during_generate!(world, call)
     else
@@ -218,7 +218,6 @@ function lookup_or_generate!(world::World, call::Call; reason_for_call=:generate
     end
 end
 
-include("world_diffs.jl")
 include("id_interface.jl") # wrappers for conversion abstract <--> concrete; methods to generate abstract objects
 include("gfi/generate.jl")
 include("gfi/assess.jl")
