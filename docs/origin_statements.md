@@ -242,8 +242,11 @@ some concrete objects and some abstracts may become "uninstantiated" in that the
 to any object of the other type.  We should remove the lookups for these at this time.
 
 ## TODOs
+- proper lookup table tracking
+- OUPM moves
+
+## Completed TODOs
+
 - `lookup_or_generate` conversion
 - choicemap/discard/externally_constrained_addrs/update_spec conversion
-- proper lookup table tracking
 - something with diffs, probably
-- OUPM moves
