@@ -17,13 +17,15 @@ include("examples/factorial.jl")
 include("examples/scene_decoration.jl")
 
 # OUPM functionality testing
-# a couple types used in several test files:
+# a few types used in several test files:
+@type Aircraft
 @type Timestep
 @type Blip
 
 include("oupms/oupm_types.jl")
 include("oupms/simple_oupmtype_usage.jl")
 # include("oupms/simple_oupm_moves.jl")
+include("oupms/origin_oupm_moves.jl")
 # include("oupms/oupm_involution_dsl.jl")
 
 # include("macros.jl)

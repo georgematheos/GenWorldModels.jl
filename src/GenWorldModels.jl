@@ -4,10 +4,12 @@ using Gen
 using FunctionalCollections
 using DataStructures
 
-include("oupm_types.jl") # exports OUPM-related items
+include("oupm_types.jl") # OUPM objects
+include("oupm_moves.jl") # types for OUPM moves
 
 include("world/world.jl")
 include("mgf.jl")
+include("mgfcall_map.jl")
 include("lookup_or_generate.jl")
 include("address_trees.jl")
 include("using_world.jl")

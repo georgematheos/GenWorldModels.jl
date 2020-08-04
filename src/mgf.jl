@@ -108,9 +108,10 @@ function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff
         end
     end
 end
+Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key::ConcreteIndexOUPMObject) = Diffed(strip_diff(mgf)[key], ToBeUpdatedDiff())
 
 # get abstract form!
-function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction{<:Any, _get_abstract_addr}, WorldUpdateDiff}, key)
+function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction{<:Any, _get_abstract_addr}, WorldUpdateDiff}, key::ConcreteIndexOUPMObject)
     mgf = strip_diff(mgf)
     wrld = world(mgf)
     c = Call(addr(mgf), key)

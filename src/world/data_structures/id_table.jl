@@ -3,6 +3,33 @@
 struct ConcreteToAbstractTable
     map::PersistentHashMap{Symbol, PersistentHashMap{Tuple, PersistentHashMap{Int, AbstractOUPMObject}}}
 end
+function ConcreteToAbstractTable()
+    ConcreteToAbstractTable(PersistentHashMap{Symbol, PersistentHashMap{Tuple, PersistentHashMap{Int, AbstractOUPMObject}}}())
+end
+
+function _get_itr(c::ConcreteToAbstractTable)
+    (
+        ConcreteIndexOUPMObject{T}(origin, idx) => abstract
+        for (T, map1) in c.map
+            for (origin, map2) in map1
+                for (idx, abstract) in map2
+    )
+end
+function Base.iterate(c::ConcreteToAbstractTable)
+    itr = _get_itr(c)
+    i = iterate(itr)
+    i === nothing && return nothing
+    (v, s) = i
+    (v, (itr, s))
+end
+function Base.iterate(_::ConcreteToAbstractTable, st)
+    (itr, s) = st
+    i = iterate(itr, s)
+    i === nothing && return nothing
+    (v, s) = i
+    (v, (itr, s))
+end
+
 @inline function Base.getindex(c::ConcreteToAbstractTable, obj::ConcreteIndexOUPMObject{T}) where {T}
     c.map[T][obj.origin][obj.idx]
 end
@@ -14,15 +41,15 @@ function FunctionalCollections.assoc(c::ConcreteToAbstractTable, conc::ConcreteI
         if haskey(c.map[T], conc.origin)
             m = assoc(c.map, T, assoc(c.map[T], conc.origin, assoc(c.map[T][conc.origin], conc.idx, abst)))
         else
-            inner_map = PersistentHashMap{Int, AbstractOUPMObject{T}}()
+            inner_map = PersistentHashMap{Int, AbstractOUPMObject}()
             inner_map = assoc(inner_map, conc.idx, abst)
             m = assoc(c.map, T, assoc(c.map[T], conc.origin, inner_map))
         end
     else
-        deep_inner_map = PersistentHashMap{Int, AbstractOUPMObject{T}}()
+        deep_inner_map = PersistentHashMap{Int, AbstractOUPMObject}()
         deep_inner_map = assoc(deep_inner_map, conc.idx, abst)
-        shallow_inner_map = PersistentHashMap{Tuple, PersistentHashMap{Int, AbstractOUPMObject{T}}}()
-        shallow_inner_map = assoc(shallow_inner_map, conc.origin, obj)
+        shallow_inner_map = PersistentHashMap{Tuple, PersistentHashMap{Int, AbstractOUPMObject}}()
+        shallow_inner_map = assoc(shallow_inner_map, conc.origin, deep_inner_map)
         m = assoc(c.map, T, shallow_inner_map)
     end
     ConcreteToAbstractTable(m)
@@ -33,10 +60,10 @@ function FunctionalCollections.dissoc(c::ConcreteToAbstractTable, conc::Concrete
         if !haskey(top, conc.idx)
             throw(keyError(conc))
         else
-            m = dissoc(c.map[T], conc.origin)
+            m = assoc(c.map, T, dissoc(c.map[T], conc.origin))
         end
     else
-        m = assoc(t.map[T], conc.origin, dissoc(t.map[T][conc.origin], conc.idx))
+        m = assoc(c.map, T, assoc(c.map[T], conc.origin, dissoc(c.map[T][conc.origin], conc.idx)))
     end
     ConcreteToAbstractTable(m)
 end
@@ -44,12 +71,12 @@ end
 # invariant: the concrete index oupm objects are stored with the origins in FULLY ABSTRACT
 # form. so only the index is concrete.
 struct IDTable
-    concrete_to_abstract::PersistentHashMap{ConcreteIndexOUPMObject, AbstractOUPMObject}
+    concrete_to_abstract::ConcreteToAbstractTable
     abstract_to_concrete::PersistentHashMap{AbstractOUPMObject, ConcreteIndexOUPMObject}
 end
 function IDTable()
     IDTable(
-        PersistentHashMap{ConcreteIndexOUPMObject, AbstractOUPMObject}(),
+        ConcreteToAbstractTable(),
         PersistentHashMap{AbstractOUPMObject, ConcreteIndexOUPMObject}()
     )
 end
@@ -130,39 +157,37 @@ associations have been overwritten.
 
 Return `(new_table, changed_abstract_objects)` where `new_table` is the updated table,
 and `changed_abstract_objects` is a set of all the abstract objects which have been deleted or moved.
+`push!` every abstract object whose index has changed or which has been deleted into `index_changed`,
+and every concrete object whose abstract form has changed or which has been deleted into `abstract_changed`.
 
 This update may result in some indices which previously had associated identifiers
 now having no associated identifier.
 The update may also overwrite current associations for indices in the range
 (min+inc,...min) or (max...max+inc).
 """
-function move_all_between(table::IDTable, typename::Symbol, origin::Tuple{Vararg{<:AbstractOUPMObject}}; min=1, inc, max=Inf)
+function move_all_between(table::IDTable, typename::Symbol, origin::Tuple{Vararg{<:AbstractOUPMObject}}, index_changed, abstract_changed; min=1, inc, max=Inf)
     original_c_to_a = table.concrete_to_abstract
     cobj(idx) = ConcreteIndexOUPMObject{typename}(origin, idx)
     new_c_to_a = table.concrete_to_abstract
-    new_a_to_c = table.concrete_to_abstract
-
-    changed_abstract_objs = Set{AbstractOUPMObject}()
-    # TODO: should I return information about the deleted objects seperately?
+    new_a_to_c = table.abstract_to_concrete
 
     # at each step through this loop, we will update
     # id_to_idx_for_type[id].
     # if we are moving this ID, we will also update idx_to_id_for_type[idx+inc].
     # if there is no ID which will be moved to position `idx`, we also
     # update idx_to_id_for_type[idx]
-    for (concrete, abstract) in original_c_to_a[typename][origin]
-        idx = concrete.idx
-
+    for (idx, abstract) in original_c_to_a.map[typename][origin]
         if (min <= idx && idx <= max)
             # all ids in the min<=...<=max range have their index incremented by `inc`
-            new_c_to_a = assoc(new_c_to_a, abstract, cobj(idx+inc))
-            new_a_to_c = assoc(new_a_to_c, cobj(idx+inc), abstract)
-            push!(changed_abstract_objs, abstract)
+            new_c_to_a = assoc(new_c_to_a, cobj(idx+inc), abstract)
+            new_a_to_c = assoc(new_a_to_c, abstract, cobj(idx+inc))
+            push!(index_changed, abstract)
+            push!(abstract_changed, cobj(idx+inc))
         elseif (min+inc <= idx && idx < min) || (max < idx && idx <= max+inc)
             # all ids with current index in an area IDs are getting moved to, but where
             # ids are not moving anywhere, should be removed since they are going to be overwritten
             new_a_to_c = dissoc(new_a_to_c, abstract)
-            push!(changed_abstract_objs, abstract)
+            push!(index_changed, abstract)
         end
 
         if (min+inc <= idx && idx <= max+inc)
@@ -171,15 +196,17 @@ function move_all_between(table::IDTable, typename::Symbol, origin::Tuple{Vararg
             # or
             # 2. have no ID which is going to get moved to it, and hence needs to have its current id deleted
             # we handle (2) here.
-            if !haskey(original_c_to_a, idx-inc)
+            if !haskey(original_c_to_a.map[typename][origin], idx-inc)
                 new_c_to_a = dissoc(new_c_to_a, cobj(idx))
+                push!(abstract_changed, cobj(idx))
             end
         elseif (min <= idx && idx < min+inc) || (max+inc < idx && idx <= max)
             # all indices in an area where IDs are moving from, but no IDs are moving to,
             # should be removed
             new_c_to_a = dissoc(new_c_to_a, cobj(idx))
+            push!(abstract_changed, cobj(idx))
         end
     end
-    new_table = IDTable(new_c_to_a, new_a_to_c)
-    return (new_table, changed_abstract_objs)
+    
+    IDTable(new_c_to_a, new_a_to_c)
 end

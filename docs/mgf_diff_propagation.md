@@ -52,11 +52,16 @@ or will not be updated.
 2. A `world[:addr]` may also be updated with a `WorldUpdateDiff` if the underlying world has this diff.
 3. `world[:addr][key]`, where `world[:addr]` has a `WorldUpdateDiff`, obeys the following logic:
    1. If the key has changed, we use a `KeyChangedDiff`
-   2. Else, IF this is a simple MGF call, so `key` is not a concrete OUPM object, and `addr` is not special:
-      1. If the update state is past the point of having updated this call:
-         1. If there is a diff for the call in the world, have a `ValChangedDiff`
-         2. Else, `NoChange`
-      2. Else, `ToBeUpdatedDiff`
+   2. Else
+      1. IF this is a simple MGF call, so `key` is not a concrete OUPM object, and `addr` is not special:
+         1. If the update state is past the point of having updated this call:
+            1. If there is a diff for the call in the world, have a `ValChangedDiff`
+            2. Else, `NoChange`
+         2. Else, `ToBeUpdatedDiff`
+      2. ELSE, if `key` is a concrete OUPM object & `addr` is not special
+         1. Return `ToBeUpdatedDiff`.  NOTE: this is sort of a hack, and conceptually could be a different type, along
+            the lines of a `DelayedUpdateLogicDiff`.  We just need something to make sure we run an update in the
+            underlying static DSL function.
    3. IF this is a MGF call to `get_abstract`:
       1. If there is no change to the association, `NoChange` (=if there is a value, and there is no diff in the lookup table)
       2. If there is a change, `ValChangedDiff` (in which case there MUST be a diff in the lookup table)

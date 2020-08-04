@@ -170,12 +170,18 @@ function substitute_indices(og_list, indices, subs)
     Tuple(lst)
 end
 
+Gen.@diffed_unary_function findall
+
 @gen (static, diffs) function convert_key_to_abstract(mgf_call)
     obj = key(mgf_call)
     wrld = world(mgf_call)
-    concrete_indices = findall(x -> x isa ConcreteIndexOUPMObject, obj.origin)
-    newly_abstract_objs ~ Map(lookup_or_generate)([wrld[:abstract][obj.origin[i]] for i in concrete_indices])
+
+    # convert origin to abstract
+    concrete_indices = findall(map(x -> x isa ConcreteIndexOUPMObject, obj.origin))
+    concrete_objs = map(i -> obj.origin[i], concrete_indices)
+    newly_abstract_objs ~ Map(lookup_or_generate)(mgfcall_map(wrld[:abstract], concrete_objs))
     abstract_origin = substitute_indices(obj.origin, concrete_indices, newly_abstract_objs)
+
     to_lookup_obj::ConcreteIndexAbstractOriginOUPMObject = ConcreteIndexOUPMObject{typename(obj)}(abstract_origin, obj.idx)
     abstract_obj ~ lookup_or_generate(wrld[:abstract][to_lookup_obj])
     return abstract_obj
@@ -276,6 +282,9 @@ end
 
 # if we switch from a concrete key to a different lookup, or vice versa, we need to generate a new trace of a new type
 @inline function Gen.update(tr::AutoKeyConversionLookupOrGenerateTrace, args::Tuple{MemoizedGenerativeFunctionCall}, ::Tuple{KeyChangedDiff}, ::EmptyAddressTree, ::Gen.Selection)
+    _update_via_new_generation(tr, args)
+end
+@inline function Gen.update(tr::AutoKeyConversionLookupOrGenerateTrace, args::Tuple{ConcreteKeyMGFCall}, ::Tuple{KeyChangedDiff}, ::EmptyAddressTree, ::Gen.Selection)
     _update_via_new_generation(tr, args)
 end
 

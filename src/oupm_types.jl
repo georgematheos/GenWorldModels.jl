@@ -39,6 +39,9 @@ function Base.show(io::IO, obj::AbstractOUPMObject{T}) where {T}
 end
 typename(::OUPMObject{T}) where {T} = T
 
+Base.getproperty(o::Diffed{<:ConcreteIndexOUPMObject, NoChange}, sym::Symbol) = Diffed(Base.getproperty(strip_diff(o), sym), NoChange())
+Base.getproperty(o::Diffed{<:ConcreteIndexOUPMObject, UnknownChange}, sym::Symbol) = Diffed(Base.getproperty(strip_diff(o), sym), UnknownChange())
+
 """
     @type TypeName
 
@@ -59,41 +62,5 @@ function concrete_origin_error(concrete::ConcreteIndexOUPMObject)
     """)
 end
 
-# TODO: below here
-
-# abstract type OUPMMove end
-# struct BirthMove <: OUPMMove
-#     type::Type{<:OUPMType}
-#     idx::Int
-# end
-# struct DeathMove <: OUPMMove
-#     type::Type{<:OUPMType}
-#     idx::Int
-# end
-# struct MergeMove <: OUPMMove
-#     type::Type{<:OUPMType}
-#     to_idx::Int
-#     from_idx1::Int
-#     from_idx2::Int
-# end
-# struct SplitMove <: OUPMMove
-#     type::Type{<:OUPMType}
-#     from_idx::Int
-#     to_idx1::Int
-#     to_idx2::Int
-# end
-# struct MoveMove <: OUPMMove
-#     type::Type{<:OUPMType}
-#     from_idx::Int
-#     to_idx::Int
-# end
-
-# struct UpdateWithOUPMMovesSpec <: Gen.CustomUpdateSpec
-#     moves::Tuple{Vararg{<:OUPMMove}}
-#     subspec::Gen.UpdateSpec
-# end
-
 export @type
 export OUPMObject, AbstractOUPMObject, ConcreteIndexOUPMObject, ConcreteIndexAbstractOriginOUPMObject
-# export BirthMove, DeathMove, SplitMove, MergeMove, MoveMove
-# export UpdateWithOUPMMovesSpec

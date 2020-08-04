@@ -154,19 +154,6 @@ function update_world_args_and_enqueue_downstream!(world, new_world_args, world_
     end
 end
 
-
-"""
-    perform_oupm_moves_and_enqueue_downstream!(world, oupm_updates)
-
-Performs all the oupm updates in `oupm_updates` in order, and enqueues
-any calls which look at the indices for changed identifiers.
-"""
-function perform_oupm_moves_and_enqueue_downstream!(world, oupm_updates)
-    for oupm_update in oupm_updates
-        perform_oupm_move_and_enqueue_downstream!(world, oupm_update)
-    end
-end
-
 """
     run_subtrace_updates!(world)
 

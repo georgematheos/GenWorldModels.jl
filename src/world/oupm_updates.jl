@@ -1,34 +1,112 @@
-# struct IDAssociationChanged <: Gen.Diff end
+function get_with_abstract_origin(world, concrete::ConcreteIndexOUPMObject{T}) where {T}
+    c_to_a(x) = convert_to_abstract(world, x)
+    new_origin = map(c_to_a, concrete.origin)
+    ConcreteIndexOUPMObject{T}(new_origin, concrete.idx)
+end
 
-# # returns an set of all indices which have had their associations changed 
-# # and whose old IDs have had their associations changed
-# function move_all_between!(world, type; min, inc, max=Inf)
-#     new_id_table, changed_ids = move_all_between(world.id_table, oupm_type_name(type); min=min, inc=inc, max=max)
-#     world.id_table = new_id_table
-#     return changed_ids
-# end
+function get_or_generate_with_abstract_origin!(world, concrete::ConcreteIndexOUPMObject{T}) where {T}
+    c_to_a(x) = convert_to_abstract!(world, x)
+    new_origin = map(c_to_a, concrete.origin)
+    ConcreteIndexOUPMObject{T}(new_origin, concrete.idx)
+end
 
-# function perform_oupm_move_and_enqueue_downstream!(world, spec)
-#     table_before_update = world.id_table
-#     changed_ids = perform_oupm_move!(world, spec)
-#     for id in changed_ids
-#         getindex_call = Call(_get_index_addr, spec.type(id))
-#         world.state.diffs[getindex_call] = IDAssociationChanged()
-#         enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, getindex_call)
+"""
+    perform_oupm_moves_and_enqueue_downstream!(world, oupm_updates)
 
-#         old_idx = get_idx(table_before_update, spec.type, id)
-#         getid_call = Call(spec.type, old_idx)
-#         world.state.diffs[getid_call] = IDAssociationChanged()
-#         enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, getid_call)
+Performs all the oupm updates in `oupm_updates` in order, and enqueues
+any calls which look at the indices for changed identifiers.
+"""
+function perform_oupm_moves_and_enqueue_downstream!(world::World, oupm_updates)
+    # I'm currently "betting" that the overhead of using sets rather than lists outweighs
+    # the risk of iterating over an item twice.  I could change these lists to sets, though.  Or linked lists?
+    origin_changed = AbstractOUPMObject[]
+    index_changed = AbstractOUPMObject[]
+    abstract_changed = ConcreteIndexAbstractOriginOUPMObject[]
+    original_id_table = world.id_table
+    for oupm_update in oupm_updates
+        # this will perform the move in the world, and `push!` all the objects with origin, index, and abstract changed to the lists
+        perform_oupm_move!(world, oupm_update, origin_changed, index_changed, abstract_changed)
+    end
+    enqueue_downstream_from_oupm_moves!(world, original_id_table, origin_changed, index_changed, abstract_changed)
+end
 
-#         if has_id(world.id_table, spec.type, id)
-#             new_idx = get_idx(world.id_table, spec.type, id)
-#             if !has_idx(table_before_update, spec.type, new_idx)
-#                 note_new_call!(world, Call(spec.type, new_idx))
-#             end
-#         end
-#     end
-# end
+function enqueue_downstream_from_oupm_moves!(world::World, original_id_table, origin_changed, index_changed, abstract_changed)
+    for abstract in index_changed
+        c1 = Call(_get_index_addr, abstract)
+        c2 = Call(_get_concrete_addr, abstract)
+        world.state.diffs[c1] = UnknownChange()
+        world.state.diffs[c2] = UnknownChange()
+        enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, c1)
+        enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, c2)
+
+        concrete_obj = world.id_table[abstract]
+        if !haskey(original_id_table, concrete_obj)
+            note_new_call!(world, Call(_get_abstract_addr, concrete_obj))
+        end
+    end
+    for abstract in origin_changed
+        c1 = Call(_get_origin_addr, abstract)
+        c2 = Call(_get_concrete_addr, abstract)
+        world.state.diffs[c1] = UnknownChange()
+        world.state.diffs[c2] = UnknownChange()
+        enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, c1)
+        enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, c2)
+
+        concrete_obj = world.id_table[abstract]
+        if !haskey(original_id_table, concrete_obj)
+            note_new_call!(world, Call(_get_abstract_addr, concrete_obj))
+        end
+    end
+    for concrete in abstract_changed
+        c = Call(_get_abstract_addr, concrete)
+        world.state.diffs[c] = UnknownChange()
+        enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, c)
+    end
+end
+
+function move_all_between!(world::World, typename::Symbol, origin::Tuple{Vararg{<:AbstractOUPMObject}}, index_changed, abstract_changed; min=1, inc, max=Inc)
+    new_id_table = move_all_between(world.id_table, typename, origin, index_changed, abstract_changed; min=min, max=max, inc=inc)
+    world.id_table = new_id_table
+    world
+end
+
+function perform_oupm_move!(world::World, spec::MoveMove, origin_changed, index_changed, abstract_changed)
+    from = get_with_abstract_origin(world, spec.from)
+    to = get_or_generate_with_abstract_origin!(world, spec.to)
+    
+    has_abstract = haskey(world.id_table, from)
+    if has_abstract
+        abstract = world.id_table[from]
+    end
+    @assert world.id_table[from] != world.id_table[to]
+    @assert from != to
+    if from.origin == to.origin
+        if from.idx < to.idx
+            min = from.idx + 1
+            max = to.idx
+            inc = -1
+        else
+            min = to.idx
+            max = from.idx - 1
+            inc = +1
+        end
+        move_all_between!(world, typename(from), from.origin, index_changed, abstract_changed; max=max, min=min, inc=inc)
+    else
+        # move down all above `from`
+        move_all_between!(world, typename(from), from.origin, index_changed, abstract_changed; min=from.idx+1, max=Inf, inc=-1)
+        # move up all after and including `to`
+        move_all_between!(world, typename(to), to.origin, index_changed, abstract_changed; min=to.idx, max=Inf, inc=+1)
+
+        if has_abstract
+            push!(origin_changed, abstract)
+        end
+    end
+    if has_abstract
+        world.id_table = assoc(world.id_table, abstract, to)
+    end
+end
+
+
 
 # function perform_oupm_move!(world, spec::BirthMove)
 #     return move_all_between!(world, spec.type; min=spec.idx, inc=1)
@@ -86,32 +164,3 @@
 
 #     return changed_indices
 # end
-# function perform_oupm_move!(world, spec::MoveMove)
-#     typename = oupm_type_name(spec.type)
-    
-#     _has_id = has_idx(world.id_table, typename, spec.from_idx)
-
-#     if _has_id
-#         id = get_id(world.id_table, spec.type, spec.from_idx)
-#     end
-#     if spec.from_idx < spec.to_idx
-#         changed_ids = move_all_between!(world, spec.type; min=spec.from_idx+1, max=spec.to_idx, inc=-1)
-#     else
-#         changed_ids = move_all_between!(world, spec.type; min=spec.to_idx, max=spec.from_idx-1, inc=+1)
-#     end
-#     if _has_id
-#         world.id_table = insert_id(world.id_table, typename, spec.to_idx, id)
-#         push!(changed_ids, id)
-#     end
-
-#     return changed_ids
-# end
-
-# function reverse_moves(moves::Tuple)
-#     Tuple(reverse_move(moves[j]) for j=length(moves):-1:1)
-# end
-# reverse_move(m::BirthMove) = DeathMove(m.type, m.idx)
-# reverse_move(m::DeathMove) = BirthMove(m.type, m.idx)
-# reverse_move(m::SplitMove) = MergeMove(m.type, m.from_idx, m.to_idx1, m.to_idx2)
-# reverse_move(m::MergeMove) = SplitMove(m.type, m.to_idx, m.from_idx1, m.from_idx2)
-# reverse_move(m::MoveMove) = MoveMove(m.type, m.to_idx, m.from_idx)
