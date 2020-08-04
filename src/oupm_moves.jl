@@ -5,12 +5,19 @@ struct MoveMove{T} <: OUPMMove
     to::ConcreteIndexOUPMObject{T}
 end
 
+struct BirthMove{T} <: OUPMMove
+    obj::ConcreteIndexOUPMObject{T}
+end
+struct DeathMove{T} <: OUPMMove
+    obj::ConcreteIndexOUPMObject{T}
+end
+
 struct UpdateWithOUPMMovesSpec <: Gen.CustomUpdateSpec
     moves::Tuple{Vararg{<:OUPMMove}}
     subspec::Gen.UpdateSpec
 end
 
-export MoveMove #, BirthMove, DeathMove, SplitMove, MergeMove
+export MoveMove, BirthMove, DeathMove #e, SplitMove, MergeMove
 export UpdateWithOUPMMovesSpec
 
 function reverse_moves(moves::Tuple)
@@ -18,6 +25,8 @@ function reverse_moves(moves::Tuple)
 end
 
 reverse_move(m::MoveMove) = MoveMove(m.to, m.from)
+reverse_move(m::BirthMove) = DeathMove(m.obj)
+reverse_move(m::DeathMove) = BirthMove(m.obj)
 
 # reverse_move(m::BirthMove) = DeathMove(m.type, m.idx)
 # reverse_move(m::DeathMove) = BirthMove(m.type, m.idx)

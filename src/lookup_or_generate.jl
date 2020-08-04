@@ -169,6 +169,15 @@ function substitute_indices(og_list, indices, subs)
     end
     Tuple(lst)
 end
+function substitute_indices(og_list::Diffed{<:Any, NoChange}, indices::Diffed{<:Any, NoChange}, subs::Diffed{<:Any, NoChange})
+    v = substitute_indices(strip_diff(og_list), strip_diff(indices), strip_diff(subs))
+    Diffed(v, NoChange())
+end
+function substitute_indices(og_list::Diffed, indices::Diffed, subs::Diffed)
+    v = substitute_indices(strip_diff(og_list), strip_diff(indices), strip_diff(subs))
+    Diffed(v, UnknownChange())
+end
+
 
 Gen.@diffed_unary_function findall
 
@@ -182,7 +191,7 @@ Gen.@diffed_unary_function findall
     newly_abstract_objs ~ Map(lookup_or_generate)(mgfcall_map(wrld[:abstract], concrete_objs))
     abstract_origin = substitute_indices(obj.origin, concrete_indices, newly_abstract_objs)
 
-    to_lookup_obj::ConcreteIndexAbstractOriginOUPMObject = ConcreteIndexOUPMObject{typename(obj)}(abstract_origin, obj.idx)
+    to_lookup_obj::ConcreteIndexAbstractOriginOUPMObject = concrete_index_oupm_object(oupm_type_name(obj), abstract_origin, obj.idx)
     abstract_obj ~ lookup_or_generate(wrld[:abstract][to_lookup_obj])
     return abstract_obj
 end
@@ -192,6 +201,18 @@ end
     wrld = world(mgf_call)
     abstract_obj ~ lookup_or_generate(wrld[:abstract][concrete_obj])
     val ~ lookup_or_generate(wrld[addr(mgf_call)][abstract_obj])
+    return val 
+end
+
+Tuple(v::Diffed{<:Any, NoChange}) = Diffed(Tuple(strip_diff(v)), NoChange())
+Tuple(v::Diffed) = Diffed(Tuple(strip_diff(v)), UnknownChange())
+
+@gen (static, diffs) function tuple_idx_to_id_lookup_or_generate(mgf_call)
+    tup = key(mgf_call)
+    wrld = world(mgf_call)
+    abstract_lst ~ Map(lookup_or_generate)(mgfcall_map(wrld[:abstract], tup))
+    abstract_tup = Tuple(abstract_lst)
+    val ~ lookup_or_generate(wrld[addr(mgf_call)][abstract_tup])
     return val 
 end
 
@@ -285,6 +306,53 @@ end
     _update_via_new_generation(tr, args)
 end
 @inline function Gen.update(tr::AutoKeyConversionLookupOrGenerateTrace, args::Tuple{ConcreteKeyMGFCall}, ::Tuple{KeyChangedDiff}, ::EmptyAddressTree, ::Gen.Selection)
+    _update_via_new_generation(tr, args)
+end
+
+######################################
+# Tuple argument auto key conversion #
+######################################
+
+"""
+    AutoTupleKeyConversionLookupOrGenerateTrace
+"""
+struct AutoTupleKeyConversionLookupOrGenerateTrace <: LookupOrGenerateTrace
+    tr::Gen.get_trace_type(tuple_idx_to_id_lookup_or_generate)
+end
+Gen.get_retval(tr::AutoTupleKeyConversionLookupOrGenerateTrace) = get_retval(tr.tr)
+Gen.get_choices(tr::AutoTupleKeyConversionLookupOrGenerateTrace) = get_choices(tr.tr)
+Gen.get_args(tr::AutoTupleKeyConversionLookupOrGenerateTrace) = get_args(tr.tr)
+
+ConcreteIndexOUPMObjTupleKeyMGFCall = MemoizedGenerativeFunctionCall{<:Any, <:Any, <:Tuple{Vararg{<:ConcreteIndexOUPMObject}}}
+EmptyTupleKeyMGFCall = MemoizedGenerativeFunctionCall{<:Any, <:Any, Tuple{}}
+
+@inline function Gen.generate(::LookupOrGenerate, args::Tuple{ConcreteIndexOUPMObjTupleKeyMGFCall}, ::EmptyChoiceMap)
+    tr, weight = generate(tuple_idx_to_id_lookup_or_generate, args, EmptyChoiceMap())
+    (AutoTupleKeyConversionLookupOrGenerateTrace(tr), weight)
+end
+Gen.generate(::LookupOrGenerate, args::Tuple{EmptyTupleKeyMGFCall}, ::EmptyChoiceMap) = _simple_LoG_generate(args)
+@inline function Gen.propose(::LookupOrGenerate, args::Tuple{ConcreteIndexOUPMObjTupleKeyMGFCall})
+    propose(tuple_idx_to_id_lookup_or_generate, args)
+end
+Gen.propose(::LookupOrGenerate, args::Tuple{EmptyTupleKeyMGFCall}) = _simple_LoG_propose(args)
+@inline function Gen.assess(::LookupOrGenerate, args::Tuple{ConcreteIndexOUPMObjTupleKeyMGFCall}, ::EmptyChoiceMap)
+    assess(tuple_idx_to_id_lookup_or_generate, args, EmptyChoiceMap())
+end
+Gen.assess(::LookupOrGenerate, args::Tuple{EmptyTupleKeyMGFCall}, ::EmptyChoiceMap) = _simple_LoG_assess(args)
+@inline function Gen.update(
+    tr::AutoTupleKeyConversionLookupOrGenerateTrace,
+    args::Tuple{ConcreteIndexOUPMObjTupleKeyMGFCall},
+    argdiffs::Tuple{<:SpecialMGFCallDiff}, spec::EmptyAddressTree, ext_const_addrs::Gen.Selection
+)
+    new_tr, weight, retdiff, discard = update(tr.tr, args, argdiffs, spec, ext_const_addrs)
+    (AutoTupleKeyConversionLookupOrGenerateTrace(new_tr), weight, retdiff, discard)
+end
+
+# if we switch from a concrete key to a different lookup, or vice versa, we need to generate a new trace of a new type
+@inline function Gen.update(tr::AutoTupleKeyConversionLookupOrGenerateTrace, args::Tuple{MemoizedGenerativeFunctionCall}, ::Tuple{KeyChangedDiff}, ::EmptyAddressTree, ::Gen.Selection)
+    _update_via_new_generation(tr, args)
+end
+@inline function Gen.update(tr::AutoTupleKeyConversionLookupOrGenerateTrace, args::Tuple{ConcreteIndexOUPMObjTupleKeyMGFCall}, ::Tuple{KeyChangedDiff}, ::EmptyAddressTree, ::Gen.Selection)
     _update_via_new_generation(tr, args)
 end
 

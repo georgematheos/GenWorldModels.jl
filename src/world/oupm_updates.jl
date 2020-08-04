@@ -39,9 +39,11 @@ function enqueue_downstream_from_oupm_moves!(world::World, original_id_table, or
         enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, c1)
         enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, c2)
 
-        concrete_obj = world.id_table[abstract]
-        if !haskey(original_id_table, concrete_obj)
-            note_new_call!(world, Call(_get_abstract_addr, concrete_obj))
+        if haskey(world.id_table, abstract)
+            concrete_obj = world.id_table[abstract]
+            if !haskey(original_id_table, concrete_obj)
+                note_new_call!(world, Call(_get_abstract_addr, concrete_obj))
+            end
         end
     end
     for abstract in origin_changed
@@ -64,7 +66,7 @@ function enqueue_downstream_from_oupm_moves!(world::World, original_id_table, or
     end
 end
 
-function move_all_between!(world::World, typename::Symbol, origin::Tuple{Vararg{<:AbstractOUPMObject}}, index_changed, abstract_changed; min=1, inc, max=Inc)
+function move_all_between!(world::World, typename::Symbol, origin::Tuple{Vararg{<:AbstractOUPMObject}}, index_changed, abstract_changed; min=1, inc, max=Inf)
     new_id_table = move_all_between(world.id_table, typename, origin, index_changed, abstract_changed; min=min, max=max, inc=inc)
     world.id_table = new_id_table
     world
@@ -90,12 +92,12 @@ function perform_oupm_move!(world::World, spec::MoveMove, origin_changed, index_
             max = from.idx - 1
             inc = +1
         end
-        move_all_between!(world, typename(from), from.origin, index_changed, abstract_changed; max=max, min=min, inc=inc)
+        move_all_between!(world, oupm_type_name(from), from.origin, index_changed, abstract_changed; max=max, min=min, inc=inc)
     else
         # move down all above `from`
-        move_all_between!(world, typename(from), from.origin, index_changed, abstract_changed; min=from.idx+1, max=Inf, inc=-1)
+        move_all_between!(world, oupm_type_name(from), from.origin, index_changed, abstract_changed; min=from.idx+1, max=Inf, inc=-1)
         # move up all after and including `to`
-        move_all_between!(world, typename(to), to.origin, index_changed, abstract_changed; min=to.idx, max=Inf, inc=+1)
+        move_all_between!(world, oupm_type_name(to), to.origin, index_changed, abstract_changed; min=to.idx, max=Inf, inc=+1)
 
         if has_abstract
             push!(origin_changed, abstract)
@@ -106,7 +108,15 @@ function perform_oupm_move!(world::World, spec::MoveMove, origin_changed, index_
     end
 end
 
+function perform_oupm_move!(world::World, spec::BirthMove{T}, _, index_changed, abstract_changed) where {T}
+    obj = get_or_generate_with_abstract_origin!(world, spec.obj)
+    move_all_between!(world, T, obj.origin, index_changed, abstract_changed; min=obj.idx, inc=+1)
+end
 
+function perform_oupm_move!(world::World, spec::DeathMove{T}, _, index_changed, abstract_changed) where {T}
+    obj = get_or_generate_with_abstract_origin!(world, spec.obj)
+    move_all_between!(world, T, obj.origin, index_changed, abstract_changed; min=obj.idx+1, inc=-1)
+end
 
 # function perform_oupm_move!(world, spec::BirthMove)
 #     return move_all_between!(world, spec.type; min=spec.idx, inc=1)

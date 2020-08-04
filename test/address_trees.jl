@@ -56,17 +56,28 @@ end
         (:vol => a11 => :val, 11),
         (:vol => a12 => :val, 12),
         (:vol => a21 => :val, 21),
-        (:vol => a25 => :val, 25)
+        (:vol => a25 => :val, 25),
+        (:num => (a11, a21) => :val, 11 + 21) # tuples should be converted too
     )
     idx_choicemap = choicemap(
         (:vol => IDTestType1(1) => :val, 11),
         (:vol => IDTestType1(2) => :val, 12),
         (:vol => IDTestType2(1) => :val, 21),
-        (:vol => IDTestType2(5) => :val, 25)
+        (:vol => IDTestType2(5) => :val, 25),
+        (:num => (IDTestType1(1), IDTestType2(1)) => :val, 11 + 21)
     )
 
     @test GenWorldModels.to_abstract_repr(world, idx_choicemap) == id_choicemap
     @test GenWorldModels.to_concrete_repr(world, id_choicemap) == idx_choicemap
+
+    # we should be able to convert tuples with some abstract and somce concrete
+    id_choicemap2 = choicemap(
+        (:vol => a11 => :val, 11),
+        (:vol => a12 => :val, 12),
+        (:vol => a21 => :val, 21),
+        (:vol => a25 => :val, 25),
+        (:num => (a11, IDTestType2(1)) => :val, 11 + 21) # tuples should be converted too
+    )
 end
 
 end

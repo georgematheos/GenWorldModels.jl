@@ -27,8 +27,11 @@ end
     ])
 end
 get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
-    :num_aircrafts => num_aircrafts, :num_blips => num_blips, :plane_size => plane_size, :blip_size => blip_size#;
-    #nums=((Blip, origin -> :world => :num_blips => origin), (Aircraft, _ -> :world => :num_aircrafts => ()))
+    :num_aircrafts => num_aircrafts, :num_blips => num_blips, :plane_size => plane_size, :blip_size => blip_size #=;
+    nums_statements=(
+        NumStatement(Blip, (Aircraft, Timestep), :num_blips),
+        NumStatement(Aircraft, (), :num_aircrafts)
+    ) =#
 )
 @load_generated_functions()
 
@@ -57,9 +60,22 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
                 (:world => :num_blips => (Aircraft(2), Timestep(2)) => :num, 2)
             )
         )
-        new_tr, weight, retdiff, discard = update(tr, ([1, 2],), (NoChange(),), spec, AllSelection())
+        new_tr, weight, retdiff, rev = update(tr, ([1, 2],), (NoChange(),), spec, AllSelection())
         new_dict = get_retval(new_tr)
         old_dict = get_retval(tr)
+
+        # println("old num blips:")
+        # display(get_submap(get_choices(tr), :world => :num_blips))
+
+        # println("new num blips:")
+        # display(get_submap(get_choices(new_tr), :world => :num_blips))
+
+        # display(old_dict)
+        # display(tr.world.id_table)
+
+        # println()
+        # display(new_dict)
+        # display(new_tr.world.id_table)
 
         @test old_dict[Blip((Aircraft(2), Timestep(1)), 1)] == new_dict[Blip((Aircraft(2), Timestep(2)), 1)]
         @test old_dict[Blip((Aircraft(2), Timestep(2)), 1)] == new_dict[Blip((Aircraft(2), Timestep(2)), 2)]
@@ -67,8 +83,162 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
         expected_score_diff = logpdf(poisson, 2, 1) + logpdf(poisson, 0, 1) - (2*logpdf(poisson, 1, 1))
         @test isapprox(weight, expected_score_diff)
         @test isapprox(get_score(new_tr) - get_score(tr), expected_score_diff)
+
+        @test rev isa UpdateWithOUPMMovesSpec
+        @test rev.moves == (MoveMove(Blip((Aircraft(2), Timestep(2)), 1), Blip((Aircraft(2), Timestep(1)), 1)),)
+        @test rev.subspec == choicemap(
+            (:world => :num_blips => (Aircraft(2), Timestep(1)) => :num, 1),
+            (:world => :num_blips => (Aircraft(2), Timestep(2)) => :num, 1)
+        )
     end
-    @testset "births" begin
+
+    @testset "birth moves" begin
+        tr, _ = generate(get_blip_sizes_at_times, ([1, 2],), constraints)
+
+        # birth of object with no origins
+        spec = UpdateWithOUPMMovesSpec(
+            (
+                BirthMove(Blip((Aircraft(2), Timestep(1)), 1),),
+            ),
+            choicemap(
+                (:world => :num_blips => (Aircraft(2), Timestep(1)) => :num, 2),
+            )
+        )
+        new_tr, weight, retdiff, rev = update(tr, ([1, 2],), (NoChange(),), spec, AllSelection())
+        new_dict = get_retval(new_tr)
+        old_dict = get_retval(tr)
+
+        @test old_dict[Blip((Aircraft(2), Timestep(1)), 1)] == new_dict[Blip((Aircraft(2), Timestep(1)), 2)]
+        @test old_dict[Blip((Aircraft(2), Timestep(1)), 1)] != new_dict[Blip((Aircraft(2), Timestep(1)), 1)]
+        newsize = new_dict[Blip((Aircraft(2), Timestep(1)), 1)]
+        new_dict[Blip((Aircraft(2), Timestep(1)), 1)] = new_dict[Blip((Aircraft(2), Timestep(1)), 2)]
+        delete!(new_dict, Blip((Aircraft(2), Timestep(1)), 2))
+        @test old_dict == new_dict
+        expected_weight = logpdf(poisson, 2, 1) - logpdf(poisson, 1, 1)
+        expected_score_diff = expected_weight + logpdf(normal, newsize, new_tr[:world => :plane_size => Aircraft(2)]/600, 0.05)
+
+        # display(get_choices(tr))
+        # display(get_choices(new_tr))
+
+        @test isapprox(weight, expected_weight)
+        @test isapprox(get_score(new_tr) - get_score(tr), expected_score_diff)
+        @test rev isa UpdateWithOUPMMovesSpec
+        @test rev.moves == (DeathMove(Blip((Aircraft(2), Timestep(1)), 1)),)
+        @test rev.subspec == choicemap((:world => :num_blips => (Aircraft(2), Timestep(1)) => :num, 1),)
+
+        # birth of object with origins
+        spec = UpdateWithOUPMMovesSpec(
+            (
+                BirthMove(Aircraft(1),),
+            ),
+            choicemap(
+                (:world => :num_aircrafts => () => :num, 3),
+            )
+        )
+        new_tr, weight, retdiff, rev = update(tr, ([1, 2],), (NoChange(),), spec, AllSelection())
+        new_dict = get_retval(new_tr)
+        old_dict = get_retval(tr)
+        newdict2 = Dict()
+        # println("old:")
+        # display(get_submap(get_choices(tr), :world))
+        # println("new:")
+        # display(get_submap(get_choices(new_tr), :world))
+
+        newvals = []
+        for (blip, size) in new_dict
+            aidx = blip.origin[1].idx
+            if aidx > 1
+                newdict2[Blip((Aircraft(aidx - 1), blip.origin[2]), blip.idx)] = size
+            else
+                push!(newvals, size)
+            end
+        end
+        @test newdict2 == old_dict
+        @test new_tr[:world => :plane_size => Aircraft(2)] == tr[:world => :plane_size => Aircraft(1)]
+        @test new_tr[:world => :plane_size => Aircraft(3)] == tr[:world => :plane_size => Aircraft(2)]
+
+        expected_weight = logpdf(poisson, 3, 5) - logpdf(poisson, 2, 5)
+        expected_score_diff = expected_weight + logpdf(normal, new_tr[:world => :plane_size => Aircraft(1)], 600, 100)
+        expected_score_diff += logpdf(poisson, new_tr[:world => :num_blips => (Aircraft(1), Timestep(1))], 1)
+        expected_score_diff += logpdf(poisson, new_tr[:world => :num_blips => (Aircraft(1), Timestep(2))], 1)
+        for val in newvals
+            expected_score_diff += logpdf(normal, val, new_tr[:world => :plane_size => Aircraft(1)]/600, .05)
+        end
+        @test isapprox(get_score(new_tr) - get_score(tr), expected_score_diff)
+        @test isapprox(weight, expected_weight)
         
+        @test rev isa UpdateWithOUPMMovesSpec
+        @test rev.moves == (DeathMove(Aircraft(1)),)
+        @test rev.subspec == choicemap((:world => :num_aircrafts => () => :num, 2))
+    end
+
+    @testset "death moves" begin
+        tr, _ = generate(get_blip_sizes_at_times, ([1, 2],), constraints)
+
+        # death of object with no origins
+        spec = UpdateWithOUPMMovesSpec(
+            (
+                DeathMove(Blip((Aircraft(2), Timestep(1)), 1),),
+            ),
+            choicemap(
+                (:world => :num_blips => (Aircraft(2), Timestep(1)) => :num, 0),
+            )
+        )
+        new_tr, weight, retdiff, rev = update(tr, ([1, 2],), (NoChange(),), spec, AllSelection())
+        new_dict = get_retval(new_tr)
+        old_dict = get_retval(tr)
+        size = pop!(old_dict, Blip((Aircraft(2), Timestep(1)), 1))
+        @test old_dict == new_dict
+        expected_weight = logpdf(poisson, 0, 1) - logpdf(poisson, 2, 1)
+        expected_weight -= logpdf(normal, size, tr[:world => :plane_size => Aircraft(2)]/600, 0.05)
+        @test isapprox(weight, expected_weight)
+        @test isapprox(get_score(new_tr) - get_score(tr), expected_weight)
+        @test rev isa UpdateWithOUPMMovesSpec
+        @test rev.moves == (BirthMove(Blip((Aircraft(2), Timestep(1)), 1)),)
+        @test rev.subspec == choicemap((:world => :blip_size => Blip((Aircraft(2), Timestep(2)), 1) => :blip_size, size))
+
+        # this should delete Aircraft(1) and all blips it is an origin for; it should move down Aircraft(2) to Aircraft(1)
+        # and have all the blips with Aircraft(1) as origin adjust down
+        spec = UpdateWithOUPMMovesSpec(
+            (
+                DeathMove(Aircraft(1)),
+            ),
+            choicemap(
+                (:world => :num_aircrafts => () => :num, 1),
+            )
+        )
+        new_tr, weight, retdiff, discard = update(tr, ([1, 2],), (NoChange(),), spec, AllSelection())
+        new_dict = get_retval(new_tr)
+        old_dict = get_retval(tr)
+        olddict2 = Dict()
+        removed_vals = []
+        discarded_vals = choicemap((:world => :plane_size => Aircraft(1) => :size, tr[:world => :plane_size => Aircraft(1)]))
+        for (blip, size) in old_dict
+            aidx = blip.origin[1].idx
+            if aidx > 1
+                olddict2[Blip((Aircraft(aidx - 1), blip.origin[2]), blip.idx)] = size
+            else
+                push!(removed_vals, size)
+                discarded_vals[:world => :blip_size => blip => :blip_size] = size
+            end
+        end
+        @test olddict2 == new_dict
+
+        expected_weight = 
+        expected_score_delta = logpdf(poisson, 1, 5) - logpdf(poisson, 2, 5) + logpdf(normal, tr[:world => :plane_size => Aircraft(1)], 600, 100)
+        for val in removed_vals
+            expected_score_delta -= logpdf(normal, val/600, tr[:world => :plane_size => Aircraft(1)], 0.05)
+        end
+        @test isapprox(get_score(new_tr) - get_score(tr), expected_score_delta)
+        @test isapprox(weight, expected_score_delta)
+
+        new_tr2, weight2, _, _ = update(tr, ([1, 2],), (NoChange(),), spec, EmptySelection())
+        @test isapprox(get_score(new_tr2), get_score(new_tr))
+        @test isapprox(weight2, logpdf(poisson, 1, 5) - logpdf(poisson, 2, 5)) # only the constrained choices should impact the weight
+        @test get_choices(new_tr2) == get_choices(new_tr)
+
+        @test rev isa UpdateWithOUPMMovesSpec
+        @test rev.moves == (BirthMove(Aircraft(1)),)
+        @test rev.subspec == discarded_vals
     end
 end
