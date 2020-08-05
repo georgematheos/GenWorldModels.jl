@@ -94,7 +94,15 @@ function World(addrs::NTuple{n, Symbol}, gen_fns::NTuple{n, Gen.GenerativeFuncti
 end
 
 # TODO: Could make this more informative by showing what calls it has in it
-Base.show(io::IO, world::World{addrs, <:Any}) where {addrs} = print(io, "world{$addrs}")
+function Base.show(io::IO, ::Type{<:World{addrs}}) where {addrs}
+    print(io, "World{")
+    print(io, addrs)
+    print(io, "}")
+end
+function Base.show(io::IO, world::World)
+    print(io, typeof(world))
+    print(io, "()")
+end
 
 metadata_addr(world::World) = world.metadata_addr
 
