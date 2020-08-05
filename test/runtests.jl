@@ -5,7 +5,7 @@ using Test
 
 include("address_trees.jl")
 
-# # # core functionality tests
+# core functionality tests
 include("core/simple.jl")
 include("core/simple_dependency_updates.jl")
 include("core/world_args.jl")

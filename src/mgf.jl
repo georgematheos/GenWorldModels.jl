@@ -93,7 +93,7 @@ function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff
 end
 
 # valchange, tobeupdated, or nochange
-function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key)
+function _standard_lookup_dispatch(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key)
     mgf = strip_diff(mgf)
     wrld = world(mgf)
     c = Call(addr(mgf), key)
@@ -108,6 +108,9 @@ function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff
         end
     end
 end
+Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key) = _standard_lookup_dispatch(mgf, key)
+Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key::Tuple{}) = _standard_lookup_dispatch(mgf, key)
+
 Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key::ConcreteIndexOUPMObject) = Diffed(strip_diff(mgf)[key], ToBeUpdatedDiff())
 Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key::Tuple{Vararg{<:ConcreteIndexOUPMObject}}) = Diffed(strip_diff(mgf)[key], ToBeUpdatedDiff())
 
