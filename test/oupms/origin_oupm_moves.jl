@@ -139,10 +139,6 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
         new_dict = get_retval(new_tr)
         old_dict = get_retval(tr)
         newdict2 = Dict()
-        # println("old:")
-        # display(get_submap(get_choices(tr), :world))
-        # println("new:")
-        # display(get_submap(get_choices(new_tr), :world))
 
         newvals = []
         for (blip, size) in new_dict
@@ -186,16 +182,20 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
         )
         new_tr, weight, retdiff, rev = update(tr, ([1, 2],), (NoChange(),), spec, AllSelection())
         new_dict = get_retval(new_tr)
-        old_dict = get_retval(tr)
+        old_dict = deepcopy(get_retval(tr))
         size = pop!(old_dict, Blip((Aircraft(2), Timestep(1)), 1))
         @test old_dict == new_dict
-        expected_weight = logpdf(poisson, 0, 1) - logpdf(poisson, 2, 1)
+        expected_weight = logpdf(poisson, 0, 1) - logpdf(poisson, 1, 1)
         expected_weight -= logpdf(normal, size, tr[:world => :plane_size => Aircraft(2)]/600, 0.05)
+
         @test isapprox(weight, expected_weight)
         @test isapprox(get_score(new_tr) - get_score(tr), expected_weight)
         @test rev isa UpdateWithOUPMMovesSpec
         @test rev.moves == (BirthMove(Blip((Aircraft(2), Timestep(1)), 1)),)
-        @test rev.subspec == choicemap((:world => :blip_size => Blip((Aircraft(2), Timestep(2)), 1) => :blip_size, size))
+        @test rev.subspec == choicemap(
+            (:world => :blip_size => Blip((Aircraft(2), Timestep(1)), 1) => :blip_size, size),
+            (:world => :num_blips => (Aircraft(2), Timestep(1)) => :num, 1)
+        )
 
         # this should delete Aircraft(1) and all blips it is an origin for; it should move down Aircraft(2) to Aircraft(1)
         # and have all the blips with Aircraft(1) as origin adjust down
@@ -207,38 +207,50 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
                 (:world => :num_aircrafts => () => :num, 1),
             )
         )
-        new_tr, weight, retdiff, discard = update(tr, ([1, 2],), (NoChange(),), spec, AllSelection())
+        new_tr, weight, retdiff, rev = update(tr, ([1, 2],), (NoChange(),), spec, AllSelection())
         new_dict = get_retval(new_tr)
         old_dict = get_retval(tr)
-        olddict2 = Dict()
+        olddict_shifted = Dict()
         removed_vals = []
-        discarded_vals = choicemap((:world => :plane_size => Aircraft(1) => :size, tr[:world => :plane_size => Aircraft(1)]))
+        discarded_vals = choicemap(
+            (:world => :plane_size => Aircraft(1) => :size, tr[:world => :plane_size => Aircraft(1)]),
+            (:world => :num_aircrafts => () => :num, 2),
+            (:world => :num_blips => (Aircraft(1), Timestep(1)) => :num, 1),
+            (:world => :num_blips => (Aircraft(1), Timestep(2)) => :num, 1)
+        )
         for (blip, size) in old_dict
             aidx = blip.origin[1].idx
             if aidx > 1
-                olddict2[Blip((Aircraft(aidx - 1), blip.origin[2]), blip.idx)] = size
+                olddict_shifted[Blip((Aircraft(aidx - 1), blip.origin[2]), blip.idx)] = size
             else
                 push!(removed_vals, size)
                 discarded_vals[:world => :blip_size => blip => :blip_size] = size
             end
         end
-        @test olddict2 == new_dict
+        @test olddict_shifted == new_dict
 
-        expected_weight = 
-        expected_score_delta = logpdf(poisson, 1, 5) - logpdf(poisson, 2, 5) + logpdf(normal, tr[:world => :plane_size => Aircraft(1)], 600, 100)
-        for val in removed_vals
-            expected_score_delta -= logpdf(normal, val/600, tr[:world => :plane_size => Aircraft(1)], 0.05)
-        end
-        @test isapprox(get_score(new_tr) - get_score(tr), expected_score_delta)
-        @test isapprox(weight, expected_score_delta)
+        expected_score_diff = (
+            logpdf(poisson, 1, 5)
+            - logpdf(poisson, 2, 5)
+            - logpdf(normal, tr[:world => :plane_size => Aircraft(1)], 600, 100)
+            - 2*logpdf(poisson, 1, 1)
+            - sum(
+                logpdf(normal, val, tr[:world => :plane_size => Aircraft(1)]/600, 0.05)
+                for val in removed_vals
+            )
+        )
+        @test isapprox(get_score(new_tr) - get_score(tr), expected_score_diff)
+        @test isapprox(weight, expected_score_diff)
 
-        new_tr2, weight2, _, _ = update(tr, ([1, 2],), (NoChange(),), spec, EmptySelection())
+        new_tr2, weight2, _, rev2 = update(tr, ([1, 2],), (NoChange(),), spec, select(:world => :num_aircrafts => ()))
         @test isapprox(get_score(new_tr2), get_score(new_tr))
         @test isapprox(weight2, logpdf(poisson, 1, 5) - logpdf(poisson, 2, 5)) # only the constrained choices should impact the weight
         @test get_choices(new_tr2) == get_choices(new_tr)
 
+        @test rev == rev2
         @test rev isa UpdateWithOUPMMovesSpec
         @test rev.moves == (BirthMove(Aircraft(1)),)
+
         @test rev.subspec == discarded_vals
     end
 end
