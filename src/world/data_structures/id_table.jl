@@ -103,6 +103,28 @@ function Base.show(io::IO, table::IDTable)
     println("--------------------------------------------")
 end
 
+function print_with_concrete_origins(table::IDTable)
+    # we should always have the same ids and idxs in the idx_to_id and id_to_idx table,
+    # but we retain the capacity to print buggy, nonsymmetric tables to help with debugging
+    println("----------------- ID Table -----------------")
+    for (concrete, abstract) in table.concrete_to_abstract
+        if haskey(table.abstract_to_concrete, abstract) && table.abstract_to_concrete[abstract] == concrete
+            println(" $(try_to_get_with_concrete_origin(table, concrete)) <-> $abstract")
+        end
+    end
+    for (abstract, concrete) in table.abstract_to_concrete
+        if !haskey(table.concrete_to_abstract, concrete) || table.concrete_to_abstract[concrete] != abstract
+            println(" $(try_to_get_with_concrete_origin(table, concrete)) --> $abstract")
+        end
+    end
+    for (concrete, abstract) in table.concrete_to_abstract
+        if !haskey(table.abstract_to_concrete, abstract) || table.abstract_to_concrete[abstract] != concrete
+            println(" $(try_to_get_with_concrete_origin(table, concrete)) <-- $abstract")
+        end
+    end
+    println("--------------------------------------------")
+end
+
 get_concrete(table::IDTable, abstract::AbstractOUPMObject) = table.abstract_to_concrete[abstract]
 @inline function get_abstract(table::IDTable, concrete::ConcreteIndexAbstractOriginOUPMObject{T}) where {T}
     table.concrete_to_abstract[concrete]
@@ -130,6 +152,28 @@ function FunctionalCollections.assoc(table::IDTable, abstract::AbstractOUPMObjec
 end
 FunctionalCollections.assoc(::IDTable, ::AbstractOUPMObject{T}, c::ConcreteIndexOUPMObject{T}) where {T} = concrete_origin_error(c)
 FunctionalCollections.assoc(t::IDTable, c::ConcreteIndexOUPMObject, a::AbstractOUPMObject) = assoc(t, a, c)
+
+"""
+    dissoc(table, abstract_obj)
+    dissoc(table, concrete_obj)
+
+Returns an updated version of `table` where `abstract_obj` has no concrete object associated, or 
+`concrete_obj` has no abstract associated.  This deletes both the forward and reverse direction
+associations for this object (ie. deletes both the abstract --> concrete and concrete --> abstract,
+regardless of whether a concrete or abstract object is used as an argument).
+"""
+function FunctionalCollections.dissoc(t::IDTable, c::ConcreteIndexAbstractOriginOUPMObject)
+    oldval = t[c]
+    ctoa = dissoc(t.concrete_to_abstract, c)
+    atoc = dissoc(t.abstract_to_concrete, oldval)
+    IDTable(ctoa, atoc)
+end
+function FunctionalCollections.dissoc(t::IDTable, a::AbstractOUPMObject)
+    oldval = t[a]
+    atoc = dissoc(t.abstract_to_concrete, a)
+    ctoa = dissoc(t.concrete_to_abstract, oldval)
+    IDTable(ctoa, atoc)
+end
 
 """
     generate_abstract_for(id_table, concrete_obj)
@@ -167,6 +211,11 @@ The update may also overwrite current associations for indices in the range
 """
 function move_all_between(table::IDTable, typename::Symbol, origin::Tuple{Vararg{<:AbstractOUPMObject}}, index_changed, abstract_changed; min=1, inc, max=Inf)
     original_c_to_a = table.concrete_to_abstract
+    
+    if !haskey(original_c_to_a.map[typename], origin)
+        return table
+    end
+
     cobj(idx) = ConcreteIndexOUPMObject{typename}(origin, idx)
     new_c_to_a = table.concrete_to_abstract
     new_a_to_c = table.abstract_to_concrete

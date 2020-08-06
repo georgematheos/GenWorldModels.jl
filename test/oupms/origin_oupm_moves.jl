@@ -154,9 +154,14 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
         @test new_tr[:world => :plane_size => Aircraft(3)] == tr[:world => :plane_size => Aircraft(2)]
 
         expected_weight = logpdf(poisson, 3, 5) - logpdf(poisson, 2, 5)
-        expected_score_diff = expected_weight + logpdf(normal, new_tr[:world => :plane_size => Aircraft(1)], 600, 100)
-        expected_score_diff += logpdf(poisson, new_tr[:world => :num_blips => (Aircraft(1), Timestep(1))], 1)
-        expected_score_diff += logpdf(poisson, new_tr[:world => :num_blips => (Aircraft(1), Timestep(2))], 1)
+        expected_score_diff = expected_weight
+        nb1 = new_tr[:world => :num_blips => (Aircraft(1), Timestep(1))]
+        nb2 = new_tr[:world => :num_blips => (Aircraft(1), Timestep(2))]
+        if nb1 + nb2 > 0 # if we have any blips for the new aircraft 1, we generated a plane size
+            expected_score_diff += logpdf(normal, new_tr[:world => :plane_size => Aircraft(1)], 600, 100)
+        end
+        expected_score_diff += logpdf(poisson, nb1, 1)
+        expected_score_diff += logpdf(poisson, nb2, 1)
         for val in newvals
             expected_score_diff += logpdf(normal, val, new_tr[:world => :plane_size => Aircraft(1)]/600, .05)
         end
@@ -252,5 +257,269 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
         @test rev.moves == (BirthMove(Aircraft(1)),)
 
         @test rev.subspec == discarded_vals
+    end
+
+    sm_constraints = choicemap(
+        (:world => :num_aircrafts => () => :num, 2),
+        (:world => :num_blips => (Aircraft(1), Timestep(1)) => :num, 1),
+        (:world => :num_blips => (Aircraft(2), Timestep(1)) => :num, 3),
+        (:world => :num_blips => (Aircraft(1), Timestep(2)) => :num, 1),
+        (:world => :num_blips => (Aircraft(2), Timestep(2)) => :num, 1),
+    )
+
+    AT(a::Int, t::Int) = (Aircraft(a), Timestep(t))
+    Blp(a::Int, t::Int, i::Int) = Blip(AT(a, t), i)
+
+    @testset "split moves" begin
+        tr, _ = generate(get_blip_sizes_at_times, ([1, 2],), sm_constraints)
+
+        # birth of object with no origins
+        spec = UpdateWithOUPMMovesSpec(
+            (
+                SplitMove(
+                    Blip((Aircraft(2), Timestep(1)), 2),
+                    1, 2
+                ),
+            ),
+            choicemap(
+                (:world => :num_blips => (Aircraft(2), Timestep(1)) => :num, 4),
+            )
+        )
+        new_tr, weight, _, rev = update(tr, ([1,2],), (NoChange(),), spec, invert(select(:world => :blip_size => Blip((Aircraft(2), Timestep(1)), 2))))
+
+        old_dict = deepcopy(get_retval(tr))
+        new_dict = get_retval(new_tr)
+
+        @test new_dict[Blip((Aircraft(2), Timestep(1)), 3)] == old_dict[Blip((Aircraft(2), Timestep(1)), 1)]
+        @test new_dict[Blip((Aircraft(2), Timestep(1)), 4)] == old_dict[Blip((Aircraft(2), Timestep(1)), 3)]
+        asize = tr[:world => :plane_size => Aircraft(2)]
+
+        expected_score_diff = (
+            logpdf(poisson, 4, 1) - logpdf(poisson, 3, 1)
+            + logpdf(normal, new_tr[:world => :blip_size => Blip((Aircraft(2), Timestep(1)), 1)], asize/600, 0.05)
+            + logpdf(normal, new_tr[:world => :blip_size => Blip((Aircraft(2), Timestep(1)), 2)], asize/600, 0.05)
+            - logpdf(normal, tr[:world => :blip_size => Blip((Aircraft(2), Timestep(1)), 2)], asize/600, 0.05)
+        )
+        @test isapprox(get_score(new_tr) - get_score(tr), expected_score_diff)
+        @test isapprox(weight, logpdf(poisson, 4, 1) - logpdf(poisson, 3, 1))
+
+        @test rev isa UpdateWithOUPMMovesSpec
+        @test rev.moves == (MergeMove(Blip((Aircraft(2), Timestep(1)), 2), 1, 2),)
+        @test rev.subspec == choicemap(
+            (:world => :blip_size => Blip((Aircraft(2), Timestep(1)), 2) => :blip_size, tr[:world => :blip_size => Blip((Aircraft(2), Timestep(1)), 2)]),
+            (:world => :num_blips => AT(2, 1) => :num, 3)
+        )
+
+        moves = (
+            Blp(2, 1, 1) => Blp(1, 1, 2),
+            Blp(2, 1, 2) => Blp(1, 1, 1),
+            Blp(2, 1, 3) => Blp(3, 1, 1),
+            Blp(2, 2, 1) => Blp(3, 2, 1)
+        )
+        spec = UpdateWithOUPMMovesSpec(
+            (
+                SplitMove(
+                    Aircraft(2),
+                    1, 3;
+                    moves=moves
+                ),
+            ),
+            choicemap(
+                (:world => :num_aircrafts => () => :num, 3),
+                (:world => :num_blips => AT(1, 1) => :num, 2),
+                (:world => :num_blips => AT(3, 1) => :num, 1),
+                (:world => :num_blips => AT(1, 2) => :num, 0),
+                (:world => :num_blips => AT(3, 2) => :num, 1),
+            )
+        )
+        new_tr, weight, _, rev = update(tr, ([1,2],), (NoChange(),), spec, AllSelection())
+
+        @test new_tr[:world => :num_blips => AT(2, 1)] == tr[:world => :num_blips => AT(1, 1)]
+        @test new_tr[:world => :num_blips => AT(2, 2)] == tr[:world => :num_blips => AT(1, 2)]
+
+        new_dict = get_retval(new_tr)
+        @test new_dict[Blp(2, 1, 1)] == old_dict[Blp(1, 1, 1)]
+        @test new_dict[Blp(2, 2, 1)] == old_dict[Blp(1, 2, 1)]
+        for (from, to) in moves
+            @test old_dict[from] == new_dict[to]
+        end
+
+        newsize1 = new_tr[:world => :plane_size => Aircraft(1)]
+        newsize3 = new_tr[:world => :plane_size => Aircraft(3)]
+        oldsize2 = tr[:world => :plane_size => Aircraft(2)]
+        new_bsize(b) = new_tr[:world => :blip_size => b]
+        old_bsize(b) = tr[:world => :blip_size => b]
+        new_planesize_scorediff = (
+              logpdf(normal, newsize1, 600, 100)
+            + logpdf(normal, newsize3, 600, 100)
+            - logpdf(normal, tr[:world => :plane_size => Aircraft(2)], 600, 100)
+        )
+        new_blipsize_scoresum = (
+            logpdf(normal, new_bsize(Blp(1, 1, 1)), newsize1/600, 0.05)
+          + logpdf(normal, new_bsize(Blp(1, 1, 2)), newsize1/600, 0.05)
+          + logpdf(normal, new_bsize(Blp(3, 1, 1)), newsize3/600, 0.05)
+          + logpdf(normal, new_bsize(Blp(3, 2, 1)), newsize3/600, 0.05)
+        )
+        old_blipsize_scoresum = (
+             logpdf(normal, old_bsize(Blp(2, 1, 1)), oldsize2/600, 0.05)
+            + logpdf(normal, old_bsize(Blp(2, 1, 2)), oldsize2/600, 0.05)
+            + logpdf(normal, old_bsize(Blp(2, 1, 3)), oldsize2/600, 0.05)
+            + logpdf(normal, old_bsize(Blp(2, 2, 1)), oldsize2/600, 0.05)
+        )
+        blipsize_scorediff = new_blipsize_scoresum - old_blipsize_scoresum
+
+        expected_score_diff = (
+            logpdf(poisson, 3, 5) - logpdf(poisson, 2, 5)
+            + logpdf(poisson, 2, 1) + logpdf(poisson, 1, 1) + logpdf(poisson, 0, 1) + logpdf(poisson, 1, 1)
+            - logpdf(poisson, 3, 1) - logpdf(poisson, 1, 1)
+            + new_planesize_scorediff
+            + blipsize_scorediff
+        )
+        @test isapprox(get_score(new_tr) - get_score(tr), expected_score_diff)
+
+        # weight should be the scorediff, minus the scores for the generated values
+        @test isapprox(weight, expected_score_diff - logpdf(normal, newsize1, 600, 100) - logpdf(normal, newsize3, 600, 100))
+
+        @test length(rev.moves) == 1
+        @test rev.moves[1].to == Aircraft(2)
+        @test rev.moves[1].from_idx_1 == 1
+        @test rev.moves[1].from_idx_2 == 3
+        @test Set(rev.moves[1].moves) == Set(map(((x, y),) -> y => x , moves))
+
+        @test rev.subspec == choicemap(
+            (:world => :num_aircrafts => () => :num, 2),
+            (:world => :num_blips => AT(2, 1) => :num, 3),
+            (:world => :num_blips => AT(2, 2) => :num, 1),
+            (:world => :plane_size => Aircraft(2) => :size, oldsize2)
+        )
+    end
+
+    @testset "merge moves" begin
+        tr, _ = generate(get_blip_sizes_at_times, ([1, 2],), sm_constraints)
+
+        oldbsize1 = tr[:world => :blip_size => Blp(2, 1, 1)]
+        oldbsize3 = tr[:world => :blip_size => Blp(2, 1, 3)]
+        meanbsize = (oldbsize1 + oldbsize3)/2.
+
+        # merge of object with no origins
+        spec = UpdateWithOUPMMovesSpec(
+            (
+                MergeMove(
+                    Blip((Aircraft(2), Timestep(1)), 2),
+                    1, 3
+                ),
+            ),
+            choicemap(
+                (:world => :num_blips => (Aircraft(2), Timestep(1)) => :num, 2),
+                (:world => :blip_size => Blp(2, 1, 2) => :blip_size, meanbsize)
+            )
+        )
+        new_tr, weight, _, rev = update(tr, ([1,2],), (NoChange(),), spec, AllSelection())
+
+        old_dict = deepcopy(get_retval(tr))
+        new_dict = deepcopy(get_retval(new_tr))
+
+        @test old_dict[Blp(2, 1, 2)] == new_dict[Blp(2, 1, 1)]
+        @test new_dict[Blp(2, 1, 2)] == meanbsize
+
+        expected_weight = (
+            logpdf(poisson, 2, 1) - logpdf(poisson, 3, 1)
+            + logpdf(normal, meanbsize, tr[:world => :plane_size => Aircraft(2)]/600, 0.05)
+            - logpdf(normal, oldbsize1, tr[:world => :plane_size => Aircraft(2)]/600, 0.05)
+            - logpdf(normal, oldbsize3, tr[:world => :plane_size => Aircraft(2)]/600, 0.05)
+        )
+
+        @test isapprox(weight, expected_weight)
+        @test isapprox(get_score(new_tr) - get_score(tr), expected_weight)
+
+        @test rev.moves == (
+            SplitMove(Blp(2, 1, 2), 1, 3),
+        )
+
+        @test rev.subspec == choicemap(
+            (:world => :num_blips => AT(2, 1) => :num, 3),
+            (:world => :blip_size => Blp(2, 1, 1) => :blip_size, oldbsize1),
+            (:world => :blip_size => Blp(2, 1, 3) => :blip_size, oldbsize3)
+        )
+
+        # merge of object with origins
+        oldsize1 = tr[:world => :plane_size => Aircraft(1)]
+        oldsize2 = tr[:world => :plane_size => Aircraft(2)]
+        meansize = (oldsize1 + oldsize2)/2
+        moves = (
+            Blp(1, 1, 1) => Blp(1, 1, 1),
+            Blp(2, 1, 2) => Blp(1, 1, 2),
+            Blp(2, 1, 1) => Blp(1, 1, 3),
+            Blp(2, 1, 3) => Blp(1, 1, 4),
+            Blp(1, 2, 1) => Blp(1, 2, 2),
+            Blp(2, 2, 1) => Blp(1, 2, 1)
+        )
+        spec = UpdateWithOUPMMovesSpec(
+            (
+                MergeMove(
+                    Aircraft(1),
+                    1, 2;
+                    moves=moves
+                ),
+            ),
+            choicemap(
+                (:world => :num_aircrafts => () => :num, 1),
+                (:world => :num_blips => AT(1, 1) => :num, 4),
+                (:world => :num_blips => AT(1, 2) => :num, 2),
+                (:world => :plane_size => Aircraft(1) => :size, meansize)
+            )
+        )
+        new_tr, weight, _, rev = update(tr, ([1,2],), (NoChange(),), spec, AllSelection())
+
+        old_dict = get_retval(tr)
+        new_dict = get_retval(new_tr)
+        for (oldblip, newblip) in moves
+            @test old_dict[oldblip] == new_dict[newblip]
+        end
+
+        new_bsize(b) = new_tr[:world => :blip_size => b]
+        old_bsize(b) = tr[:world => :blip_size => b]
+        new_planesize_scorediff = (
+              logpdf(normal, meansize, 600, 100)
+            - logpdf(normal, oldsize1, 600, 100)
+            - logpdf(normal, oldsize2, 600, 100)
+        )
+        new_blipsize_scoresum = sum(
+            logpdf(normal, new_bsize(b), meansize/600, 0.05)
+            for (_, b) in moves
+        )
+        oldsize(x) = if x == 1; oldsize1; elseif x == 2; oldsize2; else; error(); end;
+        old_blipsize_scoresum = sum(
+            logpdf(normal, old_bsize(b), oldsize(b.origin[1].idx)/600, 0.05)
+            for (b, _) in moves
+        )
+        blipsize_scorediff = new_blipsize_scoresum - old_blipsize_scoresum
+
+        expected_score_diff = (
+            logpdf(poisson, 1, 5) - logpdf(poisson, 2, 5)
+            + logpdf(poisson, 4, 1) + logpdf(poisson, 2, 1)
+            - logpdf(poisson, 3, 1) - 3*logpdf(poisson, 1, 1)
+            + new_planesize_scorediff
+            + blipsize_scorediff
+        )
+        @test isapprox(get_score(new_tr) - get_score(tr), expected_score_diff)
+        @test isapprox(weight, expected_score_diff)
+
+        @test rev.moves == (
+            SplitMove(
+                Aircraft(1),
+                1, 2;
+                moves=map(x -> (x.second => x.first), moves)
+            ),
+        )
+        @test rev.subspec == choicemap(
+            (:world => :num_aircrafts => () => :num, 2),
+            (:world => :num_blips => AT(1, 1) => :num, 1),
+            (:world => :num_blips => AT(1, 2) => :num, 1),
+            (:world => :num_blips => AT(2, 1) => :num, 3),
+            (:world => :num_blips => AT(2, 2) => :num, 1),
+            (:world => :plane_size => Aircraft(1) => :size, oldsize1),
+            (:world => :plane_size => Aircraft(2) => :size, oldsize2)
+        )
     end
 end

@@ -62,7 +62,7 @@ function Base.getindex(tr::UsingWorldTrace, addr::Pair)
                 key = convert_to_abstract(tr.world, key)
                 return get_trace(tr.world, Call(mgf_addr, key))[remaining]
             else
-                key = convert_to_abstract(tr.world, rest) 
+                key = convert_to_abstract(tr.world, rest)
                 return get_trace(tr.world, Call(mgf_addr, key))[]
             end
         catch e
@@ -70,6 +70,7 @@ function Base.getindex(tr::UsingWorldTrace, addr::Pair)
             if e isa KeyError
                 error("No lookup for $(mgf_addr => key) found in the world.")
             else
+                stacktrace(catch_backtrace())
                 throw(e)
             end
         end
