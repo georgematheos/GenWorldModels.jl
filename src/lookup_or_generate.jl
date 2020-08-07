@@ -146,12 +146,27 @@ end
 end
 
 # value has changed, but we don't need to update, and haven't changed key
-function Gen.update(tr::SimpleLookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{ValueChangedDiff}, ::EmptyChoiceMap, ::Selection)
+function _simple_valchange_update(tr, args, argdiffs)
     valdiff = argdiffs[1].diff
     new_call = args[1]
     new_val = get_val(new_call.world, call(new_call))
     new_tr = SimpleLookupOrGenerateTrace(new_call, new_val)
     (new_tr, 0., valdiff, EmptyChoiceMap())
+end
+function Gen.update(tr::SimpleLookupOrGenerateTrace, args::Tuple, argdiffs::Tuple{ValueChangedDiff}, ::EmptyChoiceMap, ::Selection)
+    _simple_valchange_update(tr, args, argdiffs)
+end
+
+# if we are looking up an origin or index, there is a chance we are making a lookup for an abstract object which has been
+# deleted, and this call will be deleted.  In either case, we may need to return an invalid trace
+OriginOrIndexMGFCall = Union{MemoizedGenerativeFunctionCall{<:Any, _get_index_addr}, MemoizedGenerativeFunctionCall{<:Any, _get_origin_addr}}
+function Gen.update(tr::SimpleLookupOrGenerateTrace, args::Tuple{<:OriginOrIndexMGFCall}, argdiffs::Tuple{ValueChangedDiff}, ::EmptyChoiceMap, ::Selection)
+    new_call = args[1]
+    if has_val(new_call.world, call(new_call))
+        _simple_valchange_update(tr, args, argdiffs)
+    else
+        (InvalidLookupOrGenerateTrace(new_call), -Inf, UnknownChange(), get_choices(tr))
+    end
 end
 
 ############################################################

@@ -22,9 +22,9 @@ include("examples/scene_decoration.jl")
 @type Timestep
 @type Blip
 
-include("oupms/oupm_types.jl")
+# include("oupms/oupm_types.jl")
 include("oupms/simple_oupmtype_usage.jl")
-# include("oupms/simple_oupm_moves.jl")
+include("oupms/simple_oupm_moves.jl")
 include("oupms/origin_oupm_moves.jl")
 # include("oupms/oupm_involution_dsl.jl")
 
