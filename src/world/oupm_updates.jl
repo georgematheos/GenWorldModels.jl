@@ -84,7 +84,6 @@ function perform_oupm_move!(world::World, spec::MoveMove, origin_changed, index_
     if has_abstract
         abstract = world.id_table[from]
     end
-    @assert from != to
     if from.origin == to.origin
         if from.idx < to.idx
             min = from.idx + 1

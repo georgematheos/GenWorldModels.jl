@@ -35,7 +35,7 @@ end
 export MoveMove, BirthMove, DeathMove, SplitMove, MergeMove
 export UpdateWithOUPMMovesSpec
 
-function reverse_moves(moves::Tuple{<:OUPMMove})
+function reverse_moves(moves::Tuple{Vararg{<:OUPMMove}})
     Tuple(reverse_move(moves[j]) for j=length(moves):-1:1)
 end
 

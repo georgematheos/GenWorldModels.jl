@@ -163,33 +163,44 @@ macro copy(src, dest)
     return quote copy($(esc(bij_state)), $(esc(src)), $(esc(dest))) end
 end
 
-macro birth(ObjectType, idx)
+macro birth(obj)
     quote
-        move = BirthMove($(esc(ObjectType)), $(esc(idx)))
+        move = BirthMove($(esc(obj)))
         apply_oupm_move($(esc(bij_state)), move)
     end
 end
-macro death(ObjectType, idx)
+macro death(obj)
     quote
-        move = DeathMove($(esc(ObjectType)), $(esc(idx)))
+        move = DeathMove($(esc(obj)))
         apply_oupm_move($(esc(bij_state)), move)
     end
 end
-macro split(ObjectType, from_idx, to_idx1, to_idx2)
+macro split(from_obj, to_idx1, to_idx2, moves_...)
+    if length(moves_) == 0
+        moves = ()
+    else
+        moves = moves_[1]
+    end
+
     quote
-        move = SplitMove($(esc(ObjectType)), $(esc(from_idx)), $(esc(to_idx1)), $(esc(to_idx2)))
+        move = SplitMove($(esc(from_obj)), $(esc(to_idx1)), $(esc(to_idx2)), $(esc(moves)))
         apply_oupm_move($(esc(bij_state)), move)
     end
 end
-macro merge(ObjectType, to_idx, from_idx1, from_idx2)
+macro merge(to_obj, from_idx1, from_idx2, moves_...)
+    if length(moves_) == 0
+        moves = ()
+    else
+        moves = moves_[1]
+    end
     quote
-        move = MergeMove($(esc(ObjectType)), $(esc(to_idx)), $(esc(from_idx1)), $(esc(from_idx2)))
+        move = MergeMove($(esc(to_obj)), $(esc(from_idx1)), $(esc(from_idx2)), $(esc(moves)))
         apply_oupm_move($(esc(bij_state)), move)
     end
 end
-macro move(ObjectType, from_idx, to_idx)
+macro move(from, to)
     quote
-        move = MoveMove($(esc(ObjectType)), $(esc(from_idx)), $(esc(to_idx)))
+        move = MoveMove($(esc(from)), $(esc(to)))
         apply_oupm_move($(esc(bij_state)), move)
     end
 end

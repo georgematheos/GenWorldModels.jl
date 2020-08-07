@@ -11,8 +11,8 @@ end
     return observation
 end
 @load_generated_functions()
-observe_sample_sum = UsingWorld(observe_samples_sum_kernel, :val => get_val; oupm_types=(Sample,))
-#=
+observe_sample_sum = UsingWorld(observe_samples_sum_kernel, :val => get_val)
+
 @testset "OUPM move involution DSL" begin
     OBS = 3.
     tr, _  = generate(observe_sample_sum, (), choicemap(
@@ -47,13 +47,13 @@ observe_sample_sum = UsingWorld(observe_samples_sum_kernel, :val => get_val; oup
         idx = @read(fwd_prop_tr[:idx], :disc)
         current_num_samples = @read(old_tr[:kernel => :num_samples], :disc)
         if @read(fwd_prop_tr[:do_birth], :disc)
-            @birth(Sample, idx)
+            @birth(Sample(idx))
             @write(new_tr[:kernel => :num_samples], current_num_samples + 1, :disc)
             new_val = @read(fwd_prop_tr[:new_val], :cont)
             @write(new_tr[:world => :val => Sample(idx) => :val], new_val, :cont)
             @write(bwd_prop_tr[:do_birth], false, :disc)
         else
-            @death(Sample, idx)
+            @death(Sample(idx))
             @write(new_tr[:kernel => :num_samples], current_num_samples - 1, :disc)
             @write(bwd_prop_tr[:do_birth], true, :disc)
         end
@@ -69,13 +69,13 @@ observe_sample_sum = UsingWorld(observe_samples_sum_kernel, :val => get_val; oup
         do_birth = @read(fwd_prop_tr[:do_birth], :disc)
         current_num_samples = @read(old_tr[:kernel => :num_samples], :disc)
         if do_birth
-            @birth(Sample, idx)
+            @birth(Sample(idx))
             @write(new_tr[:kernel => :num_samples], current_num_samples + 1, :disc)
 
             new_val = @read(fwd_prop_tr[:new_val], :cont)
             @write(new_tr[:world => :val => Sample(idx) => :val], new_val, :cont)
         else
-            @death(Sample, idx)
+            @death(Sample(idx))
             @write(new_tr[:kernel => :num_samples], current_num_samples - 1, :disc)
             
             # could use copy here, but want to test continuous read/write behavior
@@ -120,13 +120,13 @@ observe_sample_sum = UsingWorld(observe_samples_sum_kernel, :val => get_val; oup
         if deuce_idx1 != deuce_idx2
             current_num_samples = @read(old_tr[:kernel => :num_samples], :disc)
             if do_split
-                @split(Sample, solo_idx, deuce_idx1, deuce_idx2)
+                @split(Sample(solo_idx), deuce_idx1, deuce_idx2)
                 @write(new_tr[:kernel => :num_samples], current_num_samples + 1, :disc)
                 @copy(fwd_prop_tr[:new_val1], new_tr[:world => :val => Sample(deuce_idx1) => :val])
                 @copy(fwd_prop_tr[:new_val2], new_tr[:world => :val => Sample(deuce_idx2) => :val])
                 @copy(old_tr[:world => :val => Sample(solo_idx) => :val], bwd_prop_tr[:new_val])
             else
-                @merge(Sample, solo_idx, deuce_idx1, deuce_idx2)
+                @merge(Sample(solo_idx), deuce_idx1, deuce_idx2, ())
                 @write(new_tr[:kernel => :num_samples], current_num_samples - 1, :disc)
                 @copy(fwd_prop_tr[:new_val], new_tr[:world => :val => Sample(solo_idx) => :val])
                 @copy(old_tr[:world => :val => Sample(deuce_idx1) => :val], bwd_prop_tr[:new_val1])
@@ -150,7 +150,7 @@ observe_sample_sum = UsingWorld(observe_samples_sum_kernel, :val => get_val; oup
     @oupm_involution move_inv (old_tr, fwd_prop_tr) to (new_tr, bwd_prop_tr) begin
         from = @read(fwd_prop_tr[:from_idx], :disc)
         to = @read(fwd_prop_tr[:to_idx], :disc)
-        @move(Sample, from, to)
+        @move(Sample(from), Sample(to))
         @copy(fwd_prop_tr[:from_idx], bwd_prop_tr[:to_idx])
         @copy(fwd_prop_tr[:to_idx], bwd_prop_tr[:from_idx])
     end
@@ -172,11 +172,11 @@ observe_sample_sum = UsingWorld(observe_samples_sum_kernel, :val => get_val; oup
         do_birth = @read(fwd_prop_tr[:do_birth], :disc)
         current_num_samples = @read(old_tr[:kernel => :num_samples], :disc)
         if do_birth
-            @birth(Sample, idx)
+            @birth(Sample(idx))
             @write(new_tr[:kernel => :num_samples], current_num_samples + 1, :disc)
             @regenerate(:world => :val => Sample(idx))
         else
-            @death(Sample, idx)
+            @death(Sample(idx))
             @write(new_tr[:kernel => :num_samples], current_num_samples - 1, :disc)
             @save_for_reverse_regenerate(:world => :val => Sample(idx))
         end
@@ -203,7 +203,7 @@ observe_sample_sum = UsingWorld(observe_samples_sum_kernel, :val => get_val; oup
     @test isapprox(weight, -expected_weight)
     @test log_abs_det == 0.
 end
-=#
+
 @testset "num change without OUPM move" begin
     tr, _ = generate(observe_sample_sum, (), choicemap(
         (:kernel => :num_samples, 2),
@@ -219,3 +219,5 @@ end
         tr = new_tr
     end
 end
+
+# TODO: test involution DSL in a case where there are origin moves for split/merge moves?
