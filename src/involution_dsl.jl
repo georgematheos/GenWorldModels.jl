@@ -212,6 +212,13 @@ macro regenerate(address)
     quote _regenerate($(esc(bij_state)), $(esc(address))) end
 end
 
+macro convert_to_abstract(object)
+    quote convert_to_abstract($(esc(bij_state)), $(esc(object))) end
+end
+macro convert_to_concrete(object)
+    quote convert_to_concrete($(esc(bij_state)), $(esc(object))) end
+end
+
 # TODO make more consistent by allowing us to read any hierarchical address,
 # including return values of intermediate calls, not just the top-level call.
 
@@ -477,6 +484,14 @@ function _regenerate(::JacobianPassState, _)
     nothing
 end
 
+function convert_to_abstract(state::Union{FirstPassState, JacobianPassState}, object::ConcreteIndexOUPMObject)
+    convert_to_abstract(state.model_trace.world, object::ConcreteIndexOUPMObject)
+end
+function convert_to_concrete(state::Union{FirstPassState, JacobianPassState}, object)
+    convert_to_concrete(state.model_trace.world, object)
+end
+
+
 #################################
 # computing jacobian correction #
 #################################
@@ -663,6 +678,15 @@ function symmetric_trace_translator_run_transform(
         spec = UpdateWithOUPMMovesSpec(spec.moves, subspec)
     end
 
+    # println("moves:")
+    # display(spec.moves)
+    # println("subspec:")
+    # display(spec.subspec)
+    # # println("type of subspec:")
+    # # display(typeof(spec.subspec))
+    # println("Backward constraints:")
+    # display(first_pass_results.u_back)
+
     (new_model_trace, log_model_weight, _, discard) = update(
         prev_model_trace, get_args(prev_model_trace),
         map((_) -> NoChange(), get_args(prev_model_trace)),
@@ -679,6 +703,7 @@ function (translator::OUPMMHKernel)(prev_model_trace::Trace; check=false, observ
     # simulate from auxiliary program
     forward_proposal_trace = simulate(translator.q, (prev_model_trace, translator.q_args...,))
 
+    println("FORWARD:")
     # apply trace transform
     (new_model_trace, log_model_weight, backward_proposal_trace, log_abs_determinant, regenerated_vals) = symmetric_trace_translator_run_transform(
         translator.f, prev_model_trace, forward_proposal_trace, translator.q, translator.q_args)
@@ -691,6 +716,7 @@ function (translator::OUPMMHKernel)(prev_model_trace::Trace; check=false, observ
     if check
         Gen.check_observations(get_choices(new_model_trace), observations)
         forward_proposal_choices = get_choices(forward_proposal_trace)
+        println("BWD CHECK:")
         (prev_model_trace_rt, _, forward_proposal_trace_rt, _) = symmetric_trace_translator_run_transform(
             translator.f, new_model_trace, backward_proposal_trace, translator.q, translator.q_args; regeneration_constraints=regenerated_vals)
         check_round_trip(
@@ -714,4 +740,5 @@ export @oupm_involution
 export @read, @write, @copy, @tcall
 export @birth, @death, @split, @merge, @move
 export @regenerate, @save_for_reverse_regenerate
+export @convert_to_abstract, @convert_to_concrete
 export OUPMInvolutionDSLProgram, OUPMMHKernel

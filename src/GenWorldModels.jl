@@ -14,7 +14,7 @@ include("lookup_or_generate.jl")
 include("address_trees.jl")
 include("using_world.jl")
 
-export lookup_or_generate, UsingWorld, World
+export lookup_or_generate, UsingWorld, World, mgfcall_map
 
 include("involution_dsl.jl")
 

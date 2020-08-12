@@ -25,13 +25,13 @@ simply returns `item` unchanged.  (This means if there are any abstract objects
 in the tuple, the tuple is not converted.)
 """
 convert_to_abstract(_, item) = item
-convert_to_abstract(world, item::ConcreteIndexAbstractOriginOUPMObject) = get_val(world, Call(_get_abstract_addr, item))
-function convert_to_abstract(world, item::ConcreteIndexOUPMObject{T}) where {T}
+convert_to_abstract(world::World, item::ConcreteIndexAbstractOriginOUPMObject) = get_val(world, Call(_get_abstract_addr, item))
+function convert_to_abstract(world::World, item::ConcreteIndexOUPMObject{T}) where {T}
     conv_to_abst(x) = convert_to_abstract(world, x)
     new_origin = map(conv_to_abst, item.origin)
     return convert_to_abstract(world, ConcreteIndexOUPMObject{T}(new_origin, item.idx))
 end
-function convert_to_abstract(world, t::Tuple{Vararg{<:ConcreteIndexOUPMObject}})
+function convert_to_abstract(world::World, t::Tuple{Vararg{<:ConcreteIndexOUPMObject}})
     ctoa(x) = convert_to_abstract(world, x)
     map(ctoa, t)
 end
@@ -45,7 +45,7 @@ otherwise simply returns `item` unchanged.  Converts tuples of concrete OUPM obj
 (but not tuples which contain anything that is not a concrete OUPM object).
 """
 convert_to_abstract!(_, item) = item
-function convert_to_abstract!(world, item::ConcreteIndexAbstractOriginOUPMObject)
+function convert_to_abstract!(world::World, item::ConcreteIndexAbstractOriginOUPMObject)
     call = Call(_get_abstract_addr, item)
     if has_val(world, call)
         return get_val(world, call)
@@ -53,12 +53,12 @@ function convert_to_abstract!(world, item::ConcreteIndexAbstractOriginOUPMObject
         return generate_abstract_object!(world, item)
     end
 end
-function convert_to_abstract!(world, item::ConcreteIndexOUPMObject{T}) where {T}
+function convert_to_abstract!(world::World, item::ConcreteIndexOUPMObject{T}) where {T}
     conv_to_abst!(x) = convert_to_abstract!(world, x)
     new_origin = map(conv_to_abst!, item.origin)
     return convert_to_abstract!(world, ConcreteIndexOUPMObject{T}(new_origin, item.idx))
 end
-function convert_to_abstract!(world, t::Tuple{Vararg{<:ConcreteIndexOUPMObject}})
+function convert_to_abstract!(world::World, t::Tuple{Vararg{<:ConcreteIndexOUPMObject}})
     ctoa!(x) = convert_to_abstract!(world, x)
     map(ctoa!, t)
 end
@@ -71,13 +71,13 @@ concrete form with fully concrete origin for the item in the world; otherwise si
 `item` unchanged.  Converts tuples of abstractOUPM objects to concrete form as well.
 """
 convert_to_concrete(_, item) = item
-function convert_to_concrete(world, item::AbstractOUPMObject{T}) where {T}
+function convert_to_concrete(world::World, item::AbstractOUPMObject{T}) where {T}
     obj = get_val(world, Call(_get_concrete_addr, item))
     to_conc(x) = convert_to_concrete(world, x)
     concrete_origin = map(to_conc, obj.origin)
     return ConcreteIndexOUPMObject{T}(concrete_origin, obj.idx)
 end
-function convert_to_concrete(world, t::Tuple{Vararg{<:AbstractOUPMObject}})
+function convert_to_concrete(world::World, t::Tuple{Vararg{<:AbstractOUPMObject}})
     ctoc(x) = convert_to_concrete(world, x)
     map(ctoc, t)
 end

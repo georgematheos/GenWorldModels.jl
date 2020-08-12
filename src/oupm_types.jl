@@ -21,8 +21,10 @@ function ConcreteIndexOUPMObject{T}(origin::OT, idx::Int) where {T, OT}
 end
 const ConcreteIndexAbstractOriginOUPMObject{T} = ConcreteIndexOUPMObject{T, <:Tuple{Vararg{<:AbstractOUPMObject}}}
 
-concrete_index_oupm_object(name, origin, idx) = ConcreteIndexOUPMObject{name}(origin, idx)
-function concrete_index_oupm_object(name::Diffed{Symbol, NoChange}, origin::Diffed, idx::Diffed)
+function concrete_index_oupm_object(name, origin, idx)
+    ConcreteIndexOUPMObject{name}(origin, idx)
+end
+function concrete_index_oupm_object(name::Diffed{Symbol}, origin::Diffed, idx::Diffed)
     Diffed(concrete_index_oupm_object(strip_diff(name), strip_diff(origin), strip_diff(idx)), UnknownChange())
 end
 function concrete_index_oupm_object(name::Diffed{Symbol, NoChange}, origin::Diffed{<:Any, NoChange}, idx::Diffed{<:Any, NoChange})
@@ -47,6 +49,7 @@ function Base.show(io::IO, obj::AbstractOUPMObject{T}) where {T}
 end
 oupm_type_name(::OUPMObject{T}) where {T} = T
 oupm_type_name(::Diffed{<:OUPMObject{T}, NoChange}) where {T} = Diffed(T, NoChange())
+oupm_type_name(::Diffed{<:OUPMObject{T}, UnknownChange}) where {T} = Diffed(T, UnknownChange())
 
 Base.getproperty(o::Diffed{<:ConcreteIndexOUPMObject, NoChange}, sym::Symbol) = Diffed(Base.getproperty(strip_diff(o), sym), NoChange())
 Base.getproperty(o::Diffed{<:ConcreteIndexOUPMObject, UnknownChange}, sym::Symbol) = Diffed(Base.getproperty(strip_diff(o), sym), UnknownChange())
@@ -70,6 +73,8 @@ function concrete_origin_error(concrete::ConcreteIndexOUPMObject)
         a fully abstract object, or an object with concrete index but fully abstract origin.
     """)
 end
+
+Base.isapprox(x::OUPMObject, y::OUPMObject) = isequal(x, y)
 
 export @type
 export OUPMObject, AbstractOUPMObject, ConcreteIndexOUPMObject, ConcreteIndexAbstractOriginOUPMObject

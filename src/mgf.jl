@@ -111,7 +111,9 @@ end
 Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key) = _standard_lookup_dispatch(mgf, key)
 Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key::Tuple{}) = _standard_lookup_dispatch(mgf, key)
 
-Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key::ConcreteIndexOUPMObject) = Diffed(strip_diff(mgf)[key], ToBeUpdatedDiff())
+function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key::ConcreteIndexOUPMObject)
+    Diffed(strip_diff(mgf)[key], ToBeUpdatedDiff())
+end
 Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key::Tuple{Vararg{<:ConcreteIndexOUPMObject}}) = Diffed(strip_diff(mgf)[key], ToBeUpdatedDiff())
 
 # get abstract form!

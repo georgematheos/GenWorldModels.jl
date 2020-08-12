@@ -45,7 +45,7 @@ wrapped tree should expose
 to the representation used in `tree`
 """
 struct ConvertKeyAtDepthAddressTree{LT, depth, F, B} <: Gen.AddressTree{LT}
-    tree::Gen.AddressTree{LT}
+    tree::Gen.AddressTree{<:LT}
     fwd_convert::F
     bwd_convert::B
 end

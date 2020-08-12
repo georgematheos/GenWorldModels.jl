@@ -196,6 +196,13 @@ end
 
 function perform_moves_after_splitmerge!(world, moves, abstract_from_objects, abstract_changed, index_changed, origin_changed)
     for (_from, _to) in moves
+        if _to === nothing
+            # println("removing $_from")
+            world.id_table = dissoc(world.id_table, _from)
+            push!(abstract_changed, _from)
+            continue
+        end
+
         @assert any(obj in _from.origin for obj in abstract_from_objects) "A move within $spec was specified to move an object $obj which does not have an object being split or merged in its origin!"
         _to = get_or_generate_with_abstract_origin!(world, _to)
         @assert _from.origin != _to.origin "A move within $spec attempted to perform a move which does not change an object's origin."

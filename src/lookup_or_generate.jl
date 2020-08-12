@@ -193,16 +193,21 @@ function substitute_indices(og_list::Diffed, indices::Diffed, subs::Diffed)
     Diffed(v, UnknownChange())
 end
 
-
-Gen.@diffed_unary_function findall
+function get_concrete_objs_and_indices(obj)
+    concrete_indices = findall(map(x -> x isa ConcreteIndexOUPMObject, obj.origin))
+    concrete_objs = map(i -> obj.origin[i], concrete_indices)
+    return (concrete_objs, concrete_indices)
+end
+get_concrete_objs_and_indices(obj::Diffed{<:Any, NoChange}) = Diffed(get_concrete_objs_and_indices(strip_diff(obj)), NoChange())
+get_concrete_objs_and_indices(obj::Diffed{<:Any, UnknownChange}) = Diffed(get_concrete_objs_and_indices(strip_diff(obj)), UnknownChange())
+get_concrete_objs_and_indices(obj::Diffed) = error("not implemented")
 
 @gen (static, diffs) function convert_key_to_abstract(mgf_call)
     obj = key(mgf_call)
     wrld = world(mgf_call)
 
     # convert origin to abstract
-    concrete_indices = findall(map(x -> x isa ConcreteIndexOUPMObject, obj.origin))
-    concrete_objs = map(i -> obj.origin[i], concrete_indices)
+    (concrete_objs, concrete_indices) = get_concrete_objs_and_indices(obj)
     newly_abstract_objs ~ Map(lookup_or_generate)(mgfcall_map(wrld[:abstract], concrete_objs))
     abstract_origin = substitute_indices(obj.origin, concrete_indices, newly_abstract_objs)
 
