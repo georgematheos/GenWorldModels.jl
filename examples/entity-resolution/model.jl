@@ -9,8 +9,8 @@ end
 
 @gen #= (static, diffs) =# function generate_verb_prior(world, rel::Relation) # memoized
     dirichlet_prior ~ lookup_or_generate(world[:dirichlet_prior][()])
-    rel_prior ~ dirichlet(dirichlet_prior)
-    return rel_prior
+    prior ~ dirichlet(dirichlet_prior)
+    return prior
 end
 
 @gen #= (static, diffs) =# function sample_verb(world, rel::Relation) # nonmemoized
@@ -49,23 +49,20 @@ end
     return is_true ? [Fact(origin, 1)] : []
 end
 
-@gen #= (static, diffs) =# function get_facts_for_entity_pair(world, entpair) # nonmemoized
-    (ent1, ent2) = entpair
-    num_relations ~ lookup_or_generate(world[:num_relations][()])
-    origins = [(Relation(i), ent1, ent2) for i=1:num_relations]
-    facts ~ Map(get_facts_for_origin)(fill(world, num_relations), origins)
+@gen function get_facts_for_relation(world, relation)
+    num_entities ~ lookup_or_generate(world[:args][:num_entities])
+    origins = [(relation, Entity(e1), Entity(e2)) for e1=1:num_entities, e2=1:num_entities]
+    facts ~ Map(get_facts_for_origin)(fill(world, num_entities^2), origins)
     flattened = collect(Iterators.flatten(facts))
     abstract_facts ~ Map(lookup_or_generate)(mgfcall_map(world[:abstract], flattened))
-    # now facts is a list of Facts in abstract form with these entities as origin
     return abstract_facts
 end
 
 @gen #= (static, diffs) =# function get_fact_set(world) #nonmemoized
-    num_entities ~ lookup_or_generate(world[:args][:num_entities])
-    entpairs = [(Entity(i), Entity(j)) for i=1:num_entities, j=1:num_entities]
-    facts_per_entpair ~ Map(get_facts_for_entity_pair)(fill(world, num_entities^2), entpairs)
-    # facts_per_entpair is in abstract form
-    factset = Set(collect(Iterators.flatten(facts_per_entpair))) # TODO: unpack this in a way that is efficient w.r.t. diffs
+    num_relations ~ lookup_or_generate(world[:num_relations][()])
+    facts_per_rel ~ Map(get_facts_for_relation)(fill(world, num_relations), [Relation(i) for i=1:num_relations])
+    # facts_per_rel is in abstract form
+    factset = Set(collect(Iterators.flatten(facts_per_rel))) # TODO: unpack this in a way that is efficient w.r.t. diffs
     return factset
 end
 
@@ -79,9 +76,10 @@ end
     facts ~ sample_facts(world, num_sentences)
     rels_and_sentences ~ Map(generate_sentence)(fill(world, num_sentences), facts)
     
+    num_verbs ~ lookup_or_generate(world[:args][:num_verbs])
     rels = map((rel, _) -> rel, rels_and_sentences)
     verbs = map((rel, (_, verb, _)) -> verb, rels_and_sentences)
-   # counts ~ get_emm_counts(rels, verbs)
+    counts ~ get_entity_mention_counts(num_verbs, rels, verbs)
 
     sentences = map((_, sent) -> sent, rels_and_sentences)
 
