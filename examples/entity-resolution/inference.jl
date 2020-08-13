@@ -23,6 +23,41 @@ end
 # Inference #
 #############
 
+function infer_mean_num_rels(tr, num_iters; log_freq=num_iters + 1, save_freq=num_iters+1)
+    num_rel_sum = 0
+    examine!(tr) = num_rel_sum += tr[:world => :num_relations => ()]
+    run_inference!(tr, examine!, num_iters; log_freq=log_freq, save_freq=save_freq)
+    return num_rel_sum/num_iters
+end
+
+function save!(tr, datetime, i)
+    path = joinpath(@__DIR__, "saves", "infchoicemap_$(datetime)__$i")
+    # println("dynamic copy : ")
+    # println( Gen.deep_dynamic_copy(get_choices(tr)))
+    serialize(path, Gen.deep_dynamic_copy(get_choices(tr)))
+end
+
+# `examine!(tr)` updates some sort of state; is called at the end of every iteration which is a multiple of `examine_freq`
+# saves the trace at `examples/entity-resolution/saves/infchoicemap_STARTDATETIME__iter`
+function run_inference!(tr, examine!, num_iters; log_freq=num_iters+1, examine_freq=1, save_freq=num_iters+1)
+    datetime = Dates.format(now(), "yyyymmdd-HH_MM_SS")
+    (num_entities, _, num_sentences) = get_args(tr)
+    for i=1:num_iters
+        if i % log_freq === 0
+            println("Running iter $i...")
+        end
+
+        tr = inference_iter(tr, num_entities, num_sentences)
+
+        if i % examine_freq === 0
+            examine!(tr)
+        end
+        if i % save_freq === 0
+            save!(tr, datetime, i)
+        end
+    end
+end
+
 function inference_iter(tr, num_entities, num_sentences)
     for _=1:10
         tr = update_facts_and_sparsities(tr, num_entities)
@@ -137,6 +172,6 @@ end
 include("splitmerge.jl")
 
 function splitmerge_updates(tr)
-    tr, _ = mh(tr, dumb_splitmerge_kernel; check=true)
+    tr, _ = mh(tr, dumb_splitmerge_kernel; check=false)
     return tr
 end
