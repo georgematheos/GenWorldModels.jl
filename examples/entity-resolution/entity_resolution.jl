@@ -10,7 +10,7 @@ using SpecialFunctions: loggamma
 logbeta(x::Vector{<:Real}) = sum(loggamma(i) for i in x) - loggamma(sum(x))
 
 const DIRICHLET_PRIOR_VAL = 0.2
-const BETA_PRIOR = (100, 200)
+const BETA_PRIOR = (2., 5.)
 const NUM_REL_PRIOR_MEAN = 3
 
 include("dirichlet.jl")
@@ -58,7 +58,7 @@ println("Initial trace generated; score = ", get_score(tr))
 println()
 
 println("Beginning inference!")
-mean = infer_mean_num_rels(tr, 200; log_freq=20)
+mean = infer_mean_num_rels(tr, 1000; log_freq=20, save_freq=100)
 println("MEAN: $mean")
 
 # Profile.clear()

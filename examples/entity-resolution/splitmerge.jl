@@ -39,7 +39,8 @@ end
     for e1=1:num_entities, e2=1:num_entities
         if tr[:world => :num_facts => (Relation(from_idx), Entity(e1), Entity(e2))]
             # 1 = only to1 true; 2 = only to2 true, 3 = both true
-            t = {:truthiness => (e1, e2)} ~ uniform_discrete(1, 3)
+            sp = tr[:world => :sparsity => Relation(from_idx)]
+            t = {:truthiness => (e1, e2)} ~ categorical([(1 - sp)/2, (1 - sp)/2, sp])
             truthiness[(e1, e2)] = t
             if t == 1 || t == 3
                 num_true_1 += 1

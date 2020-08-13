@@ -5,6 +5,13 @@ function make_constraints(sentences::Vector{Tuple{Int, Int, Int}}, num_entities)
     for e1=1:num_entities, e2=1:num_entities, r=1:NUM_REL_PRIOR_MEAN
         constraints[:world => :num_facts => (Relation(r), Entity(e1), Entity(e2)) => :is_true] = true
     end
+    # true_for_rel = [Set() for _=1:NUM_REL_PRIOR_MEAN]
+    # for r=1:NUM_REL_PRIOR_MEAN
+    #     constriants[:world => :sparsity => Relation(r) => :sparsity] = 0.2
+    #     certainly_true1 = uniform_discrete(1, num_entities)
+    #     certainly_true2 = uniform_discrete(1, num_entities)
+    #     push!(true_for_rel
+    # end
     for (i, sentence) in enumerate(sentences)
         constraints[:kernel => :rels_and_sentences => i => :verb => :verb] = sentence[2]
         rel = uniform_discrete(1, NUM_REL_PRIOR_MEAN)
@@ -25,9 +32,18 @@ end
 
 function infer_mean_num_rels(tr, num_iters; log_freq=num_iters + 1, save_freq=num_iters+1)
     num_rel_sum = 0
-    examine!(tr) = num_rel_sum += tr[:world => :num_relations => ()]
-    run_inference!(tr, examine!, num_iters; log_freq=log_freq, examine_freq=1, save_freq=save_freq)
-    return num_rel_sum/num_iters
+    iters_run = 0
+    function examine!(tr)
+        num_rel_sum += tr[:world => :num_relations => ()]
+        iters_run += 1
+    end
+    try
+        run_inference!(tr, examine!, num_iters; log_freq=log_freq, examine_freq=1, save_freq=save_freq)
+        return num_rel_sum/iters_run
+    catch e
+        println("Caught error ", e)
+        println("Managed to run $iters_run iterations.  Mean num relations at this point was ", num_rel_sum/iters_run)
+    end
 end
 
 function save!(tr, datetime, i)
@@ -37,17 +53,38 @@ function save!(tr, datetime, i)
     serialize(path, Gen.deep_dynamic_copy(get_choices(tr)))
 end
 
+mutable struct AccTracker
+    num_acc_split::Int
+    num_acc_merge::Int
+    num_rejected_splitmerge::Int
+    num_acc_fact_update::Int
+    num_rej_fact_update::Int
+    num_acc_sparsity::Int
+    num_rej_sparsity::Int
+end
+function Base.show(io::IO, trk::AccTracker)
+    println(io, "  ACCEPTED SPLIT       : ", trk.num_acc_split)
+    println(io, "  ACCEPTED MERGE       : ", trk.num_acc_merge)
+    println(io, "  REJECTED Splitmerge  : ", trk.num_rejected_splitmerge)
+    println(io, "  NUM ACC FACT UPDATE  : ", trk.num_acc_fact_update)
+    println(io, "  NUM REJ FACT UPDATE  : ", trk.num_rej_fact_update)
+    println(io, "  NUM ACC SPARSITY     : ", trk.num_acc_sparsity)
+    println(io, "  NUM REJ  SPARSITY    : ", trk.num_rej_sparsity)
+end
+
 # `examine!(tr)` updates some sort of state; is called at the end of every iteration which is a multiple of `examine_freq`
 # saves the trace at `examples/entity-resolution/saves/infchoicemap_STARTDATETIME__iter`
 function run_inference!(tr, examine!, num_iters; log_freq=num_iters+1, examine_freq=1, save_freq=num_iters+1)
     datetime = Dates.format(now(), "yyyymmdd-HH_MM_SS")
     (num_entities, _, num_sentences) = get_args(tr)
+    tracker = AccTracker(0, 0, 0, 0, 0, 0, 0)
     for i=1:num_iters
         if i % log_freq === 0
             println("Running iter $i...")
+            display(tracker)
         end
 
-        tr = inference_iter(tr)
+        tr = inference_iter(tr, tracker)
 
         if i % examine_freq === 0
             examine!(tr)
@@ -58,37 +95,64 @@ function run_inference!(tr, examine!, num_iters; log_freq=num_iters+1, examine_f
     end
 end
 
-function update_random_ract(tr)
+function update_random_fact(tr, acc_tracker)
     num_ents = get_args(tr)[1]
     rel = uniform_discrete(1, tr[:world => :num_relations => ()])
     ent1 = uniform_discrete(1, num_ents)
     ent2 = uniform_discrete(1, num_ents)
-    tr,acc = mh(tr, select(:world => :num_facts => (Relation(rel), Entity(ent1), Entity(ent2) => :is_true)))
+    tr,acc = mh(tr, select(:world => :num_facts => (Relation(rel), Entity(ent1), Entity(ent2)) => :is_true))
+    if acc
+        acc_tracker.num_acc_fact_update += 1
+    else
+        acc_tracker.num_rej_fact_update += 1
+    end
     # println("Fact update: ", acc ? "ACCEPTED" : "REJECTED")
     return tr
 end
 
 include("splitmerge.jl")
 
-function splitmerge_update(tr)
+function splitmerge_update(tr, acc_tracker)
     new_tr, acc = mh(tr, dumb_split_smart_merge_kernel; check=false)
-    # diff = new_tr[:world => :num_relations => ()] - tr[:world => :num_relations => ()]
-    # if diff > 0
-    #     println("Split move ACCEPTED")
-    # elseif diff < 0
-    #     println("Merge move ACCEPTED")
-    # else
-    #     println("Splitmerge REJECTED")
-    # end
-    # println("Splitmerge update: ", acc ? "ACCEPTED" : REJECTED)
+    
+    diff = new_tr[:world => :num_relations => ()] - tr[:world => :num_relations => ()]
+    if diff > 0
+        acc_tracker.num_acc_split += 1
+    elseif diff < 0
+        acc_tracker.num_acc_merge += 1
+    else
+        acc_tracker.num_rejected_splitmerge += 1
+    end
+
     new_tr
 end
 
-function inference_iter(tr)
-    if bernoulli(0.3)
-        tr = splitmerge_update(tr)
+@gen function sparsity_proposal(tr, idx)
+    num_entities = get_args(tr)[1]
+    facts = tr[:kernel => :facts => :facts => :facts_per_rel => idx]
+    num_true = length(facts)
+    {:world => :sparsity => Relation(idx) => :sparsity} ~ beta(BETA_PRIOR[1] + num_true, BETA_PRIOR[2] + num_entities^2)
+end
+
+function sparsity_update(tr, acc_tracker)
+    idx = uniform_discrete(1, tr[:world => :num_relations => ()])
+    tr, acc = mh(tr, sparsity_proposal, (idx,))
+    if acc
+        acc_tracker.num_acc_sparsity += 1
     else
-        tr = update_random_ract(tr)
+        acc_tracker.num_rej_sparsity += 1
+    end
+    tr
+end
+
+function inference_iter(tr, acc_tracker)
+    type = categorical([0.6, 0.1, 0.3])
+    if type == 1
+        tr = update_random_fact(tr, acc_tracker)
+    elseif type == 2
+        tr = sparsity_update(tr, acc_tracker)
+    else
+        tr = splitmerge_update(tr, acc_tracker)
     end
     return tr
 end
