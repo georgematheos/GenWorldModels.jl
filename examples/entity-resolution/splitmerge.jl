@@ -1,9 +1,36 @@
+struct CategoricalFromList <: Gen.Distribution{Any} end
+categorical_from_list = CategoricalFromList()
+function Gen.random(::CategoricalFromList, list, probs)
+    idx = categorical(probs)
+    list[idx]
+end
+function Gen.logpdf(::CategoricalFromList, v, list, probs)
+    idxs = findall(x -> x == v, list)
+    @assert length(idxs) == 1
+    idx = idxs[1]
+    log(probs[idx])
+end
+
+struct UniformFromList <: Gen.Distribution{Any} end
+uniform_from_list = UniformFromList()
+function Gen.random(::UniformFromList, list)
+    idx = uniform_discrete(1, length(list))
+    return list[idx]
+end
+function Gen.logpdf(::UniformFromList, obj, list)
+    if obj in list
+        -log(length(list))
+    else
+        -Inf
+    end
+end
+
 @gen function dumb_split_proposal(tr)
     num_entities = get_args(tr)[1]
     current_num_rels = tr[:world => :num_relations => ()]
     from_idx ~ uniform_discrete(1, current_num_rels)
-    to_idx1 ~ uniform_discrete(1, current_num_rels)
-    to_idx2 ~ uniform_discrete(to_idx1 + 1, current_num_rels + 1)
+    to_idx1 ~ uniform_discrete(1, current_num_rels + 1)
+    to_idx2 ~ uniform_from_list([idx for idx=1:(current_num_rels + 1) if idx != to_idx1])
 
     abst_rel = GenWorldModels.convert_to_abstract(tr.world, Relation(from_idx))
     truthiness = Dict()
@@ -60,10 +87,38 @@ end
 
 @gen function dumb_merge_proposal(tr)
     current_num_rels = tr[:world => :num_relations => ()]
-    from_idx1 ~ uniform_discrete(1, current_num_rels - 1)
-    from_idx2 ~ uniform_discrete(from_idx1 + 1, current_num_rels)
+    from_idx1 ~ uniform_discrete(1, current_num_rels)
+    from_idx2 ~ uniform_from_list([idx for idx=1:current_num_rels if idx != from_idx1])
     to_idx ~ uniform_discrete(1, current_num_rels - 1)
 
+    {*} ~ merge_sparsity_verbprior_resample(tr, from_idx1, from_idx2, to_idx)
+end
+
+cnt(rel, counts, num_verbs) = haskey(counts, rel) ? counts[rel] : zeros(num_verbs)
+@gen function smart_merge_proposal(tr)
+    num_verbs = get_args(tr)[2]
+    current_num_rels = tr[:world => :num_relations => ()]
+    to_idx ~ uniform_discrete(1, current_num_rels - 1)
+
+    from_idx1 ~ uniform_discrete(1, current_num_rels)
+    
+    α = fill(DIRICHLET_PRIOR_VAL, num_verbs)
+    abst = GenWorldModels.convert_to_abstract(tr.world, Relation(from_idx1))
+    counts = (tr[:kernel => :counts]::EntityMentionCounts).num_mentions_per_entity
+    other_rel_indices = [r for r=1:current_num_rels if r != from_idx1]
+    abstract_other_rels = map(x -> GenWorldModels.convert_to_abstract(tr.world, Relation(x)), other_rel_indices)
+
+    factors = [
+        exp(logbeta(α + cnt(other_rel, counts, num_verbs) + cnt(abst, counts, num_verbs))) for other_rel in abstract_other_rels
+    ]
+    probs = factors/sum(factors)
+
+    from_idx2 ~ categorical_from_list(other_rel_indices, probs)
+
+    {*} ~ merge_sparsity_verbprior_resample(tr, from_idx1, from_idx2, to_idx)
+end
+
+@gen function merge_sparsity_verbprior_resample(tr, from_idx1, from_idx2, to_idx)
     num_verbs = get_args(tr)[2]
     count = zeros(Int, num_verbs)
     abst1 = GenWorldModels.convert_to_abstract(tr.world, Relation(from_idx1))
@@ -97,6 +152,16 @@ end
         {*} ~ dumb_split_proposal(tr)
     else
         {*} ~ dumb_merge_proposal(tr)
+    end
+end
+
+@gen function dumb_split_smart_merge_proposal(tr)
+    prob_of_split = tr[:world => :num_relations => ()] > 1 ? 0.5 : 1.
+    do_split ~ bernoulli(prob_of_split)
+    if do_split
+        {*} ~ dumb_split_proposal(tr)
+    else
+        {*} ~ smart_merge_proposal(tr)
     end
 end
 
@@ -230,4 +295,4 @@ end
         end
     end
 end
-dumb_splitmerge_kernel = OUPMMHKernel(dumb_split_merge_proposal, (), dumb_splitmerge_involution)
+dumb_split_smart_merge_kernel = OUPMMHKernel(dumb_split_smart_merge_proposal, (), dumb_splitmerge_involution)

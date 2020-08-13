@@ -44,7 +44,7 @@ end
     return is_true
 end
 
-@gen (static) function get_facts_for_origin(world, origin::Tuple{<:Relation, <:Entity, <:Entity}) # memoized
+@gen  (static) function get_facts_for_origin(world, origin::Tuple{<:Relation, <:Entity, <:Entity}) # memoized
     is_true ~ lookup_or_generate(world[:num_facts][origin])
     return is_true ? [Fact(origin, 1)] : []
 end
@@ -61,7 +61,6 @@ end
 @gen (static) function get_fact_set(world) #nonmemoized
     num_relations ~ lookup_or_generate(world[:num_relations][()])
     facts_per_rel ~ Map(get_facts_for_relation)(fill(world, num_relations), [Relation(i) for i=1:num_relations])
-    # facts_per_rel is in abstract form
     factset = Set(collect(Iterators.flatten(facts_per_rel))) # TODO: unpack this in a way that is efficient w.r.t. diffs
     return factset
 end
