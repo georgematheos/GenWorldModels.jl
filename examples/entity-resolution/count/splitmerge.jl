@@ -72,8 +72,8 @@ end
 
 @gen function sample_fact_truth_values(tr, from_idx, to_idx1, to_idx2, true1pairs, true2pairs, num_entities)
     sparsity = tr[:world => :sparsity => Relation(from_idx)]
-    num1true = 0
-    num2true = 0
+    num1true = length(true1pairs)
+    num2true = length(true2pairs)
     for e1=1:num_entities, e2=1:num_entities
         sp1 = (e1, e2) in true1pairs ? 1. : sparsity
         sp2 = (e1, e2) in true2pairs ? 1. : sparsity
@@ -87,8 +87,8 @@ end
 end
 
 @gen function sample_split_sparsities(to_idx1, to_idx2, true1count, true2count, num_entities)
-    {:world => :sparsity => Relation(to_idx1) => :sparsity} ~ beta(BETA_PRIOR[1] + true1count, BETA_PRIOR[2] + num_entities^2 - true1count)
-    {:world => :sparsity => Relation(to_idx2) => :sparsity} ~ beta(BETA_PRIOR[1] + true2count, BETA_PRIOR[2] + num_entities^2 - true2count)
+    {:world => :sparsity => Relation(to_idx1) => :sparsity} ~ beta(BETA_PRIOR[1] + true1count, BETA_PRIOR[2] + num_entities^2)
+    {:world => :sparsity => Relation(to_idx2) => :sparsity} ~ beta(BETA_PRIOR[1] + true2count, BETA_PRIOR[2] + num_entities^2)
 end
 
 @gen function sample_split_dirichlets(to_idx1, to_idx2, count1, count2)
@@ -116,7 +116,7 @@ end
 
     (guaranteed_true_entpairs, merged_count) = find_references_during_merge(tr, from_idx1, from_idx2)
     num_true_entpairs = {*} ~ sample_merge_fact_vals(tr, from_idx1, from_idx2, to_idx, guaranteed_true_entpairs)
-    {*} ~ sample_merge_sparsity(to_idx, num_true_entpairs, get_args(tr)[1])
+    {*} ~ sample_merge_sparsity(to_idx, num_true_entpairs, get_args(tr)[2])
     {*} ~ sample_merge_verbprior(to_idx, merged_count)
 end
 
@@ -169,7 +169,7 @@ end
     sp1 = tr[:world => :sparsity => Relation(from_idx1)]
     sp2 = tr[:world => :sparsity => Relation(from_idx2)]
     sp = (sp1 + sp2)/2
-    num_true = 0
+    num_true = length(guaranteed_true_entpairs)
     for e1=1:num_entities, e2=1:num_entities
         p = (e1, e2) in guaranteed_true_entpairs ? 1. : sp
         is_true = {:world => :num_facts => (Relation(to_idx), Entity(e1), Entity(e2)) => :is_true} ~ bernoulli(p)
@@ -181,7 +181,7 @@ end
 end
 
 @gen function sample_merge_sparsity(to_idx, num_true, num_entities)
-    {:world => :sparsity => Relation(to_idx) => :sparsity} ~ beta(BETA_PRIOR[1] + num_true, BETA_PRIOR[2] + num_entities^2 - num_true)
+    {:world => :sparsity => Relation(to_idx) => :sparsity} ~ beta(BETA_PRIOR[1] + num_true, BETA_PRIOR[2] + num_entities^2)
 end
 
 @gen function sample_merge_verbprior(to_idx, count)
@@ -277,12 +277,12 @@ end
             (
                 (
                     Fact((Relation(from1), Entity(e1), Entity(e2)), 1) => nothing
-                    for e1=1:num_entities, e2=1:num_entities
+                    for e1=1:get_args(tr)[1], e2=1:get_args(tr)[1]
                     if @read(old[:world => :num_facts => (Relation(from1), Entity(e1), Entity(e2)) => :is_true], :disc)
                 ),
                 (
                     Fact((Relation(from2), Entity(e1), Entity(e2)), 1) => nothing
-                    for e1=1:num_entities, e2=1:num_entities
+                    for e1=1:get_args(tr)[1], e2=1:get_args(tr)[1]
                     if @read(old[:world => :num_facts => (Relation(from2), Entity(e1), Entity(e2)) => :is_true], :disc)
                 )
             )
@@ -338,8 +338,8 @@ end
 #######################
 # Put it all together #
 #######################
-@gen function splitmerge_proposal(tr, smartness_prior)
-    do_smart ~ bernoulli(smartness_prior)
+@gen function sdds_splitmerge_proposal(tr)
+    do_smart ~ bernoulli(0.5)
 
     current_num_rels = tr[:world => :num_relations => ()]
     priorval = current_num_rels == 1 ? 1. : 0.5
@@ -352,16 +352,6 @@ end
     end
 end
 
-@gen function sdds_splitmerge_proposal(tr)
-    {*} ~ splitmerge_proposal(tr, 0.5)
-end
-@gen function dumb_splitmerge_proposal(tr)
-    {*} ~ splitmerge_proposal(tr, 0.)
-end
-@gen function smart_splitmerge_proposal(tr)
-    {*} ~ splitmerge_proposal(tr, 1.)
-end
-
 @oupm_involution sdds_splitmerge_involution (old, fwd) to (new, bwd) begin
     do_smart = @read(fwd[:do_smart], :disc)
     @write(bwd[:do_smart], !do_smart, :disc)
@@ -369,13 +359,4 @@ end
     @tcall splitmerge_involution(num_entities)
 end
 
-@oupm_involution samesmartness_splitmerge_involution (old, fwd) to (new, bwd) begin
-    do_smart = @read(fwd[:do_smart], :disc)
-    @write(bwd[:do_smart], do_smart, :disc)
-    num_entities = @read(old[:world => :args => :num_entities], :disc)
-    @tcall splitmerge_involution(num_entities)
-end
-
 sdds_splitmerge_kernel = OUPMMHKernel(sdds_splitmerge_proposal, (), sdds_splitmerge_involution)
-dumb_splitmerge_kernel = OUPMMHKernel(dumb_splitmerge_proposal, (), samesmartness_splitmerge_involution)
-smart_splitmerge_kernel = OUPMMHKernel(smart_splitmerge_proposal, (), samesmartness_splitmerge_involution)

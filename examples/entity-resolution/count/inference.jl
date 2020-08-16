@@ -1,4 +1,4 @@
-function make_constraints(sentences::AbstractVector{Tuple{Int, Int, Int}}, num_entities)
+function make_constraints(sentences::Vector{Tuple{Int, Int, Int}}, num_entities)
     constraints = choicemap(
         (:world => :num_relations => () => :num, NUM_REL_PRIOR_MEAN),
     )
@@ -20,7 +20,7 @@ function make_constraints(sentences::AbstractVector{Tuple{Int, Int, Int}}, num_e
     return constraints
 end
 
-function get_initial_trace(sentences::AbstractVector{Tuple{Int, Int, Int}}, num_entities, num_verbs)
+function get_initial_trace(sentences::Vector{Tuple{Int, Int, Int}}, num_entities, num_verbs)
     constraints = make_constraints(sentences, num_entities)
     tr, _ = generate(generate_sentences, (num_entities, num_verbs, length(sentences)), constraints)
     return tr
@@ -30,22 +30,12 @@ end
 # Inference #
 #############
 
-function save_evaluations(examinations, datetime)
-    path = joinpath(@__DIR__, "saves", "run_$(datetime)__evaluations")
-    # println("dynamic copy : ")
-    # println( Gen.deep_dynamic_copy(get_choices(tr)))
-    serialize(path, examinations)
-end
-
-function infer_num_facts(tr, splitmergetype, num_iters; log_freq=num_iters+1, save_freq=num_iters+1, examine_freq=1)
-    examinations = []
+function infer_with_benchmarking(tr, num_iters; log_freq=num_iters+1, save_freq=num_iters+1)
     function examine!(tr)
-        current_num = length(tr[:kernel => :facts => :facts])
-        push!(examinations, current_num)
+        println("EVALUATION: $(evaluate(tr))")
     end
-    (datetime, tracker) = run_inference!(tr, splitmergetype, examine!, num_iters; examine_freq=examine_freq, log_freq=log_freq, save_freq=save_freq, save_acc_tracker=true)
-    #save_evaluations(examinations, date_time)
-    return examinations
+    run_inference!(tr, examine!, num_iters; log_freq=logfreq, save_freq=save_freq, save_acc_tracker=true, get_additional_save_state=((tr,) -> evaluate(tr))
+)
 end
 
 function infer_mean_num_rels(tr, num_iters; log_freq=num_iters + 1, save_freq=num_iters+1)
@@ -116,7 +106,7 @@ end
 
 # `examine!(tr)` updates some sort of state; is called at the end of every iteration which is a multiple of `examine_freq`
 # saves the trace at `examples/entity-resolution/saves/infchoicemap_STARTDATETIME__iter`
-function run_inference!(tr, splitmergetype, examine!, num_iters;
+function run_inference!(tr, examine!, num_iters;
     log_freq=num_iters+1,
     examine_freq=1,
     save_freq=num_iters+1,
@@ -132,7 +122,7 @@ function run_inference!(tr, splitmergetype, examine!, num_iters;
             display(tracker)
         end
 
-        tr = inference_iter(tr, tracker, splitmergetype)
+        tr = inference_iter(tr, tracker)
 
         if i % examine_freq === 0
             examine!(tr)
@@ -142,8 +132,6 @@ function run_inference!(tr, splitmergetype, examine!, num_iters;
             save!(tr, datetime, i, trk, get_additional_save_state(tr))
         end
     end
-
-    return (datetime, tracker)
 end
 
 function update_random_fact(tr, acc_tracker)
@@ -163,14 +151,8 @@ end
 
 include("splitmerge.jl")
 
-function splitmerge_update(tr, acc_tracker, splitmerge_type)
-    if splitmerge_type == :sdds
-        new_tr, acc = mh(tr, sdds_splitmerge_kernel; check=false)
-    elseif splitmerge_type == :smart
-        new_tr, acc = mh(tr, smart_splitmerge_kernel; check=false)
-    elseif splitmerge_type == :dumb
-        new_tr, acc = mh(tr, dumb_splitmerge_kernel; check=false)
-    end
+function splitmerge_update(tr, acc_tracker)
+    new_tr, acc = mh(tr, sdds_splitmerge_kernel; check=false)
     
     diff = new_tr[:world => :num_relations => ()] - tr[:world => :num_relations => ()]
     if diff > 0
@@ -188,7 +170,7 @@ end
     num_entities = get_args(tr)[1]
     facts = tr[:kernel => :facts => :facts => :facts_per_rel => idx]
     num_true = length(facts)
-    {:world => :sparsity => Relation(idx) => :sparsity} ~ beta(BETA_PRIOR[1] + num_true, BETA_PRIOR[2] + (num_entities^2 - num_true))
+    {:world => :sparsity => Relation(idx) => :sparsity} ~ beta(BETA_PRIOR[1] + num_true, BETA_PRIOR[2] + num_entities^2)
 end
 
 function sparsity_update(tr, acc_tracker)
@@ -202,36 +184,15 @@ function sparsity_update(tr, acc_tracker)
     tr
 end
 
-@gen function dirichlet_proposal(tr, idx)
-    num_verbs = get_args(tr)[2]
-    nmpe = tr[:kernel => :counts].num_mentions_per_entity
-    abst = GenWorldModels.convert_to_abstract(tr.world, idx)
-    count = haskey(nmpe, abst) ? nmpe[abst] : zeros(Int, num_verbs)
-    {:world => :verb_prior => Relation(idx) => :prior} ~ dirichlet(count .+ DIRICHLET_PRIOR_VAL)
-end
-function dirichlet_update(tr, acc_tracker)
-    idx = uniform_discrete(1, tr[:world => :num_relations => ()])
-    if has_value(get_choices(tr), :world => :verb_priors => Relation(idx) => :prior)
-        tr, acc = mh(tr, dirichlet_proposal, (idx,))
-        if !acc
-            println("dirichlet prop not accepted!")
-        end
-        return tr
-    end
-    return tr
-end
-
-function inference_iter(tr, acc_tracker, splitmerge_type)
-    type = categorical([0.5, 0.1, 0.3, 0.1])
+function inference_iter(tr, acc_tracker)
+    type = categorical([0.6, 0.1, 0.3])
     # type = 3
     if type == 1
         tr = update_random_fact(tr, acc_tracker)
     elseif type == 2
         tr = sparsity_update(tr, acc_tracker)
-    elseif type == 3
-        tr = splitmerge_update(tr, acc_tracker, splitmerge_type)
     else
-        tr = dirichlet_update(tr, acc_tracker)
+        tr = splitmerge_update(tr, acc_tracker)
     end
     return tr
 end
