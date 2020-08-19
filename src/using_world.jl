@@ -56,7 +56,11 @@ function Base.getindex(tr::UsingWorldTrace, addr::Pair)
         # TODO: if there is only one call for a MGF, we should be able to just look up that address
 
         mgf_addr, rest = second
-        try 
+        try
+            if mgf_addr == _world_args_addr
+                return tr.world.world_args[rest]
+            end
+
             if rest isa Pair
                 key, remaining = rest
                 key = convert_to_abstract(tr.world, key)
