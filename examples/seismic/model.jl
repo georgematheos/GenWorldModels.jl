@@ -163,8 +163,16 @@ end
     end
 end
 
+get_detections = OriginIteratingObjectSet(
+    (event,) => :world => :num_noise_detections => (),
+    (event, station) => :world => num_event_detections => (event, station)
+)
+
 @gen (static) function generate_observations(world)
-    detections ~ OriginIteratingObjectSet(Detection)(world)
+    num_events ~ lookup_or_generate(world[:num_events][()])
+    events ~ OriginlessObjectSet(Event)(num_events)
+    stations ~ OriginlessObjectSet(Station)(NUM_STATIONS)
+    detections ~ get_detections(world, (events,), (events, stations))
     observations ~ ObjectSetMap(:get_observation)(world, detections)
     return observations
 end
