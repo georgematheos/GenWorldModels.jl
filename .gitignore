@@ -1,0 +1,4 @@
+examples/entity-resolution/saves
+examples/entity-resolution/figures
+examples/gen-bayesian-auditory-scenes-master/ipynbs/*.wav
+.vscode
