@@ -619,12 +619,70 @@ function jacobian_correction(transform::OUPMInvolutionDSLProgram, prev_model_tra
     return correction
 end
 
+function get_differences(c1, c2)
+    in1not2 = []
+    in2not1 = []
+    diffval = []
+
+    for (addr, sub1) in get_subtrees_shallow(c1)
+        isempty(sub1) && continue
+        sub2 = get_subtree(c2, addr)
+        if isempty(sub2)
+            push!(in1not2, addr)
+        elseif sub1 isa Value && sub2 isa Value
+            if !isapprox(get_value(sub1), get_value(sub2))
+                push!(diffval, addr)
+            end
+        else
+            (sub1not2, sub2not1, subdiffvals) = get_differences(sub1, sub2)
+            for x in sub1not2
+                push!(in1not2, addr => x)
+            end
+            for x in sub2not1
+                push!(in2not1, addr => x)
+            end
+            for x in subdiffvals
+                push!(diffval, addr => x)
+            end
+        end
+    end
+    for (addr, sub2) in get_subtrees_shallow(c2)
+        isempty(sub2) && continue
+        sub1 = get_subtree(c1, addr)
+        if isempty(sub1)
+            push!(in2not1, addr)
+        end
+    end
+
+    return (in1not2, in2not1, diffval)
+end
+
+function errorlog_on_differences(c1, c2)
+    (in1not2, in2not1, diffval) = get_differences(c1, c2)
+    strs = []
+    for addr in in1not2
+        push!(strs, "\n  Found in 1 but not 2: $addr")
+    end
+    for addr in in2not1
+        push!(strs, "\n  Found in 2 but not 1: $addr")
+    end
+    for addr in diffval
+        push!(strs, "\n  Different vals at: $addr is $(c1[addr]) in first and $(c2[addr]) in second")
+    end
+
+    if !isempty(strs)
+        @error("differences: $(strs...)")
+    end
+end
+
 function check_round_trip(trace, trace_rt)
     choices = get_choices(trace)
     choices_rt = get_choices(trace_rt)
     if !isapprox(choices, choices_rt)
-        @error("choices: $(sprint(show, "text/plain", choices))")
-        @error("choices after round trip: $(sprint(show, "text/plain", choices_rt))")
+        # @error("choices: $(sprint(show, "text/plain", choices))")
+        # @error("choices after round trip: $(sprint(show, "text/plain", choices_rt))")
+        @error("Choices did not match after round trip!  Differences:")
+        errorlog_on_differences(choices, choices_rt)
         error("transform round trip check failed")
     end
     return nothing
@@ -678,15 +736,6 @@ function symmetric_trace_translator_run_transform(
         spec = UpdateWithOUPMMovesSpec(spec.moves, subspec)
     end
 
-    # println("moves:")
-    # display(spec.moves)
-    # println("subspec:")
-    # display(spec.subspec)
-    # # println("type of subspec:")
-    # # display(typeof(spec.subspec))
-    # println("Backward constraints:")
-    # display(first_pass_results.u_back)
-
     (new_model_trace, log_model_weight, _, discard) = update(
         prev_model_trace, get_args(prev_model_trace),
         map((_) -> NoChange(), get_args(prev_model_trace)),
@@ -703,7 +752,6 @@ function (translator::OUPMMHKernel)(prev_model_trace::Trace; check=false, observ
     # simulate from auxiliary program
     forward_proposal_trace = simulate(translator.q, (prev_model_trace, translator.q_args...,))
 
-    println("FORWARD:")
     # apply trace transform
     (new_model_trace, log_model_weight, backward_proposal_trace, log_abs_determinant, regenerated_vals) = symmetric_trace_translator_run_transform(
         translator.f, prev_model_trace, forward_proposal_trace, translator.q, translator.q_args)
@@ -716,7 +764,6 @@ function (translator::OUPMMHKernel)(prev_model_trace::Trace; check=false, observ
     if check
         Gen.check_observations(get_choices(new_model_trace), observations)
         forward_proposal_choices = get_choices(forward_proposal_trace)
-        println("BWD CHECK:")
         (prev_model_trace_rt, _, forward_proposal_trace_rt, _) = symmetric_trace_translator_run_transform(
             translator.f, new_model_trace, backward_proposal_trace, translator.q, translator.q_args; regeneration_constraints=regenerated_vals)
         check_round_trip(
