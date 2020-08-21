@@ -1,10 +1,4 @@
 #=
-TODOs:
-- Get Dist dsl working
-- Inverse normal gamma distribution
-=#
-
-#=
 Questions:
 - 4: To clarify, here, σ^2 is drawn from InvGamma.  Then, in 12, we use σ as a parameter--which means
 we need to take the sqrt of the draw from InvGamma.  Is this correct, or should we draw σ from InvGamma?
@@ -19,21 +13,21 @@ or Poisson(N(s)) (mean=noise level)
 #################
 
 @dist event_occurance_rate(_, _) = gamma(α_I, β_I)
-@dist background_noise_level(_, ::Station) = inv_gamma(α_N, β_N)
-@dist false_alarm_rate(_, ::Station) = gamma(α_F, β_F)
-@dist function signal_velocity(_, _)
-    W_0 = normal(μ_V, σ2_V)
+@dist background_noise_level(_, _::Station) = inv_gamma(α_N, β_N)
+@dist false_alarm_rate(_, _::Station) = gamma(α_F, β_F)
+@gen (static) function signal_velocity(w, o)
+    W_0 ~ normal(μ_V, σ2_V)
     return W_0^2
 end
-@gen (static) function absorpivity_per_unit_distance(_, _)
+@gen (static) function absorpivity_per_unit_distance(w, o)
     β_0 ~ normal(μ_B, σ2_B)
     return β_0^2
 end
-@dist ν(_, ::Station) = normal(μ_v, σ2_v)
-@dist σ2(_, ::Station) = inv_gamma(α_s, β_s)
-@dist arrival_time_measurement_error_params(_, ::Station) = normal_inv_gamma(μ_t, λ_t, α_t, β_t)
-@dist amplitude_measurement_error_params(_, ::Station) = normal_inv_gamma(μ_a, λ_a, α_a, β_a)
-@dist noise_detection_amplitude_params(_, ::Station) = norm_inv_gamma(μ_n, λ_n, α_n, β_n)
+@dist ν(_, _::Station) = normal(μ_ν, σ2_ν)
+@dist σ2(_, _::Station) = inv_gamma(α_S, β_S)
+@dist arrival_time_measurement_error_params(_, _::Station) = normal_inverse_gamma(μ_t, λ_t, α_t, β_t)
+@dist amplitude_measurement_error_params(_, _::Station) = normal_inverse_gamma(μ_a, λ_a, α_a, β_a)
+@dist noise_detection_amplitude_params(_, _::Station) = normal_inverse_gamma(μ_n, λ_n, α_n, β_n)
 
 @gen (static) function station_location(world, s::Station)
     idx ~ lookup_or_generate(world[:index][s])
@@ -51,16 +45,16 @@ end
 
 @type Event
 
-@gen (static) function num_events(world, _)
+@gen (static) function num_events(world, o)
     rate ~ lookup_or_generate(world[:event_occurance_rate][()])
     num ~ poisson(rate)
     return num
 end
 
-@dist location(_, ::Event) = uniform_continuous(0, 1)
-@dist time(_, ::Event) = uniform_continuous(0, 1)
+@dist location(_, _::Event) = uniform_continuous(0, 1)
+@dist time(_, _::Event) = uniform_continuous(0, 1)
 
-# TODO: magnitude(_, ::Event)
+@dist magnitude(_, _::Event) = 2 + exponential(log(10))
 
 @gen (static) function arriving_log_amplitude(world, event::Event, station::Station)
     mag ~ lookup_or_generate(world[:magnitude][event])
@@ -81,6 +75,8 @@ end
 ###################
 # Detection model #
 ###################
+
+@type Detection
 
 @gen (static) function num_event_detections(world, tup::Tuple{Event, Station})
     (e, s) = tup
@@ -123,7 +119,7 @@ end
     return sign(stationpos - eventpos)
 end
 
-@dist measured_false_detection_arrival_time(_, ::Detection) = uniform_continuous(0, 1)
+@dist measured_false_detection_arrival_time(_, _::Detection) = uniform_continuous(0, 1)
 @gen (static) function measured_log_amplitude_noise(world, d::Detection)
     origin ~ lookup_or_generate(world[:origin][d])
     (_, station) = origin
@@ -132,10 +128,7 @@ end
     logamp ~ normal(μ, σ2)
     return logamp
 end
-@dist function noise_sign(_, ::Detection)
-    x ~ uniform_discrete(1, 2)
-    return (x*2) - 3
-end
+@dist noise_sign(_, _::Detection) = 2*uniform_discrete(1, 2) - 3
 
 struct Observation
     station_idx::Int # in 1...5
@@ -163,16 +156,43 @@ end
     end
 end
 
-get_detections = OriginIteratingObjectSet(
-    (event,) => :world => :num_noise_detections => (),
-    (event, station) => :world => num_event_detections => (event, station)
-)
+get_detections = GetOriginIteratingObjectSet(:Detection, (:num_noise_detections, :num_event_detections))
 
-@gen (static) function generate_observations(world)
+@gen (static) function _generate_observations(world)
     num_events ~ lookup_or_generate(world[:num_events][()])
-    events ~ OriginlessObjectSet(Event)(num_events)
-    stations ~ OriginlessObjectSet(Station)(NUM_STATIONS)
+    events ~ GetSingleOriginObjectSet(:Event)(world, (), num_events)
+    stations ~ GetSingleOriginObjectSet(:Station)(world,(), NUM_STATIONS)
     detections ~ get_detections(world, (events,), (events, stations))
-    observations ~ ObjectSetMap(:get_observation)(world, detections)
+    observations ~ SetMap(lookup_or_generate)(mgfcall_setmap(world[:get_observation], detections))
     return observations
 end
+
+generate_observations = UsingWorld(
+    _generate_observations,
+    :event_occurance_rate => event_occurance_rate,
+    :background_noise_level => background_noise_level,
+    :false_alarm_rate => false_alarm_rate,
+    :signal_velocity => signal_velocity,
+    :absorpivity_per_unit_distance => absorpivity_per_unit_distance,
+    :ν => ν,
+    :σ2 => σ2,
+    :arrival_time_measurement_error_params => arrival_time_measurement_error_params,
+    :amplitude_measurement_error_params => amplitude_measurement_error_params,
+    :noise_detection_amplitude_params => noise_detection_amplitude_params,
+    :station_location => station_location,
+    :travel_time => travel_time,
+    :num_events => num_events,
+    :location => location,
+    :time => time,
+    :num_event_detections => num_event_detections,
+    :num_noise_detections => num_noise_detections,
+    :measured_arrival_time => measured_arrival_time,
+    :measured_log_amplitude_real => measured_log_amplitude_real,
+    :real_detection_sign => real_detection_sign,
+    :measured_false_detection_arrival_time => measured_false_detection_arrival_time,
+    :measured_log_amplitude_noise => measured_log_amplitude_noise,
+    :noise_sign => noise_sign,
+    :get_observation => get_observation
+)
+
+@load_generated_functions()
