@@ -1,3 +1,4 @@
+const NUM_STATIONS = 5
 const α_I = 20; const β_I = 2
 const α_N = 3;  const β_N = 2
 const α_F = 20; const β_F = 1

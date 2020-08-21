@@ -7,6 +7,8 @@ include("distributions.jl")
 include("model.jl")
 
 tr = simulate(generate_observations, ())
-display(get_choies(tr))
+open("choicemap.txt", "w") do io
+    show(io, MIME("text/plain"), get_choices(tr))
+end
 
 end
