@@ -9,11 +9,11 @@ struct WorldUpdateDiff <: Gen.Diff end
 # UpdateWorldState #
 ####################
 mutable struct UpdateWorldState <: WorldState
+    previous_world::World
     spec::Gen.UpdateSpec
     externally_constrained_addrs::Selection
     weight::Float64 # total weight of all updates
     discard::DynamicChoiceMap # discard for all world calls
-    original_id_table::IDTable # id table from before this update started
     # the following fields are used for the update algorithm as described in `update_algorithm.md`
     update_queue::PriorityQueue{Call, Int} # queued updates
     fringe_bottom::Int # INVARIANT: every call with topological index < fringe_bottom has been updated if it needs to be
@@ -30,14 +30,16 @@ mutable struct UpdateWorldState <: WorldState
     # the choicemap each call which was updated/generated had before the update/generate (if generated, is EmptyChoiceMap)
     original_choicemaps::Dict{Call, ChoiceMap}
     world_update_complete::Bool # once we have finished updating all the calls and move to update the kernel, this goes from false to true
+    ### for object set tracking: ###
+    origins_with_id_table_updates::Dict{Symbol, Set} # stores typename => set_of_origins_with_update
 end
-function UpdateWorldState(world)
+function UpdateWorldState(old_world)
     UpdateWorldState(
+        old_world,
         EmptyAddressTree(), # spec
         EmptySelection(), # externally_constrained_addrs
         0., # weight
         choicemap(), # discard
-        world.id_table,
         PriorityQueue{Call, Int}(), # update_queue
         0, 0, # fringe_bottom, fringe_top
         Set{Call}(), Set{Call}(), Dict{Call, Diff}(), # visited, calls_whose_dependencies_have_diffs, diffs
@@ -46,11 +48,21 @@ function UpdateWorldState(world)
         Queue{Call}(), # call_update_order
         Set{Call}(), # calls_which_must_be_deleted
         Dict{Call, ChoiceMap}(), # original_choicemaps
-        false # world is up to date
+        false, # world is up to date
+        Dict{Symbol, Set}()
     )
 end
 
 generate_fn(::UpdateWorldState) = Gen.generate
+
+function _previous_world(world::World)
+    @assert world.state isa UpdateWorldState "Currently we only allow accessing the previous world during an update."
+    world.state.previous_world
+end
+function _get_origins_with_id_table_updates(world, typename)
+    @assert world.state isa UpdateWorldState "expected UpdateWorldState; got $(world.state)"
+    get(world.state.origins_with_id_table_updates, typename, ())
+end
 
 #################################
 # Count and dependency tracking #
@@ -427,12 +439,12 @@ as specified, and perform the specified open universe moves, then return
 the new world object.
 This will not yet update any memoized generative function calls.
 """
-function begin_update(world::World, oupm_moves::Tuple, new_world_args::NamedTuple, world_argdiffs::NamedTuple)
-    @assert (world.state isa NoChangeWorldState) "cannot initiate an update from a $(typeof(world.state))"
+function begin_update(old_world::World, oupm_moves::Tuple, new_world_args::NamedTuple, world_argdiffs::NamedTuple)
+    @assert (old_world.state isa NoChangeWorldState) "cannot initiate an update from a $(typeof(world.state))"
 
     # shallow copy the world and put in update mode
-    world = World(world)
-    world.state = UpdateWorldState(world)
+    world = World(old_world)
+    world.state = UpdateWorldState(old_world)
 
     # update the world args, and enqueue all the
     # calls which look up these world args to be updated

@@ -30,6 +30,15 @@ Gen.generate(gen_fn::GetSingleOriginObjectSet, args::Tuple, ::EmptyChoiceMap) = 
 function Gen.update(tr::GetSingleOriginObjectSetTrace, args::Tuple, argdiffs::Tuple, spec::UpdateSpec, ext_const_addrs::Selection)
     gen_fn = Gen.get_gen_fn(tr)
     new_tr, weight, retdiff, discard = update(tr.tr, (gen_fn.typename, args...), (NoChange(), argdiffs...), spec, ext_const_addrs)
+
+    if retdiff === UnknownChange()
+        new_set = get_retval(new_tr)
+        old_set = get_retval(tr)
+        added = Set((x for x in new_set if !(x in old_set)))
+        removed = Set((x for x in old_set if !(x in new_set)))
+        retdiff = SetDiff(added, removed)
+    end
+
     (GetSingleOriginObjectSetTrace(gen_fn, new_tr), weight, retdiff, discard)
 end
 

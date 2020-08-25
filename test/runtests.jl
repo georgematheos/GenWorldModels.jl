@@ -18,15 +18,18 @@ using Test
 
 # # OUPM functionality testing
 # # a few types used in several test files:
-# @type Aircraft
-# @type Timestep
-# @type Blip
+@type Aircraft
+@type Timestep
+@type Blip
 
 # include("oupms/oupm_types.jl")
 # include("oupms/simple_oupmtype_usage.jl")
 # include("oupms/simple_oupm_moves.jl")
 # include("oupms/origin_oupm_moves.jl")
-include("oupms/oupm_involution_dsl.jl")
+# include("oupms/oupm_involution_dsl.jl")
+
+# include("oupms/object_set.jl")
+include("oupms/object_sets/sibling_set_specs.jl")
 
 # include("macros.jl)
 

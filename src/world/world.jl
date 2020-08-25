@@ -145,6 +145,16 @@ end
 @inline get_gen_fn(world::World, addr::Symbol) = get_gen_fn(world, Val(addr))
 @inline get_gen_fn(world::World, ::Call{addr}) where {addr} = get_gen_fn(world, addr)
 
+function cannot_change_retval_due_to_diffs(world::W, addr::CallAddr) where {W}
+    gen_fn = get_gen_fn(world, addr)
+    rettype = Core.Compiler.return_type(
+        Gen.update,
+        Tuple{Gen.get_trace_type(gen_fn), <:Tuple{W, <:Any}, Tuple{WorldUpdateDiff, NoChange}, EmptyAddressTree, <:Selection}
+    )
+    retdiff_statically_known = hasproperty(rettype, :parameters) && length(rettype.parameters) >= 3
+    return retdiff_statically_known && rettype.parameters[3] == NoChange
+end
+
 @inline get_all_calls_which_look_up(world::World, call) = get_all_calls_which_look_up(world.lookup_counts, call)
 @inline get_trace(world::World, call::Call) = get_trace(world.traces, call)
 @inline total_score(world::World) = world.total_score

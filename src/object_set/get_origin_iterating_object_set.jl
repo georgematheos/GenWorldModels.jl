@@ -17,7 +17,7 @@ end
     len = length(origins)
     sets ~ Map(get_single_origin_set)(fill(typename, len), fill(num_statement_addr, len), origins, fill(world, len))
     pairs = [origin => set for (origin, set) in zip(origins, sets)]
-    return EnumeratedOriginObjectSet(PersistentHashMap(pairs))
+    return EnumeratedOriginObjectSet(pairs)
 end
 
 @gen (static) function get_origin_iterating_object_set(typename, num_statement_addresses, world, originset_tuples)

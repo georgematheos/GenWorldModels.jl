@@ -1,3 +1,5 @@
+export mgfcall_map, mgfcall_setmap
+
 """
     mgfcall_map(memoized_gen_function, keys::AbstractVector)
 
@@ -34,12 +36,24 @@ function mgfcall_map(mgf::Diffed{<:MemoizedGenerativeFunction}, keys::Diffed{<:A
 
     Diffed(vals, VectorDiff(vdiff.new_length, vdiff.prev_length, changed))
 end
-function mgfcall_map(mgf::Diffed{<:MemoizedGenerativeFunction}, keys::Diffed{<:Any, UnknownChange})
+function mgfcall_map(mgf::Diffed{<:MemoizedGenerativeFunction}, keys::Diffed{<:Any})
     Diffed(mgfcall_map(strip_diff(mgf), strip_diff(keys)), UnknownChange())
 end
 
-mgfcall_map(mgf::MemoizedGenerativeFunction, keys::Diffed) = mgf_call_map(Diffed(mgf, NoChange()), keys)
-mgfcall_map(mgf::Diffed{<:MemoizedGenerativeFunction}, keys) = mgf_call_map(mgf, Diffed(keys, NoChange()))
+mgfcall_map(mgf::MemoizedGenerativeFunction, keys::Diffed) = mgfcall_map(Diffed(mgf, NoChange()), keys)
+mgfcall_map(mgf::Diffed{<:MemoizedGenerativeFunction}, keys) = mgfcall_map(mgf, Diffed(keys, NoChange()))
 function mgfcall_map(mgf::Diffed{MemoizedGenerativeFunction, NoChange}, keys::Diffed{<:Any, NoChange})
     Diffed(mgfcall_map(strip_diff(mgf), strip_diff(keys)), NoChange())
+end
+
+##################
+# mgfcall_setmap #
+##################
+function mgfcall_setmap(mgf::MemoizedGenerativeFunction, keys)
+    Set(mgf[key] for key in keys)
+end
+
+function mgfcall_setmap(mgf::Diffed{MemoizedGenerativeFunction}, keys::Diffed)
+    diff = get_diff(mgf) === NoChange() && get_diff(keys) === NoChange() ? NoChange() : UnknownChange()
+    Diffed(mgfcall_setmap(strip_diff(mgf), strip_diff(keys)), diff)
 end

@@ -1,3 +1,7 @@
+###############
+# Conversions #
+###############
+
 function get_with_abstract_origin(world, concrete::ConcreteIndexOUPMObject{T}) where {T}
     c_to_a(x) = convert_to_abstract(world, x)
     new_origin = map(c_to_a, concrete.origin)
@@ -23,11 +27,18 @@ function try_to_get_with_concrete_origin(id_table, concrete::ConcreteIndexAbstra
 end
 try_to_get_with_concrete_origin(_, c::ConcreteIndexOUPMObject) = c
 
+#########################
+# Top-level bookkeeping #
+#########################
+
 """
     perform_oupm_moves_and_enqueue_downstream!(world, oupm_updates)
 
-Performs all the oupm updates in `oupm_updates` in order, and enqueues
+Performs all the oupm updates in `oupm_updates` in order and enqueues
 any calls which look at the indices for changed identifiers.
+
+This will also ensure add information to `world.state.origins_with_id_table_updates`
+about every origin which has had a change in the ID table for it.
 """
 function perform_oupm_moves_and_enqueue_downstream!(world::World, oupm_updates)
     # I'm currently "betting" that the overhead of using sets rather than lists outweighs
@@ -38,11 +49,38 @@ function perform_oupm_moves_and_enqueue_downstream!(world::World, oupm_updates)
     original_id_table = world.id_table
     for oupm_update in oupm_updates
         # this will perform the move in the world, and `push!` all the objects with origin, index, and abstract changed to the lists
-        perform_oupm_move!(world, oupm_update, origin_changed, index_changed, abstract_changed)
+        updated_typenames_and_origins = perform_oupm_move!(world, oupm_update, origin_changed, index_changed, abstract_changed)
+        note_new_origin_changes!(world.state.origins_with_id_table_updates, updated_typenames_and_origins)
     end
     enqueue_downstream_from_oupm_moves!(world, original_id_table, origin_changed, index_changed, abstract_changed)
 end
 
+"""
+    note_new_origin_changes!(origins_with_id_table_updates, updated_typenames_and_origins)
+
+Given an iterator `updated_typenames_and_origins` of pairs `(typename, set_of_origins_for_this_type_with_changes_in_id_table)`,
+this will note in the `origins_with_id_table_updates` that these origins have had changes for this type (in addition
+to whatever changes for this type are already noted).
+
+`origins_with_id_table_updates` should be a table with entries `typename => set_of_origins_for_this_type_with_changes_in_id_table`
+we are going to add to.
+"""
+function note_new_origin_changes!(origins_with_id_table_updates, updated_typenames_and_origins)
+    for (typename, origins) in updated_typenames_and_origins
+        if !haskey(origins_with_id_table_updates, typename)
+            origins_with_id_table_updates[typename] = origins
+        else
+            merge!(origins_with_id_table_updates[typename], origins)
+        end
+    end
+end
+
+"""
+    enqueue_downstream_from_oupm_moves!(world::World, original_id_table, origin_changed, index_changed, abstract_changed)
+
+Enqueue all calls which look up conversions of the OUPM objects changed by the OUPM updates which left remnants
+`origin_changed`, `index_changed`, and `abstract_changed`.
+"""
 function enqueue_downstream_from_oupm_moves!(world::World, original_id_table, origin_changed, index_changed, abstract_changed)
     for abstract in index_changed
         c1 = Call(_get_index_addr, abstract)
@@ -76,6 +114,21 @@ function move_all_between!(world::World, typename::Symbol, origin::Tuple{Vararg{
     world
 end
 
+####################
+# Performing moves #
+####################
+
+"""
+    perform_oupm_move!(world::World, spec::OUPMMove, origin_changed, index_changed, abstract_changed)
+
+Performs the OUPM move specified by `spec` in the world.  Pushes all abstract objects
+whose origins have changed to `origin_changed`, all abstract objects whose index have changed
+to `index_changed`, and all concrete objects whose abstract forms have changed to `abstract_changed`.
+
+Returns an iterator over pairs `(typename, origins_for_type_with_changes)`,
+where `origins_for_type_with_changes` is a set containing all origins for this typename
+for which the ID associations have been updated.
+"""
 function perform_oupm_move!(world::World, spec::MoveMove, origin_changed, index_changed, abstract_changed)
     from = get_with_abstract_origin(world, spec.from)
     to = get_or_generate_with_abstract_origin!(world, spec.to)
@@ -110,16 +163,20 @@ function perform_oupm_move!(world::World, spec::MoveMove, origin_changed, index_
         push!(abstract_changed, to)
         world.id_table = assoc(world.id_table, abstract, to)
     end
+    
+    return (oupm_type_name(from) => Set([from.origin, to.origin]),)
 end
 
 function perform_oupm_move!(world::World, spec::BirthMove{T}, _, index_changed, abstract_changed) where {T}
     obj = get_or_generate_with_abstract_origin!(world, spec.obj)
     move_all_between!(world, T, obj.origin, index_changed, abstract_changed; min=obj.idx, inc=+1)
+    return (oupm_type_name(obj) => Set(obj.origin),)
 end
 
 function perform_oupm_move!(world::World, spec::DeathMove{T}, _, index_changed, abstract_changed) where {T}
     obj = get_or_generate_with_abstract_origin!(world, spec.obj)
     move_all_between!(world, T, obj.origin, index_changed, abstract_changed; min=obj.idx+1, inc=-1)
+    return (oupm_type_name(obj) => Set(obj.origin),)
 end
 
 function perform_oupm_move!(world, spec::SplitMove{T}, origin_changed, index_changed, abstract_changed) where {T}
@@ -127,6 +184,9 @@ function perform_oupm_move!(world, spec::SplitMove{T}, origin_changed, index_cha
     from_idx = from.idx
     to_idx1 = min(spec.to_idx_1, spec.to_idx_2)
     to_idx2 = max(spec.to_idx_1, spec.to_idx_2)
+
+    changed_origins = Dict()
+    changed_origins[oupm_type_name(from)] = Set(from.origin)
 
     # before we change the abstract associations, get the current abstract for for the objects we are
     # going to need to move
@@ -155,8 +215,10 @@ function perform_oupm_move!(world, spec::SplitMove{T}, origin_changed, index_cha
 
     # now that the new associations are present, we can move the objects for which moves have been specified
     if length(moves) > 0
-        perform_moves_after_splitmerge!(world, moves, (abstract_from,), abstract_changed, index_changed, origin_changed)
+        perform_moves_after_splitmerge!(world, moves, (abstract_from,), abstract_changed, index_changed, origin_changed, changed_origins)
     end
+
+    return changed_origins
 end
 
 function perform_oupm_move!(world, spec::MergeMove{T}, origin_changed, index_changed, abstract_changed) where {T}
@@ -164,6 +226,9 @@ function perform_oupm_move!(world, spec::MergeMove{T}, origin_changed, index_cha
     to_idx = to.idx
     from_idx1 = min(spec.from_idx_1, spec.from_idx_2)
     from_idx2 = max(spec.from_idx_1, spec.from_idx_2)
+
+    changed_origins = Dict()
+    changed_origins[oupm_type_name(to)] = Set(to.origin)
 
     # capture the variables common to all the `move_all_between!` calls we need, to simplify syntax
     mb!(min, max, inc) = move_all_between!(world, T, to.origin, index_changed, abstract_changed; min=min, max=max, inc=inc)
@@ -190,12 +255,29 @@ function perform_oupm_move!(world, spec::MergeMove{T}, origin_changed, index_cha
     end
 
     if length(moves) > 0
-        perform_moves_after_splitmerge!(world, moves, (abstract_from_1, abstract_from_2), abstract_changed, index_changed, origin_changed)
+        perform_moves_after_splitmerge!(world, moves, (abstract_from_1, abstract_from_2), abstract_changed, index_changed, origin_changed, changed_origins)
     end
 end
 
-function perform_moves_after_splitmerge!(world, moves, abstract_from_objects, abstract_changed, index_changed, origin_changed)
+"""
+    note_origin_change_for_object!(changed_origins, obj)
+
+Note in `changed_origins::Dict{TypeName, SetOfOriginsForType}` that
+the given `obj` has had a change--so it's origin has experienced a change for this typename.
+"""
+function note_origin_change_for_object!(changed_origins, obj)
+    typename = oupm_type_name(obj)
+    if haskey(changed_origins, typename)
+        push!(changed_origins[typename], obj.origin)
+    else
+        changed_origins[typename] = Set((obj.origin,))
+    end
+end
+
+function perform_moves_after_splitmerge!(world, moves, abstract_from_objects, abstract_changed, index_changed, origin_changed, changed_origins)
     for (_from, _to) in moves
+        note_origin_change_for_object!(changed_origins, _from)
+
         if _to === nothing
             # println("removing $_from")
             world.id_table = dissoc(world.id_table, _from)
@@ -206,6 +288,8 @@ function perform_moves_after_splitmerge!(world, moves, abstract_from_objects, ab
         @assert any(obj in _from.origin for obj in abstract_from_objects) "A move within $spec was specified to move an object $obj which does not have an object being split or merged in its origin!"
         _to = get_or_generate_with_abstract_origin!(world, _to)
         @assert _from.origin != _to.origin "A move within $spec attempted to perform a move which does not change an object's origin."
+
+        note_origin_change_for_object!(changed_origins, _to)
 
         abst = world.id_table[_from]
         world.id_table = dissoc(world.id_table, _from)

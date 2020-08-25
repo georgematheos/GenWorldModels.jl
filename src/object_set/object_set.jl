@@ -31,15 +31,17 @@ struct EnumeratedOriginObjectSet <: ObjectSet
 end
 function EnumeratedOriginObjectSet(origin_to_objects)
     objects = PersistentSet()
+    persistent_o_to_o = PersistentHashMap{Tuple, AbstractSet{OUPMObject}}()
     for (origin, set) in origin_to_objects
+        persistent_o_to_o = assoc(persistent_o_to_o, origin, set)
         for object in set
             objects = push(objects, object)
         end
     end
-    return EnumeratedOriginObjectSet(origin_to_objects, objects)
+    
+    return EnumeratedOriginObjectSet(persistent_o_to_o, objects)
 end
 function Base.merge(e1::EnumeratedOriginObjectSet, e2::EnumeratedOriginObjectSet)
-    println("MERGING $e1 and $e2")
     if length(e1) < length(e2)
         (e2, e1) = (e1, e2)
     end
@@ -49,7 +51,12 @@ function Base.merge(e1::EnumeratedOriginObjectSet, e2::EnumeratedOriginObjectSet
         if haskey(o_to_o, origin)
             o_to_o = assoc(o_to_o, origin, merge(o_to_o[origin], set))
         else
-            o_to_o = assoc(o_to_o, origin, set)
+            try
+                o_to_o = assoc(o_to_o, origin, set)
+            catch e
+                println("o_to_o isa $(typeof(o_to_o))")
+                println("origin isa $(typeof(origin))")
+            end
         end
         for obj in e2.objects
             objects = push(objects, obj)
@@ -75,6 +82,7 @@ function Base.show(io::IO, m::MIME"text/plain", set::EnumeratedOriginObjectSet)
     println(io, "---------------------")
 end
 
+include("sibling_set_spec.jl")
 include("get_single_origin_object_set.jl")
 include("get_origin_iterating_object_set.jl")
 export ObjectSet, GetOriginIteratingObjectSet, GetSingleOriginObjectSet
