@@ -257,6 +257,8 @@ function perform_oupm_move!(world, spec::MergeMove{T}, origin_changed, index_cha
     if length(moves) > 0
         perform_moves_after_splitmerge!(world, moves, (abstract_from_1, abstract_from_2), abstract_changed, index_changed, origin_changed, changed_origins)
     end
+
+    return changed_origins
 end
 
 """

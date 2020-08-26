@@ -24,7 +24,7 @@ const ConcreteIndexAbstractOriginOUPMObject{T} = ConcreteIndexOUPMObject{T, <:Tu
 function concrete_index_oupm_object(name, origin, idx)
     ConcreteIndexOUPMObject{name}(origin, idx)
 end
-function concrete_index_oupm_object(name::Diffed{Symbol}, origin::Diffed, idx::Diffed)
+function concrete_index_oupm_object(name::Diffed{Symbol}, origin::Diffed, idx)
     Diffed(concrete_index_oupm_object(strip_diff(name), strip_diff(origin), strip_diff(idx)), UnknownChange())
 end
 function concrete_index_oupm_object(name::Diffed{Symbol, NoChange}, origin::Diffed{<:Any, NoChange}, idx::Diffed{<:Any, NoChange})

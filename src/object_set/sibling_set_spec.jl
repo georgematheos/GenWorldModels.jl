@@ -4,11 +4,34 @@ and the gen fn at $(s.num_address) cannot be statically confirmed to satisfy thi
 One way to ensure this property is satisfied is to use a `Gen.Distribution` as the number statement generative function.
 """
 
+struct WorldOrOriginChange <: Gen.Diff end
+struct WorldChange <: Gen.Diff end
+
 struct SiblingSetSpec
     typename::Symbol
     num_address::CallAddr
     world::World
     origin::Tuple{Vararg{<:OUPMObject}}
+end
+function Base.getproperty(sss::Diffed{SiblingSetSpec, WorldOrOriginChange}, sym::Symbol)
+    stripped = strip_diff(sss)
+    if sym === :typename
+        Diffed(stripped.typename, NoChange())
+    elseif sym === :num_address
+        Diffed(stripped.num_address, NoChange())
+    elseif sym === :world
+        Diffed(stripped.world, WorldUpdateDiff())
+    elseif sym === origin
+        Diffed(stripped.origin, UnknownChange())
+    end
+end
+function Base.getproperty(sss::Diffed{SiblingSetSpec, WorldChange}, sym::Symbol)
+    stripped = strip_diff(sss)
+    if sym === :world
+        Diffed(stripped.world, WorldUpdateDiff())
+    else
+        Diffed(getfield(stripped, sym), NoChange())
+    end
 end
 
 struct GetSiblingSetSpec
@@ -18,11 +41,19 @@ end
 function (s::GetSiblingSetSpec)(world::World, origin::Tuple)
     SiblingSetSpec(s.typename, s.num_address, world, origin)
 end
-function (s::GetSiblingSetSpec)(world::Diffed{World}, origin::Diffed{<:Tuple})
+function (s::GetSiblingSetSpec)(world::Diffed{<:World, WorldUpdateDiff}, origin::Diffed{<:Tuple})
     # TODO
     # for diff tracking, check whether the num has changed, and whether anything has changed
     # for the origin
+    Diffed(s(strip_diff(world), strip_diff(origin)), WorldOrOriginChange())
 end
+function (s::GetSiblingSetSpec)(world::Diffed{<:World, WorldUpdateDiff}, origin::Diffed{<:Tuple, NoChange})
+    # TODO
+    # for diff tracking, check whether the num has changed, and whether anything has changed
+    # for the origin
+    Diffed(s(strip_diff(world), strip_diff(origin)), WorldChange())
+end
+(s::GetSiblingSetSpec)(world::Diffed{<:World}, origin::Tuple) = s(world, Diffed(origin, NoChange()))
 
 struct GetSiblingSetSpecs
     typename::Symbol
@@ -57,7 +88,9 @@ function (s::GetSiblingSetSpecs)(world::World, origins::AbstractSet{<:Tuple})
 
     LazySiblingSetSpecSet(s, world, origins)
 end
-(s::GetSiblingSetSpecs)(::Diffed, ::Diffed) = error("Not implemented")
+function (s::GetSiblingSetSpecs)(a::Diffed, b::Diffed)
+    error("Not implemented")
+end
 function (s::GetSiblingSetSpecs)(world::Diffed{<:World, WorldUpdateDiff}, origins::Diffed{<:PersistentSet, <:Union{NoChange, SetDiff}})
     origins, origins_diff = strip_diff(origins), get_diff(origins)
     in_removed = origins_diff isa SetDiff ? origins_diff.deleted : Set()

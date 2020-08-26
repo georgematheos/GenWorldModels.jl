@@ -3,8 +3,7 @@
 @dist num_aircrafts(_, _) = poisson(3)
 @dist num_blips(_, _) = poisson(2)
 @gen (static, diffs) function _get_blip_sib_specs(world)
-    num_aircrafts ~ lookup_or_generate(world[:num_aircrafts][()])
-    aircrafts ~ GetSingleOriginObjectSet(:Aircraft)(world, (), num_aircrafts)
+    aircrafts ~ get_sibling_set(GenWorldModels.GetSiblingSetSpec(:Aircraft, :num_aircrafts)(world, ()))
     origins ~ no_collision_set_map(tuple, aircrafts)
     sibspecs = ((GenWorldModels.GetSiblingSetSpecs)(:Blip, :num_blips))(world, origins)
 
