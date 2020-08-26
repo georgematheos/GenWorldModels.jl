@@ -8,7 +8,9 @@
     origins ~ no_collision_set_map(tuple, aircrafts)
     sibspecs = ((GenWorldModels.GetSiblingSetSpecs)(:Blip, :num_blips))(world, origins)
 
-    nums ~ Map(lookup_or_generate)(mgfcall_map(world[:num_blips], origins))
+    collected_origins = collect(origins)
+    nums ~ Map(lookup_or_generate)(mgfcall_map(world[:num_blips], collected_origins))
+    # blips ~ Map(GetSingleOriginObjectSet(:Blip))(fill(world, length(origins)), collected_origins, nums)
 
     return sibspecs
 end
@@ -54,17 +56,14 @@ get_blip_sib_specs = UsingWorld(_get_blip_sib_specs,
     olds = [GenWorldModels.convert_to_abstract(tr.world, Aircraft(i)) for i=1:3]
     new1 = GenWorldModels.convert_to_abstract(new_tr.world, Aircraft(1))
     new2 = GenWorldModels.convert_to_abstract(new_tr.world, Aircraft(2))
-    
-    println("deleted:")
-    display(retdiff.deleted)
-    println("added:")
-    display(retdiff.added)
 
-    @test length(retdiff.deleted) == 1 && olds[3] in retdiff.deleted
-    @test length(retdiff.added) == 2 && new1 in retdiff.added && new2 in retdiff.added
+    @test length(retdiff.deleted) == 1 && (olds[3],) === collect(retdiff.deleted)[1].origin
+    added_origins = map(x -> x.origin, collect(retdiff.added))
+    @test length(retdiff.added) == 2 && (new1,) in added_origins && (new2,) in added_origins
 
+    new_origins = map(x -> x.origin, collect(get_retval(new_tr)))
     @test all(
-        GenWorldModels.SiblingSetSpec(:Blip, :num_blips, tr.world, (ac,)) in get_retval(tr)
+        (ac,) in new_origins
         for ac in (new1, new2, olds[1], olds[2])
     )
 end

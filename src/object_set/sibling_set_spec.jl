@@ -75,8 +75,12 @@ function (s::GetSiblingSetSpecs)(world::Diffed{<:World, WorldUpdateDiff}, origin
         _get_origins_with_id_table_updates(world, s.typename)
     ))
         if origin in origins
-            push!(out_removed, ssspec(old_world, origin))
             push!(out_added, ssspec(world, origin))
+
+            # if we looked this up last time, remove the old call
+            if !(origin in in_added)
+                push!(out_removed, ssspec(old_world, origin))
+            end
         end
     end
 

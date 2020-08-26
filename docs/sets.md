@@ -106,14 +106,16 @@ function which incrementally updates the set of ``origin context''s for
 a collection of origins, we can achieve better asymptotic performance.
 
 ## TODOs
-- Implement `set_map`, `no_collision_set_map` with graceful diff handling
 - Implement SetMap, NoCollisionSetMap
 - `tracked_union`
-- `SiblingSetSpec`, `GetSiblingSpecs`
-  - Make sure we can implement this with proper diff tracking
 - `get_single_origin_object_set`
 - `get_origin_iterating_object_set`
 - `tracked_product_set`
 
-I'm going to start with `SiblingSetSpec`, `GetSiblingSpecs` since
-these currently seem to me to be the highest risk of the TODOs.
+Maybe:
+- `set_map`
+
+### Completed TODOs
+- `SiblingSetSpec`, `GetSiblingSpecs`
+  - Make sure we can implement this with proper diff tracking
+- Implement `no_collision_set_map` with graceful diff handling
