@@ -31,7 +31,7 @@ end
 
 @gen (static) function station_location(world, s::Station)
     idx ~ lookup_or_generate(world[:index][s])
-    return (idx - 1) * 0.25
+    return min(SPACE_RANGE) + (idx - 1) * 0.25 * SPACE_SIZE
 end
 
 @gen (static) function travel_time(world, x, y)
@@ -51,10 +51,10 @@ end
     return num
 end
 
-@dist location(a, b::Event) = uniform_continuous(0, 1)
-@dist time(a, b::Event) = uniform_continuous(0, 1)
+@dist location(a, b::Event) = uniform_continuous(min(SPACE_RANGE), max(SPACE_RANGE))
+@dist time(a, b::Event) = uniform_continuous(min(SPACE_RANGE), max(SPACE_RANGE))
 
-@dist magnitude(a, b::Event) = 2 + exponential(log(10))
+@dist magnitude(a, b::Event) = MIN_EVENT_MAGNITUDE + exponential(1/(EVENT_MAG_MEAN))
 
 @gen (static) function arriving_log_amplitude(world, event::Event, station::Station)
     mag ~ lookup_or_generate(world[:magnitude][event])
@@ -120,7 +120,7 @@ end
     return sign(statpos - eventpos)
 end
 
-@dist measured_false_detection_arrival_time(a, b::Detection) = uniform_continuous(0, 1)
+@dist measured_false_detection_arrival_time(a, b::Detection) = uniform_continuous(min(TIME_RANGE), max(TIME_RANGE))
 @gen (static) function measured_log_amplitude_noise(world, d::Detection)
     origin ~ lookup_or_generate(world[:origin][d])
     (station,) = origin
@@ -129,6 +129,7 @@ end
     logamp ~ normal(μ, σ2)
     return logamp
 end
+# equally likely to be 1 or -1:
 @dist noise_sign(a, b::Detection) = 2*uniform_discrete(1, 2) - 3
 
 struct Observation
