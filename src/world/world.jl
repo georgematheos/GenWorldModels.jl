@@ -145,11 +145,14 @@ end
 @inline get_gen_fn(world::World, addr::Symbol) = get_gen_fn(world, Val(addr))
 @inline get_gen_fn(world::World, ::Call{addr}) where {addr} = get_gen_fn(world, addr)
 
-function cannot_change_retval_due_to_diffs(world::W, addr::CallAddr) where {W}
+function cannot_change_retval_due_to_diffs(world::W, addr::CallAddr, argtype) where {W}
     gen_fn = get_gen_fn(world, addr)
+    # return needs_nonempty_spec_for_output_change(tracetype)
+    # return can_statically_guarantee_nochange_on_update(tracetype, Tuple{WorldUpdateDiff, NoChange}, EmptyAddressTree)
+    println("Argtype: $argtype")
     rettype = Core.Compiler.return_type(
         Gen.update,
-        Tuple{Gen.get_trace_type(gen_fn), <:Tuple{W, <:Any}, Tuple{WorldUpdateDiff, NoChange}, EmptyAddressTree, <:Selection}
+        Tuple{Gen.get_trace_type(gen_fn), Tuple{W, argtype}, Tuple{WorldUpdateDiff, NoChange}, EmptyAddressTree, AllSelection}
     )
     retdiff_statically_known = hasproperty(rettype, :parameters) && length(rettype.parameters) >= 3
     return retdiff_statically_known && rettype.parameters[3] == NoChange

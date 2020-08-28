@@ -1,8 +1,13 @@
+struct Range
+    min::Float64
+    max::Float64
+end
+
 const NUM_STATIONS = 5
 const EVENT_MAG_MIN = 2
 const EVENT_MAG_EXP_RATE = log(10)
-const SPACE_RANGE = [0, 1]
-const TIME_RANGE = [0, 10]
+const SPACE_RANGE = Range(0, 1)
+const TIME_RANGE = Range(0, 10)
 const α_I = 20; const β_I = 2
 const α_N = 3;  const β_N = 2
 const α_F = 20; const β_F = 1

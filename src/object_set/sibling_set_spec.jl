@@ -65,7 +65,9 @@ GetOriginsToSiblingSetSpecs(tn::Diffed{Symbol, NoChange}, na::Diffed{<:CallAddr,
 function (s::GetOriginsToSiblingSetSpecs)(world::World, origins::AbstractSet)
     # we do the check here instead of during updates since we have to call this
     # to ever perform an update, but we don't want to waste time on the check on every update
-    @assert(cannot_change_retval_due_to_diffs(world, s.num_address), DIFF_MAY_CAUSE_CHANGE_ERROR_MSG(s))
+    @assert(cannot_change_retval_due_to_diffs(world, s.num_address, typeof(first(origins))), DIFF_MAY_CAUSE_CHANGE_ERROR_MSG(s))
+    # TODO: we should use the type from the origins set rather than the type of just one element...
+    # unfortunately, types are not being tracked well right now, so this doesn't currently work
 
     get_spec(origin) = SiblingSetSpec(s.typename, s.num_address, world, origin)
     lazy_set_to_dict_map(get_spec, origins)

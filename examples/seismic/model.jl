@@ -31,7 +31,7 @@ end
 
 @gen (static) function station_location(world, s::Station)
     idx ~ lookup_or_generate(world[:index][s])
-    return min(SPACE_RANGE) + (idx - 1) * 0.25 * SPACE_SIZE
+    return SPACE_RANGE.min + (idx - 1) * 0.25 * SPACE_SIZE
 end
 
 @gen (static) function travel_time(world, x, y)
@@ -51,10 +51,10 @@ end
     return num
 end
 
-@dist location(a, b::Event) = uniform_continuous(min(SPACE_RANGE), max(SPACE_RANGE))
-@dist time(a, b::Event) = uniform_continuous(min(SPACE_RANGE), max(SPACE_RANGE))
+@dist location(a, b::Event) = uniform_continuous(SPACE_RANGE.min, SPACE_RANGE.max)
+@dist time(a, b::Event) = uniform_continuous(SPACE_RANGE.min, SPACE_RANGE.max)
 
-@dist magnitude(a, b::Event) = MIN_EVENT_MAGNITUDE + exponential(1/(EVENT_MAG_MEAN))
+@dist magnitude(a, b::Event) = EVENT_MAG_MIN + exponential(EVENT_MAG_EXP_RATE)
 
 @gen (static) function arriving_log_amplitude(world, event::Event, station::Station)
     mag ~ lookup_or_generate(world[:magnitude][event])
@@ -65,7 +65,9 @@ end
 end
 
 logistic(x, v, σ) = 1/(1 + exp(-(x-v)/σ))
-@gen (static) function probability_event_detected_at_station(world, event::Event, station::Station)
+logistic(args::Vararg{<:Diffed}) = Diffed(logistic(map(strip_diff(arg), args)...), UnknownChange())
+logistic(args::Vararg{<:Diffed{<:Any, NoChange}}) = Diffed(logistic(map(strip_diff(arg), args)...), NoChange())
+@gen (static, diffs) function probability_event_detected_at_station(world, event::Event, station::Station)
     logamp ~ arriving_log_amplitude(world, event, station)
     noiselvl ~ lookup_or_generate(world[:background_noise_level][station])
     ν ~ lookup_or_generate(world[:ν][station])
@@ -79,7 +81,7 @@ end
 
 @type Detection
 
-@gen (static) function num_event_detections(world, tup::Tuple{<:Event, <:Station})
+@gen (static, diffs) function num_event_detections(world, tup::Tuple{<:Event, <:Station})
     (e, s) = tup
     prob ~ probability_event_detected_at_station(world, e, s)
     is_detected ~ bernoulli(prob)
@@ -120,7 +122,7 @@ end
     return sign(statpos - eventpos)
 end
 
-@dist measured_false_detection_arrival_time(a, b::Detection) = uniform_continuous(min(TIME_RANGE), max(TIME_RANGE))
+@dist measured_false_detection_arrival_time(a, b::Detection) = uniform_continuous(TIME_RANGE.min, TIME_RANGE.max)
 @gen (static) function measured_log_amplitude_noise(world, d::Detection)
     origin ~ lookup_or_generate(world[:origin][d])
     (station,) = origin
@@ -158,13 +160,18 @@ end
     end
 end
 
-get_detections = GetOriginIteratingObjectSet(:Detection, (:num_noise_detections, :num_event_detections))
+@gen (static, diffs) function get_detections(world, events, stations)
+    real_detections ~ get_origin_iterated_set(:Detection, :num_event_detections, world, constlen_vec(events, stations))
+    noise_detections ~ get_origin_iterated_set(:Detection, :num_noise_detections, world, constlen_vec(stations))
+    detections ~ tracked_union(real_detections, noise_detections)
+    return detections
+end
 
 @gen (static) function _generate_observations(world)
     num_events ~ lookup_or_generate(world[:num_events][()])
-    events ~ GetSingleOriginObjectSet(:Event)(world, (), num_events)
-    stations ~ GetSingleOriginObjectSet(:Station)(world,(), NUM_STATIONS)
-    detections ~ get_detections(world, ((stations,), (events, stations)))
+    events ~ get_sibling_set(:Event, :num_events, world, ())
+    stations ~ get_sibling_set_from_num(:Station, world, (), NUM_STATIONS)
+    detections ~ get_detections(world, events, stations)
     observations ~ SetMap(lookup_or_generate)(mgfcall_setmap(world[:get_observation], detections))
     return observations
 end
