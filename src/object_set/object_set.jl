@@ -1,4 +1,6 @@
 include("sibling_set_spec.jl")
-include("get_sibling_set.jl")
+include("object_set_getters.jl")
 
-export get_sibling_set
+export get_sibling_set, get_sibling_set_from_num
+export get_origin_iterated_set
+export constlen_vec

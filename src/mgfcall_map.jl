@@ -53,7 +53,7 @@ function mgfcall_setmap(mgf::MemoizedGenerativeFunction, keys)
     Set(mgf[key] for key in keys)
 end
 
-function mgfcall_setmap(mgf::Diffed{MemoizedGenerativeFunction}, keys::Diffed)
+function mgfcall_setmap(mgf::Diffed{<:MemoizedGenerativeFunction}, keys::Diffed)
     diff = get_diff(mgf) === NoChange() && get_diff(keys) === NoChange() ? NoChange() : UnknownChange()
     Diffed(mgfcall_setmap(strip_diff(mgf), strip_diff(keys)), diff)
 end
