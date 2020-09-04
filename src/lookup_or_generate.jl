@@ -236,7 +236,7 @@ Tuple(v::Diffed) = Diffed(Tuple(strip_diff(v)), UnknownChange())
     return val 
 end
 
-@load_generated_functions()
+# @load_generated_functions()
 
 ##################################################
 # Explicit concrete --> absract LookupOrGenerate #

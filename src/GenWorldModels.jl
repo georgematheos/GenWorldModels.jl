@@ -20,6 +20,8 @@ include("involution_dsl.jl")
 
 include("object_set/object_set.jl")
 
+@load_generated_functions()
+
 # # don't export the macros; users can import them if needed
 # include("macros.jl")
 
