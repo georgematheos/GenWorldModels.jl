@@ -16,10 +16,8 @@ end
 function Gen.random(::NoisyMatrix, mu::Matrix{Float64}, noise::Float64)
     mat = copy(mu)
     (w, h) = size(mu)
-    for i=1:w
-        for j=1:h
-            mat[i, j] = mu[i, j] + randn() * noise
-        end
+    for i=1:w, j=1:h
+        mat[i, j] = mu[i, j] + randn() * noise
     end
     mat
 end

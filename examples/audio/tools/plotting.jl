@@ -8,9 +8,7 @@ include("../model/time_helpers.jl")
 
 function plot_gtg(gtg, duration, audio_sr, vmin, vmax;colors="Blues",plot_colorbar=true)
     max_freq=audio_sr/2
-    println("about to imshow:")
     imshow(gtg, cmap=colors, origin="lower", extent=(0, duration, 0, max_freq),vmin=vmin, vmax=vmax, aspect="auto")
-    println("just imshowed")
     locs, labels = yticks();
     lowlim = freq_to_ERB(1.)
     hilim = freq_to_ERB(max_freq)

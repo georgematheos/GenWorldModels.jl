@@ -1,24 +1,23 @@
-module AudioInference
-
-using Gen
-using WAV
-include("../tools/plotting.jl")
-include("../model/gammatonegram.jl");
-include("../model/time_helpers.jl");
-include("../model/extra_distributions.jl");
-
-source_params, steps, gtg_params, obs_noise = include("../params/base.jl")
-sr = 2000.0
-gtg_params["dB_threshold"] = 0.0
-wts, = gtg_weights(sr, gtg_params);
-
-scene_length, steps, sr = (2.0, steps, sr)
-args = (scene_length, steps, sr, wts, gtg_params)
-
-using GenWorldModels
-
-include("worldmodel/model.jl")
-include("worldmodel/inference.jl")
+function generic_no_num_change_inference_iter(tr)
+    for j = 1:tr[:kernel => :n_tones]
+        tr, _ = mh(tr, select(:world => :waves => AudioSource(j)))
+        if tr[:world => :waves => AudioSource(j) => :is_noise]
+            tr, _ = mh(tr, select(:world => :waves => AudioSource(j) => :amp))
+        else
+            tr, _ = mh(tr, select(:world => :waves => AudioSource(j) => :erb))
+        end
+        if bernoulli(0.5)
+            tr, _ = mh(tr, select(
+                :world => :waves => AudioSource(j) => :onset,
+                :world => :waves => AudioSource(j) => :duration
+            ))
+        else
+            tr, _ = mh(tr, select(:world => :waves => AudioSource(j) => :onset))
+            tr, _ = mh(tr, select(:world => :waves => AudioSource(j) => :duration))
+        end
+    end
+    return tr
+end
 
 function vis_and_write_wave(tr, title)
     duration, _, sr, = get_args(tr)
@@ -45,20 +44,16 @@ function tones_with_noise(amp)
     return tr
 end
 
-function get_worldmodel_likelihood_tracker_and_recorder()
-    likelihoods = Float64[]
-    function record_worldmodel_iter!(tr)
-        push!(likelihoods,
-            project(tr, select(:kernel => :scene))
-        )
+function run_inference(initial_tr, run_iter, num_iters)
+    tr = initial_tr
+    for _=1:num_iters
+        tr = run_iter(tr)
     end
-    return (likelihoods, record_worldmodel_iter!)
+    return tr
 end
 
-generate_initial_tr(tr) = generate(generate_scene, args, choicemap((:kernel => :scene, tr[:kernel => :scene])))
-
-export tones_with_noise, vis_and_write_wave
-export get_worldmodel_likelihood_tracker_and_recorder, generate_initial_tr
-export do_generic_inference, do_birth_death_inference, do_split_merge_inference
-
+function get_initial_tr(trr)
+    observations = choicemap((:kernel => :scene, trr[:kernel => :scene]))
+    initial_tr, = generate(generate_scene, args, observations)
+    return initial_tr
 end

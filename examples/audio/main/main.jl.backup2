@@ -18,7 +18,7 @@ args = (scene_length, steps, sr, wts, gtg_params)
 using GenWorldModels
 
 include("worldmodel/model.jl")
-include("worldmodel/inference.jl")
+# include("worldmodel/inference.jl")
 
 function vis_and_write_wave(tr, title)
     duration, _, sr, = get_args(tr)
@@ -45,20 +45,12 @@ function tones_with_noise(amp)
     return tr
 end
 
-function get_worldmodel_likelihood_tracker_and_recorder()
-    likelihoods = Float64[]
-    function record_worldmodel_iter!(tr)
-        push!(likelihoods,
-            project(tr, select(:kernel => :scene))
-        )
-    end
-    return (likelihoods, record_worldmodel_iter!)
-end
-
-generate_initial_tr(tr) = generate(generate_scene, args, choicemap((:kernel => :scene, tr[:kernel => :scene])))
-
 export tones_with_noise, vis_and_write_wave
-export get_worldmodel_likelihood_tracker_and_recorder, generate_initial_tr
-export do_generic_inference, do_birth_death_inference, do_split_merge_inference
+
+# trr = tones_with_noise(10.0);
+
+# println("about to vis_and_write_wave:")
+# vis_and_write_wave(trr, "trr.wav")
+# println("finished.")
 
 end
