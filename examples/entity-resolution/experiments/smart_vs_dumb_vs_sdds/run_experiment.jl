@@ -1,3 +1,7 @@
+### WARNING: I don't think this code is currently working; you probably need
+# to see the Git commit when I was running this to get it to work, since I think
+# I may have deleted some code it needs.
+
 module SmartVsDumbVsSDDSExperiment
 using Gen
 using GenWorldModels
@@ -20,7 +24,5 @@ include("evaluate_inference_on_synthetic_data.jl")
 while true
     evaluate_inference()
 end
-
-
 
 end

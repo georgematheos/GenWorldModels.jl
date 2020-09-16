@@ -96,28 +96,20 @@ generate_sentences = UsingWorld(_generate_sentences,
     :sparsity => sparsity,
     :num_facts => num_facts
     ;
-    world_args=(:num_entities, :num_verbs)#,
-    # nums=(
-    #     (Relation, (), :world => :num_relations => () => :num),
-    #     (Entity, (), :world => :args => :num_entities),
-    #     (Fact, (Relation, Entity, Entity), :world => 
-    # )
+    world_args=(:num_entities, :num_verbs)
 )
 
 # called via:
 # generate_sentences(num_entities, num_verbs, num_sentences_to_generate)
 
-
-#=
-
-=#
-#=
-
-@gen (static#=, diffs=#) function get_fact_set(world)
-    entset ~ GetOriginlessSet(:Entity, :args => :num_entities)(world)
-    relset ~ GetOriginlessSet(:Relation, :num_relations => ())(world)
-    fact_set ~ GetObjectSetFromOriginSets(:Fact)(world, :num_facts, relset, entset, entset)
-    return fact_set
+function get_state(tr)
+    nrels = tr[:world => :num_relations => ()]
+    rels_abstract = [rel for (rel, _) in tr[:kernel => :rels_and_sentences]]
+    rel_indices = [GenWorldModels.convert_to_concrete(tr.world, rel).idx for rel in rels_abstract]
+    facts = [GenWorldModels.convert_to_concrete(tr.world, fact) for fact in tr[:kernel => :facts]]
+    facts_numeric = Set(FactNumeric(rel.idx, ent1.idx, ent2.idx) for (rel, ent1, ent2) in (fact.origin for fact in facts))
+    # println("nrels = $nrels")
+    # println("facts numeric: ", facts_numeric)
+    # println("rel indices: ", rel_indices)
+    State(nrels, facts_numeric, rel_indices)
 end
-
-=#

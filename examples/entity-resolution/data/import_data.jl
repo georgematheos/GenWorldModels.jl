@@ -1,14 +1,3 @@
-struct SentenceNumeric
-    verb::Int
-    ent1::Int
-    ent2::Int
-end
-struct FactNumeric
-    rel::Int
-    ent1::Int
-    ent2::Int
-end
-
 struct LabeledDataSet
     sentences_numeric::Vector{SentenceNumeric}
     facts_numeric::Vector{FactNumeric}
@@ -48,8 +37,8 @@ function read_data(filename)
                 e1 = get_ent_idx!(sentence["source"])
                 e2 = get_ent_idx!(sentence["dest"])
                 verb = get_verb_idx!(sentence["depPath"])
-                push!(facts_numeric, FactNumeric(rel_idx, e1, e2))
-                push!(sentences_numeric, SentenceNumeric(verb, e1, e2))
+                push!(facts_numeric, FactNumeric(rel=rel_idx, ent1=e1, ent2=e2))
+                push!(sentences_numeric, SentenceNumeric(verb=verb, ent1=e1, ent2=e2))
             end
         end
     end

@@ -1,5 +1,5 @@
 function save_num_facts(num_rels, datetime, description, num_true_facts, num_facts_over_time)
-    path = joinpath(@__DIR__, "../out/saves", "run_$(datetime)_$(description)_$(num_rels)")
+    path = joinpath(@__DIR__, "../../out/saves", "run_$(datetime)_$(description)_$(num_rels)")
     io = open(path, "w")
     println(io, description)
     println(io, num_rels)
