@@ -1,6 +1,24 @@
-@type Entity; @type Relation; @type Fact;
+include("distributions.jl")
+include("dirichlet_process_entity_mention.jl")
+include("beta_bernoulli_subset.jl")
+
+@type Relation
+struct Fact
+    rel::Relation
+    ent1::Int
+    ent2::Int
+end
 
 @dist num_relations(world, t) = log_normal(NUM_RELS_MEAN)
+
+fact_getter(rel) = entpair -> Fact(rel, entpair...)
+fact_getter(rel::Diffed{Int, NoChange}) = Diffed(fact_getter(strip_diff(rel)), NoChange())
+@gen (static, diffs) function generate_facts_for_rel(num_entities, rel, α, β)
+    possible_entpairs = [(i, j) for i=1:num_entities, j=1:num_entities]
+    true_entpairs ~ beta_bernoulli_subset(possible_entpairs, α, β)
+    facts = no_collision_set_map(fact_getter(rel), true_entpairs)
+    return facts
+end
 
 @gen (static, diffs) function get_fact_set(world)
     rels ~ get_sibling_set(:Relation, :num_relations, world, ())
@@ -22,7 +40,9 @@ end
     entpairs = map(((rel, e1, e2),) -> (e1, e2), origins)
     
     α = fill(dirichlet_prior_val, num_verbs)
-    verbs ~ integrated_dirichlet_to_categorical(rels, α)
+    verbs ~ dirichlet_process_entity_mention(rels, α)
 
     (verbs, entpairs)
 end
+
+generate_sentences = UsingWorld(_generate_sentences, :num_relations => num_relations)

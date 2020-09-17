@@ -1,31 +1,33 @@
+# TODO: I should rename this to something like `dirichlet_process_entity_mention`
+
 struct VectorChoiceMap{T} <: Gen.AddressTree{Value}
     v::AbstractVector{T}
 end
 Gen.get_subtree(c::VectorChoiceMap, i::Int) = Gen.Value(c.v[i])
 Gen.get_subtrees_shallow(c::VectorChoiceMap) = ((i, Gen.Value(val)) for (i, val) in enumerate(c.v))
 
-struct IntegratedDirichletToCategoricalTrace{EntityType} <: Gen.Trace
+struct DirichletProcessEntityMentionTrace{EntityType} <: Gen.Trace
     args::Tuple{AbstractVector{EntityType}, AbstractVector{<:Real}}
     counts::PersistentHashMap{EntityType, PersistentVector{Int}}
     mentions::AbstractVector{Int}
     score::Float64
 end
-Gen.get_gen_fn(::IntegratedDirichletToCategoricalTrace) = IntegratedDirichletToCategorical()
-Gen.get_args(tr::IntegratedDirichletToCategoricalTrace) = tr.args
-Gen.get_retval(tr::IntegratedDirichletToCategoricalTrace) = tr.mentions
-Gen.get_score(tr::IntegratedDirichletToCategoricalTrace) = tr.score
-Gen.get_choices(tr::IntegratedDirichletToCategoricalTrace) = VectorChoiceMap(v)
-Gen.project(::IntegratedDirichletToCategoricalTrace, ::EmptyAddressTree) = 0.
+Gen.get_gen_fn(::DirichletProcessEntityMentionTrace) = DirichletProcessEntityMention()
+Gen.get_args(tr::DirichletProcessEntityMentionTrace) = tr.args
+Gen.get_retval(tr::DirichletProcessEntityMentionTrace) = tr.mentions
+Gen.get_score(tr::DirichletProcessEntityMentionTrace) = tr.score
+Gen.get_choices(tr::DirichletProcessEntityMentionTrace) = VectorChoiceMap(v)
+Gen.project(::DirichletProcessEntityMentionTrace, ::EmptyAddressTree) = 0.
 
-function IntegratedDirichletToCategoricalTrace{EntityType}(args, counts, mentions) where {EntityType}
+function DirichletProcessEntityMentionTrace{EntityType}(args, counts, mentions) where {EntityType}
     α = args[2]
     score = sum(logbeta(α + count) for (_, count) in counts) - (length(counts) * logbeta(α))
-    IntegratedDirichletToCategoricalTrace{EntityType}(args, counts, mentions, score)
+    DirichletProcessEntityMentionTrace{EntityType}(args, counts, mentions, score)
 end
 
-struct IntegratedDirichletToCategorical <: Gen.GenerativeFunction{
+struct DirichletProcessEntityMention <: Gen.GenerativeFunction{
     AbstractVector{Int},
-    <:IntegratedDirichletToCategoricalTrace
+    DirichletProcessEntityMentionTrace
 } end
 
 function sample(counts, entity, α, constraint::EmptyAddressTree)
@@ -47,7 +49,7 @@ function to_persistent(d::Dict{T, Vector{Int}}) where {T}
 end
 
 function Gen.generate(
-    ::IntegratedDirichletToCategorical,
+    ::DirichletProcessEntityMention,
     args::Tuple{AbstractVector{EntityType}, Vector{<:Real}},
     constraints::ChoiceMap
 ) where {EntityType}
@@ -66,14 +68,14 @@ function Gen.generate(
         weight += Δweight
     end
     (
-        IntegratedDirichletToCategoricalTrace{EntityType}(args, to_persistent(counts), mentions)
+        DirichletProcessEntityMentionTrace{EntityType}(args, to_persistent(counts), mentions),
         weight
     )
 end
 
 # this update method is for the case where we change the entities, but the α and the mentions remain the same
 function Gen.update(
-    tr::IntegratedDirichletToCategoricalTrace{EntityType},
+    tr::DirichletProcessEntityMentionTrace{EntityType},
     args::Tuple{AbstractVector{EntityType}, Vector{<:Real}},
     argdiffs::Tuple{VectorDiff, NoChange},
     constraints::EmptyAddressTree,
@@ -121,6 +123,6 @@ function Gen.update(
         Δlogprob += logbeta(α + new_counts[entity])
     end
 
-    new_tr = IntegratedDirichletToCategoricalTrace{EntityType}(args, new_counts, get_retval(tr), get_score(tr) + Δlogprob)
+    new_tr = DirichletProcessEntityMentionTrace{EntityType}(args, new_counts, get_retval(tr), get_score(tr) + Δlogprob)
     (new_tr, Δlogprob, NoChange(), EmptyAddressTree())
 end
