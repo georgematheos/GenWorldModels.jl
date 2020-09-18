@@ -3,6 +3,7 @@ struct BetaBernoulliSubsetChoiceMap{S, SS} <: Gen.AddressTree{Value}
     subset::SS
 end
 Gen.get_subtree(c::BetaBernoulliSubsetChoiceMap, a) = Value(a in c.subset)
+Gen.get_subtree(::BetaBernoulliSubsetChoiceMap, ::Pair) = EmptyAddressTree()
 Gen.get_subtrees_shallow(c::BetaBernoulliSubsetChoiceMap) = ((a, Value(a in c.subset)) for a in c.set)
 
 struct BetaBernoulliSubsetTrace <: Gen.Trace
@@ -17,7 +18,7 @@ Gen.project(tr::BetaBernoulliSubsetTrace, ::EmptyAddressTree) = 0.
 Gen.get_args(tr::BetaBernoulliSubsetTrace) = tr.args
 Gen.get_gen_fn(::BetaBernoulliSubsetTrace) = beta_bernoulli_subset
 
-struct BetaBernoulliSubset <: Gen.GenerativeFunction{PersistentSet{Int}, BetaBernoulliSubsetTrace} end
+struct BetaBernoulliSubset <: Gen.GenerativeFunction{PersistentSet, BetaBernoulliSubsetTrace} end
 
 """
     beta_bernoulli_subset(set, α, β)
@@ -28,7 +29,6 @@ each set element from a beta/bernoulli process.
 `set` should be an abstract array (not a Julia Set).
 """
 beta_bernoulli_subset = BetaBernoulliSubset()
-
 function Gen.generate(::BetaBernoulliSubset, (set, α, β)::Tuple{AbstractArray, Real, Real}, constraints::ChoiceMap)
     certainly_true = Set()
     certainly_false = Set()

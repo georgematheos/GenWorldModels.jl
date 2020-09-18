@@ -4,6 +4,7 @@ struct VectorChoiceMap{T} <: Gen.AddressTree{Value}
     v::AbstractVector{T}
 end
 Gen.get_subtree(c::VectorChoiceMap, i::Int) = Gen.Value(c.v[i])
+Gen.get_subtree(::VectorChoiceMap, ::Pair) = EmptyAddressTree()
 Gen.get_subtrees_shallow(c::VectorChoiceMap) = ((i, Gen.Value(val)) for (i, val) in enumerate(c.v))
 
 struct DirichletProcessEntityMentionTrace{EntityType} <: Gen.Trace
@@ -16,7 +17,7 @@ Gen.get_gen_fn(::DirichletProcessEntityMentionTrace) = DirichletProcessEntityMen
 Gen.get_args(tr::DirichletProcessEntityMentionTrace) = tr.args
 Gen.get_retval(tr::DirichletProcessEntityMentionTrace) = tr.mentions
 Gen.get_score(tr::DirichletProcessEntityMentionTrace) = tr.score
-Gen.get_choices(tr::DirichletProcessEntityMentionTrace) = VectorChoiceMap(v)
+Gen.get_choices(tr::DirichletProcessEntityMentionTrace) = VectorChoiceMap(tr.mentions)
 Gen.project(::DirichletProcessEntityMentionTrace, ::EmptyAddressTree) = 0.
 
 _get_score(counts, α) = sum(logbeta(α + count) for (_, count) in counts) - (length(counts) * logbeta(α))
