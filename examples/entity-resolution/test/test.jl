@@ -12,6 +12,7 @@ include("../types.jl")
 include("../model2/model2.jl")
 include("../data/import_data.jl")
 include("../inference2/initial_trace.jl")
+include("../inference2/inference.jl")
 
 data = read_data()
 
@@ -25,6 +26,8 @@ params = ModelParams(
     num_relations_var=3
 )
 
-tr = get_initial_trace(data.sentences_numeric, params)
+initial_tr = get_initial_trace(data.sentences_numeric, params)
 
+@time run_tracked_splitmerge_inference!(initial_tr, 100, (_, _) -> nothing, log=true, log_freq=10)
+@time run_tracked_splitmerge_inference!(initial_tr, 100, (_, _) -> nothing, log=true, log_freq=10)
 end

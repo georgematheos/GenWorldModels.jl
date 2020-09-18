@@ -1,3 +1,5 @@
+true_entpairs_addr(rel) = :kernel => :sampled_facts => :all_facts => :rels_to_facts => rel => :true_entpairs
+
 function make_constraints(sentences::Vector{SentenceNumeric}, params::ModelParams)
     constraints = choicemap()
     num_rels = discrete_log_normal(params.num_relations_prior...)
@@ -11,7 +13,7 @@ function make_constraints(sentences::Vector{SentenceNumeric}, params::ModelParam
     end
 
     for (r, certainly_true) in enumerate(true_for_rel)
-        set_submap!(constraints, :kernel => :sampled_facts => :all_facts => :rels_to_facts => Relation(r) => :true_entpairs,
+        set_submap!(constraints, true_entpairs_addr(Relation(r)),
             choicemap([(entpair, true) for entpair in certainly_true]...)
         )
     end

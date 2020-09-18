@@ -5,6 +5,7 @@ struct Fact{R}
     ent2::Int
     Fact(rel::R, ent1::Int, ent2::Int) where {R <: Relation} = new{R}(rel, ent1, ent2)
 end
+Base.isapprox(f1::Fact, f2::Fact) = f1.rel == f2.rel && f1.ent1 == f2.ent1 && f2.ent2 == f2.ent2
 
 include("distributions.jl")
 include("dirichlet_process_entity_mention.jl")
@@ -21,7 +22,7 @@ fact_getter(rel::Diffed{Int, NoChange}) = Diffed(fact_getter(strip_diff(rel)), N
 @gen (static, diffs) function generate_facts_for_rel(args)
     (rel, possible_entpairs, beta_prior) = args
     true_entpairs ~ beta_bernoulli_subset(possible_entpairs, beta_prior[1], beta_prior[2])
-    facts = no_collision_set_map(fact_getter(rel), true_entpairs)
+    facts ~ no_collision_set_map(fact_getter(rel), true_entpairs)
     return facts
 end
 
@@ -44,10 +45,13 @@ end
     return sampled_facts
 end
 
+@gen (static, diffs) function get_rel(fact); return fact.rel; end;
+@gen (static, diffs) function get_entpair(fact); return (fact.ent1, fact.ent2); end;
+
 @gen (static, diffs) function _generate_sentences(world, num_sentences, dirichlet_prior_val, num_verbs)
     sampled_facts ~ sample_facts(world, num_sentences)
-    rels = map(fact -> fact.rel, sampled_facts)
-    entpairs = map(fact -> (fact.ent1, fact.ent2), sampled_facts)
+    rels ~ Map(get_rel)(sampled_facts)
+    entpairs ~ Map(get_entpair)(sampled_facts)
     
     α = fill(dirichlet_prior_val, num_verbs)
     verbs ~ dirichlet_process_entity_mention(rels, α)
@@ -67,6 +71,9 @@ generate_sentences = UsingWorld(_generate_sentences, :num_relations => num_relat
 )
 
 model_args(p::ModelParams) = (p.num_entities, p.num_relations_prior, p.beta_prior, p.num_sentences, p.dirichlet_prior_val, p.num_verbs)
+num_ents(tr) = get_args(tr)[1]
+num_verbs(tr) = get_args(tr)[6]
+entpairs(tr) = get_retval(tr)[2]
 
 function get_state(tr)
     nrels = tr[:world => :num_relations => ()]

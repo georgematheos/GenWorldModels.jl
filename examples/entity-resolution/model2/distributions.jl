@@ -63,7 +63,13 @@ function Gen.generate(g::UniformFactSample, (world, s)::Tuple, v::Value{<:Fact{<
     abst = GenWorldModels.convert_to_abstract(world, f.rel)
     return Gen.generate(g, (world, s), Value(Fact(abst, f.ent1, f.ent2)))
 end
-function Gen.update(tr::Gen.DistributionTrace{<:Any, UniformFactSample}, (world, s)::Tuple, argdiffs::Tuple, v::Value{<:Fact{<:ConcreteIndexOUPMObject}}, sel::Selection)
+function Gen.update(tr::Gen.DistributionTrace{<:Any, UniformFactSample}, (world, s)::Tuple, argdiffs::Tuple, v::Value{<:Fact{<:ConcreteIndexOUPMObject}}, sel::AllSelection)
+    _converting_update(tr, (world, s), argdiffs, v, sel)
+end
+function Gen.update(tr::Gen.DistributionTrace{<:Any, UniformFactSample}, (world, s)::Tuple, argdiffs::Tuple, v::Value{<:Fact{<:ConcreteIndexOUPMObject}}, sel::EmptySelection)
+    _converting_update(tr, (world, s), argdiffs, v, sel)
+end
+function _converting_update(tr, (world, s), argdiffs, v, sel)
     f = get_value(v)
     abst = GenWorldModels.convert_to_abstract(world, f.rel)
     update(tr, (world, s), argdiffs, Value(Fact(abst, f.ent1, f.ent2)), sel)

@@ -45,3 +45,18 @@ function read_state(io)
 
     State(num_rels, facts, rels)
 end
+
+@with_kw struct ModelParams
+    num_entities::Int
+    num_verbs::Int
+    num_sentences::Int
+    dirichlet_prior_val::Float64
+    beta_prior::Tuple{Float64, Float64}
+    num_relations_prior::Tuple{Float64, Float64}
+end
+function ModelParams(;num_entities, num_verbs, num_sentences, dirichlet_prior_val, beta_prior, num_relations_mean, num_relations_var)
+    num_relations_mean += 0.5 # approximately account for the `floor` in the discrete_log_normal
+    σ2 = log(1 + num_relations_var/num_relations_mean^2)
+    μ = log(num_relations_mean) - σ2/2
+    ModelParams(num_entities, num_verbs, num_sentences, dirichlet_prior_val, beta_prior, (μ, √(σ2)))
+end
