@@ -19,10 +19,10 @@ Gen.get_score(tr::DirichletProcessEntityMentionTrace) = tr.score
 Gen.get_choices(tr::DirichletProcessEntityMentionTrace) = VectorChoiceMap(v)
 Gen.project(::DirichletProcessEntityMentionTrace, ::EmptyAddressTree) = 0.
 
+_get_score(counts, α) = sum(logbeta(α + count) for (_, count) in counts) - (length(counts) * logbeta(α))
 function DirichletProcessEntityMentionTrace{EntityType}(args, counts, mentions) where {EntityType}
     α = args[2]
-    score = sum(logbeta(α + count) for (_, count) in counts) - (length(counts) * logbeta(α))
-    DirichletProcessEntityMentionTrace{EntityType}(args, counts, mentions, score)
+    DirichletProcessEntityMentionTrace{EntityType}(args, counts, mentions, _get_score(counts, α))
 end
 
 struct DirichletProcessEntityMention <: Gen.GenerativeFunction{
@@ -30,20 +30,31 @@ struct DirichletProcessEntityMention <: Gen.GenerativeFunction{
     DirichletProcessEntityMentionTrace
 } end
 
-function sample(counts, entity, α, constraint::EmptyAddressTree)
-    mention = categorical(counts[entity] + α)
-    (mention, 0.)
-end
-function sample(counts, entity, α, constraint::Value)
+"""
+    dirichlet_process_entity_mention(entity_list, α)
+
+Given a list of (potentially non-unique) entities, samples a mention for each appearance
+of each entity according to a dirichlet process with parameter α.
+"""
+dirichlet_process_entity_mention = DirichletProcessEntityMention()
+
+normalize(v) = v./sum(v)
+function sample_mention_and_count!(counts, unconstrained_counts, entity, α, ::EmptyAddressTree)
+    mention = categorical(normalize(counts[entity] + α))
+    counts[entity][mention] += 1
+    unconstrained_counts[entity][mention] += 1
+    mention
+end 
+function sample_mention_and_count!(counts, _, entity, _, constraint::Value)
     mention = get_value(constraint)
-    pdf = logpdf(categorical, mention, counts[entity] + α)
-    (mention, pdf)
+    counts[entity][mention] += 1
+    mention
 end
 
 function to_persistent(d::Dict{T, Vector{Int}}) where {T}
     phm = PersistentHashMap{T, PersistentVector{Int}}()
-    for v in d
-        phm = assoc(phm, PersistentVector{Int}(v))
+    for (k, v) in d
+        phm = assoc(phm, k, PersistentVector{Int}(v))
     end
     phm
 end
@@ -54,23 +65,17 @@ function Gen.generate(
     constraints::ChoiceMap
 ) where {EntityType}
     (entities, α) = args
+    unique_entities = unique(entities)
     num_mentions = length(α)
-    counts = Dict{EntityType, Int}()
+    counts = Dict{EntityType, Vector{Int}}((ent => zeros(num_mentions) for ent in unique_entities))
+    unconstrained_counts = Dict{EntityType, Vector{Int}}((ent => zeros(num_mentions) for ent in unique_entities))
     mentions = Vector{Int}(undef, length(entities))
-    weight = 0.
     for (i, entity) in enumerate(entities)
-        if !haskey(counts, entity)
-            counts[entity] = zeros(num_mentions)
-        end
-        mention, Δweight = sample(counts, entity, α, get_submap(constraints, i))
-        counts[entity][mention] += 1
-        mentions[i] = mention
-        weight += Δweight
+        mentions[i] = sample_mention_and_count!(counts, unconstrained_counts, entity, α, get_submap(constraints, i))
     end
-    (
-        DirichletProcessEntityMentionTrace{EntityType}(args, to_persistent(counts), mentions),
-        weight
-    )
+    tr = DirichletProcessEntityMentionTrace{EntityType}(args, to_persistent(counts), mentions)
+    weight = get_score(tr) - _get_score(unconstrained_counts, α)
+    (tr, weight)
 end
 
 # this update method is for the case where we change the entities, but the α and the mentions remain the same
@@ -82,15 +87,15 @@ function Gen.update(
     ext_const_addrs::Selection
 ) where {EntityType}
     diff = argdiffs[1]
-    if diff.new_length !== diff.old_length
+    if diff.new_length !== diff.prev_length
         error("Not implemented: the situation where the length of an entity-mention vector is changing.")
     end
     old_entities = get_args(tr)[1]
     new_entities, α = args
     num_mentions = length(α)
 
-    new_entities = Set()
-    old_entities = Set()
+    new_ent_set = Set()
+    old_ent_set = Set()
     new_counts = tr.counts
     for (idx, diff) in diff.updated
         diff === NoChange() && continue;
@@ -107,22 +112,26 @@ function Gen.update(
         new_counts = assoc(new_counts, old_entity, new_old_ent_count)
         new_counts = assoc(new_counts, new_entity, new_new_ent_count)
 
-        push!(new_entities, new_entity)
-        push!(old_entities, old_entity)
+        push!(new_ent_set, new_entity)
+        push!(old_ent_set, old_entity)
     end
 
     # remove any entities from the dictionary if there are no references to them; update the score
     Δlogprob = 0.
-    for entity in old_entities
+    old_counts = tr.counts
+    for entity in old_ent_set
+        Δlogprob -= logbeta(α + old_counts[entity])
+        Δlogprob += logbeta(α + new_counts[entity])
         if sum(new_counts[entity]) === 0
             new_counts = dissoc(new_counts, entity)
         end
-        Δlogprob -= logbeta(α + old_counts[entity])
     end
-    for entity in new_entities
-        Δlogprob += logbeta(α + new_counts[entity])
+    for entity in new_ent_set
+        if !(entity in old_ent_set)
+            Δlogprob -= logbeta(α + get(old_counts, entity, zeros(num_mentions)))
+            Δlogprob += logbeta(α + new_counts[entity])
+        end
     end
-
     new_tr = DirichletProcessEntityMentionTrace{EntityType}(args, new_counts, get_retval(tr), get_score(tr) + Δlogprob)
     (new_tr, Δlogprob, NoChange(), EmptyAddressTree())
 end

@@ -3,7 +3,8 @@ module Tests
 using Test
 using Gen
 using FunctionalCollections
-using SpecialFunctions: logbeta
+import SpecialFunctions: logbeta, loggamma
+logbeta(x::Vector{<:Real}) = sum(loggamma(i) for i in x) - loggamma(sum(x))
 using Distributions: BetaBinomial
 using StatsBase: sample
 include("../model2/beta_bernoulli_subset.jl")
@@ -86,6 +87,62 @@ include("../model2/beta_bernoulli_subset.jl")
     @test discard == choicemap(
         (el, !newval)
     )
+end
+
+include("../model2/dirichlet_process_entity_mention.jl")
+@testset "dirichlet_process_entity_mention" begin
+    tr, wt = generate(dirichlet_process_entity_mention, (["a", "a", "b"], [0.2, 0.2]))
+    @test wt == 0.
+    @test get_retval(tr) isa AbstractVector
+    @test length(get_retval(tr)) == 3
+
+    tr, wt = generate(dirichlet_process_entity_mention, (["a", "a", "b"], [0.2, 0.2]), choicemap((1, 1), (2, 1), (3, 2)))
+    exp_score = logbeta([2.2,.2]) - logbeta([.2,.2]) + logbeta([.2, 1.2]) - logbeta([.2,.2])
+    @test get_retval(tr) == [1, 1, 2]
+    @test isapprox(get_score(tr), exp_score)
+    @test isapprox(wt, exp_score)
+
+    new_tr, weight, retdiff, discard = update(tr, (["a", "b", "b"], [0.2, 0.2]), (
+            VectorDiff(3, 3, Dict(2 => UnknownChange())), NoChange()
+        ),
+        EmptyChoiceMap()
+    )
+    @test get_retval(new_tr) == get_retval(tr)
+    @test retdiff === NoChange()
+    @test isempty(discard)
+
+    exp_score = logbeta([1.2,1.2]) - logbeta([.2,.2]) + logbeta([1.2, .2]) - logbeta([.2,.2])
+    @test isapprox(get_score(new_tr), exp_score)
+    @test isapprox(weight, get_score(new_tr) - get_score(tr))
+
+    ents = PersistentVector([rand() < .6 ? rand() < .5 ? "a" : "b" : "c" for _=1:1000])
+    α = [.5, .5, .5, .5]
+    tr, wt = generate(
+        dirichlet_process_entity_mention,
+        (ents, α)
+    )
+    ments = get_retval(tr)
+    cnts = [[length([i for i=1:1000 if ents[i] == ent && ments[i] == j]) for j=1:4] for ent in ["a", "b", "c", "d"]]
+    exp_score = sum(logbeta(cnt + α) for cnt in cnts) - 4*logbeta(α)
+    @test isapprox(get_score(tr), exp_score)
+    @test wt == 0.
+
+    changed_ents = collect(2:2:102)
+    for idx in changed_ents
+        ents = assoc(ents, idx, ents[idx] == "a" ? "b" : "a")
+    end
+    new_tr, weight, retdiff, discard = update(tr, (ents, α), (
+        VectorDiff(1000, 1000, Dict(idx => UnknownChange() for idx in changed_ents)), NoChange()), EmptyAddressTree()
+    )
+    @test get_retval(new_tr) == get_retval(tr)
+    ments = get_retval(new_tr)
+    cnts = [[length([i for i=1:1000 if ents[i] == ent && ments[i] == j]) for j=1:4] for ent in ["a", "b", "c", "d"]]
+    println("expected counts: $cnts")
+    exp_score = sum(logbeta(cnt + α) for cnt in cnts) - 4*logbeta(α)
+    @test isapprox(get_score(new_tr), exp_score)
+    @test isapprox(weight, get_score(new_tr) - get_score(tr))
+    @test retdiff === NoChange()
+    @test isempty(discard)
 end
 
 end
