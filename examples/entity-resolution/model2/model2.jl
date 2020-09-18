@@ -1,13 +1,14 @@
+@type Relation
+struct Fact{R}
+    rel::R
+    ent1::Int
+    ent2::Int
+    Fact(rel::R, ent1::Int, ent2::Int) where {R <: Relation} = new{R}(rel, ent1, ent2)
+end
+
 include("distributions.jl")
 include("dirichlet_process_entity_mention.jl")
 include("beta_bernoulli_subset.jl")
-
-@type Relation
-struct Fact
-    rel::Relation
-    ent1::Int
-    ent2::Int
-end
 
 @gen (static, diffs) function num_relations(world, t)
     num_rels_prior ~ lookup_or_generate(world[:args][:num_rels_prior])
@@ -32,21 +33,21 @@ end
     rels ~ get_sibling_set(:Relation, :num_relations, world, ())
 
     rel_to_args_dict = lazy_set_to_dict_map(rel -> (rel, possible_entpairs, beta_prior), rels)
-    rels_to_facts ~ DictMap(generate_facts_for_rel)(rel_to_args_dict)
+    rels_to_facts ~ DictMap(generate_facts_for_rel)(world, rel_to_args_dict)
     facts ~ tracked_union(rels_to_facts)
     return facts
 end
 
 @gen (static, diffs) function sample_facts(world, num_sentences)
-    facts ~ get_fact_set(world)
-    sampled_facts ~ Map(uniform_choice)(fill(facts, num_sentences))
+    all_facts ~ get_fact_set(world)
+    sampled_facts ~ Map(uniform_fact_sample)(fill(world, num_sentences), fill(all_facts, num_sentences))
     return sampled_facts
 end
 
 @gen (static, diffs) function _generate_sentences(world, num_sentences, dirichlet_prior_val, num_verbs)
-    facts ~ sample_facts(world, num_sentences)
-    rels = map(fact -> fact.rel, facts)
-    entpairs = map(fact -> (fact.ent1, fact.ent2), facts)
+    sampled_facts ~ sample_facts(world, num_sentences)
+    rels = map(fact -> fact.rel, sampled_facts)
+    entpairs = map(fact -> (fact.ent1, fact.ent2), sampled_facts)
     
     α = fill(dirichlet_prior_val, num_verbs)
     verbs ~ dirichlet_process_entity_mention(rels, α)
@@ -64,3 +65,17 @@ end
 generate_sentences = UsingWorld(_generate_sentences, :num_relations => num_relations;
     world_args=(:num_entities, :num_rels_prior, :beta_prior)
 )
+
+model_args(p::ModelParams) = (p.num_entities, p.num_relations_prior, p.beta_prior, p.num_sentences, p.dirichlet_prior_val, p.num_verbs)
+
+function get_state(tr)
+    nrels = tr[:world => :num_relations => ()]
+    facts = tr[:kernel => :sampled_facts]
+    rels_abstract = map(fact -> fact.rel, facts)
+    rels_concrete = map(rel -> GenWorldModels.convert_to_concrete(tr.world, rel).idx, rels_abstract)
+    facts_numeric = Set(
+        FactNumeric(rel=GenWorldModels.convert_to_concrete(tr.world, fact.rel).idx, ent1=fact.ent1, ent2=fact.ent2)
+        for fact in tr[:kernel => :sampled_facts => :all_facts]
+    )
+    State(nrels, facts_numeric, rels_concrete)
+end
