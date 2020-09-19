@@ -13,7 +13,10 @@ function Gen.random(::CategoricalFromList, list, probs)
 end
 function Gen.logpdf(::CategoricalFromList, v, list, probs)
     idxs = findall(x -> x == v, list)
-    @assert length(idxs) == 1
+    if length(idxs) < 1
+        println("v = $v; list = $list")
+    end
+    @assert length(idxs) == 1 "IDXS: $idxs"
     idx = idxs[1]
     log(probs[idx])
 end

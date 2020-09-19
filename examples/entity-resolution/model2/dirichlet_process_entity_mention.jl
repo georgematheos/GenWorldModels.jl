@@ -11,6 +11,7 @@ struct DirichletProcessEntityMentionTrace{EntityType} <: Gen.Trace
     args::Tuple{AbstractVector{EntityType}, AbstractVector{<:Real}}
     counts::PersistentHashMap{EntityType, PersistentVector{Int}}
     mentions::AbstractVector{Int}
+    entity_to_indices::PersistentHashMap{EntityType, PersistentSet{Int}}
     score::Float64
 end
 Gen.get_gen_fn(::DirichletProcessEntityMentionTrace) = DirichletProcessEntityMention()
@@ -21,9 +22,9 @@ Gen.get_choices(tr::DirichletProcessEntityMentionTrace) = VectorChoiceMap(tr.men
 Gen.project(::DirichletProcessEntityMentionTrace, ::EmptyAddressTree) = 0.
 
 _get_score(counts, α) = sum(logbeta(α + count) for (_, count) in counts) - (length(counts) * logbeta(α))
-function DirichletProcessEntityMentionTrace{EntityType}(args, counts, mentions) where {EntityType}
+function DirichletProcessEntityMentionTrace{EntityType}(args, counts, mentions, ent_to_indices) where {EntityType}
     α = args[2]
-    DirichletProcessEntityMentionTrace{EntityType}(args, counts, mentions, _get_score(counts, α))
+    DirichletProcessEntityMentionTrace{EntityType}(args, counts, mentions, ent_to_indices, _get_score(counts, α))
 end
 
 struct DirichletProcessEntityMention <: Gen.GenerativeFunction{
@@ -71,10 +72,17 @@ function Gen.generate(
     counts = Dict{EntityType, Vector{Int}}((ent => zeros(num_mentions) for ent in unique_entities))
     unconstrained_counts = Dict{EntityType, Vector{Int}}((ent => zeros(num_mentions) for ent in unique_entities))
     mentions = Vector{Int}(undef, length(entities))
+    ent_to_indices = PersistentHashMap{EntityType, PersistentSet{Int}}()
     for (i, entity) in enumerate(entities)
+        if haskey(ent_to_indices, entity)
+            ent_to_indices = assoc(ent_to_indices, entity, push(ent_to_indices[entity], i))
+        else
+            ent_to_indices = assoc(ent_to_indices, entity, PersistentSet{Int}([i]))
+        end
+
         mentions[i] = sample_mention_and_count!(counts, unconstrained_counts, entity, α, get_submap(constraints, i))
     end
-    tr = DirichletProcessEntityMentionTrace{EntityType}(args, to_persistent(counts), mentions)
+    tr = DirichletProcessEntityMentionTrace{EntityType}(args, to_persistent(counts), mentions, ent_to_indices)
     weight = get_score(tr) - _get_score(unconstrained_counts, α)
     (tr, weight)
 end
@@ -94,6 +102,7 @@ function Gen.update(
     old_entities = get_args(tr)[1]
     new_entities, α = args
     num_mentions = length(α)
+    ent_to_indices = tr.entity_to_indices
 
     new_ent_set = Set()
     old_ent_set = Set()
@@ -105,6 +114,13 @@ function Gen.update(
         new_entity = new_entities[idx]
         mention = get_retval(tr)[idx]
         old_entity === new_entity && continue;
+
+        ent_to_indices = assoc(ent_to_indices, old_entity, disj(ent_to_indices[old_entity], idx))
+        if haskey(ent_to_indices, new_entity)
+            ent_to_indices = assoc(ent_to_indices, new_entity, push(ent_to_indices[new_entity], idx))
+        else
+            ent_to_indices = assoc(ent_to_indices, new_entity, PersistentSet{Int}([idx]))
+        end
 
         old_old_ent_count = new_counts[old_entity]
         new_old_ent_count = assoc(old_old_ent_count, mention, old_old_ent_count[mention] - 1)
@@ -125,6 +141,7 @@ function Gen.update(
         Δlogprob += logbeta(α + new_counts[entity])
         if sum(new_counts[entity]) === 0
             new_counts = dissoc(new_counts, entity)
+            ent_to_indices = dissoc(ent_to_indices, entity)
         end
     end
     for entity in new_ent_set
@@ -133,6 +150,16 @@ function Gen.update(
             Δlogprob += logbeta(α + new_counts[entity])
         end
     end
-    new_tr = DirichletProcessEntityMentionTrace{EntityType}(args, new_counts, get_retval(tr), get_score(tr) + Δlogprob)
+    new_tr = DirichletProcessEntityMentionTrace{EntityType}(args, new_counts, get_retval(tr), ent_to_indices, get_score(tr) + Δlogprob)
     (new_tr, Δlogprob, NoChange(), EmptyAddressTree())
+end
+
+function Base.getindex(tr::DirichletProcessEntityMentionTrace, addr)
+    if addr == :indices_per_entity
+        tr.entity_to_indices
+    elseif addr == :counts
+        tr.counts
+    else
+        get_choices(tr)[addr]
+    end
 end

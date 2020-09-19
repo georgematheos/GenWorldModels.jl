@@ -27,7 +27,9 @@ params = ModelParams(
 )
 
 initial_tr = get_initial_trace(data.sentences_numeric, params)
+println("Initial trace generated (score = $(get_score(initial_tr))).\nRunning inference...")
 
-@time run_tracked_splitmerge_inference!(initial_tr, 100, (_, _) -> nothing, log=true, log_freq=10)
-@time run_tracked_splitmerge_inference!(initial_tr, 100, (_, _) -> nothing, log=true, log_freq=10)
+examine!(i, tr) = println("Score at iteration $i : $(get_score(tr))")
+
+inferred = run_tracked_splitmerge_inference!(initial_tr, 10000, examine!, log=true, log_freq=50, examine_freq=100)
 end

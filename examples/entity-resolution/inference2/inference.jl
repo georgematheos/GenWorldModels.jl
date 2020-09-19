@@ -91,14 +91,31 @@ a split/merge update or an update to which relation is assigned to each sentence
 of all the indices in which these entpairs appear.
 """
 function splitmerge_inference_iter(tr, acc_tracker, splitmerge_type, entpair_to_indices)
-   # do_splitmerge = bernoulli(0.2)
-   ## if do_splitmerge
-   #     tr = splitmerge_update(tr, acc_tracker, splitmerge_type)
-  #  else
+    do_splitmerge = bernoulli(0.2)
+    if do_splitmerge
+       tr = splitmerge_update(tr, acc_tracker, splitmerge_type)
+    else
         tr = update_random_sentence_relation(tr, acc_tracker, entpair_to_indices)
-  #  end
+    end
        
     return tr
+end
+
+include("splitmerge.jl")
+function splitmerge_update(tr, acc_tracker, splitmerge_type)
+    @assert splitmerge_type === :sdds "Other splitmerge types not implemented"
+    new_tr, acc = mh(tr, sdds_splitmerge_kernel; check=false)
+    
+    diff = new_tr[:world => :num_relations => ()] - tr[:world => :num_relations => ()]
+    if diff > 0
+        acc_tracker.num_acc_split += 1
+    elseif diff < 0
+        acc_tracker.num_acc_merge += 1
+    else
+        acc_tracker.num_rejected_splitmerge += 1
+    end
+
+    return new_tr
 end
 
 @dist list_categorical(probs, list) = list[categorical(probs)]

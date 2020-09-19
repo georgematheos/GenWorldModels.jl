@@ -26,6 +26,10 @@ fact_getter(rel::Diffed{Int, NoChange}) = Diffed(fact_getter(strip_diff(rel)), N
     return facts
 end
 
+rel_to_args(possible_entpairs, beta_prior) = rel -> (rel, possible_entpairs, beta_prior)
+function rel_to_args(p::Diffed{<:Any, NoChange}, b::Diffed{<:Any, NoChange})
+    Diffed(rel_to_args(strip_diff(p), strip_diff(b)), NoChange())
+end
 @gen (static, diffs) function get_fact_set(world)
     num_entities ~ lookup_or_generate(world[:args][:num_entities])
     possible_entpairs = [(i, j) for i=1:num_entities, j=1:num_entities]
@@ -33,7 +37,7 @@ end
 
     rels ~ get_sibling_set(:Relation, :num_relations, world, ())
 
-    rel_to_args_dict = lazy_set_to_dict_map(rel -> (rel, possible_entpairs, beta_prior), rels)
+    rel_to_args_dict = lazy_set_to_dict_map(rel_to_args(possible_entpairs, beta_prior), rels)
     rels_to_facts ~ DictMap(generate_facts_for_rel)(world, rel_to_args_dict)
     facts ~ tracked_union(rels_to_facts)
     return facts
@@ -73,7 +77,9 @@ generate_sentences = UsingWorld(_generate_sentences, :num_relations => num_relat
 model_args(p::ModelParams) = (p.num_entities, p.num_relations_prior, p.beta_prior, p.num_sentences, p.dirichlet_prior_val, p.num_verbs)
 num_ents(tr) = get_args(tr)[1]
 num_verbs(tr) = get_args(tr)[6]
+dirichlet_prior_val(tr) = get_args(tr)[5]
 entpairs(tr) = get_retval(tr)[2]
+verbs(tr) = get_retval(tr)[1]
 
 function get_state(tr)
     nrels = tr[:world => :num_relations => ()]

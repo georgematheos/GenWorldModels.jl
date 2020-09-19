@@ -74,6 +74,18 @@ function Gen.generate(::BetaBernoulliSubset, (set, α, β)::Tuple{AbstractArray,
     (tr, weight)
 end
 
+# TODO: DRY
+function Gen.generate(::BetaBernoulliSubset, (set, α, β)::Tuple{AbstractArray, Real, Real}, constraints::Value)
+    trues = get_value(constraints)
+    num_true = length(trues)
+    num_false = length(set) - num_true
+    base_lbeta = logbeta(α, β)
+    score = logbeta(α + num_true, β + num_false) - base_lbeta
+
+    tr = BetaBernoulliSubsetTrace((set, α, β), trues, score)
+    (tr, score)
+end
+
 function Gen.update(
     tr::BetaBernoulliSubsetTrace,
     args::Tuple{AbstractArray, Real, Real},
