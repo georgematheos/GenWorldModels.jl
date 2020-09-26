@@ -1,0 +1,1339 @@
+{"sentences":[
+{
+"source":"Randi Weingarten",
+"dest":"United Federation of Teachers",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Randi Weingarten",
+"dest":"United Federation of Teachers",
+"depPath":"nsubj|<-nsubj<-president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Randi Weingarten",
+"dest":"United Federation of Teachers",
+"depPath":"appos|->appos->president->dep->|dep"
+}
+,
+{
+"source":"Randi Weingarten",
+"dest":"United Federation of Teachers",
+"depPath":"rcmod|->rcmod->succeed->prep->as->pobj->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Randi Weingarten",
+"dest":"United Federation of Teachers",
+"depPath":"rcmod|->rcmod->seek->dobj->presidency->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Kenneth E. Raske",
+"dest":"Greater New York Hospital Association",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Kenneth E. Raske",
+"dest":"Greater New York Hospital Association",
+"depPath":"nn|<-nn<-president->appos->|appos"
+}
+,
+{
+"source":"Kenneth E. Raske",
+"dest":"Greater New York Hospital Association",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Kenneth E. Raske",
+"dest":"Greater New York Hospital Association",
+"depPath":"appos|->appos->head->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Kenneth E. Raske",
+"dest":"Greater New York Hospital Association",
+"depPath":"appos|<-appos<-ally->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Sandra Feldman",
+"dest":"United Federation of Teachers",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Sandra Feldman",
+"dest":"United Federation of Teachers",
+"depPath":"appos|->appos->head->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Sandra Feldman",
+"dest":"United Federation of Teachers",
+"depPath":"appos|<-appos<-shooting->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Sandra Feldman",
+"dest":"United Federation of Teachers",
+"depPath":"appos|->appos->leader->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Sandra Feldman",
+"dest":"United Federation of Teachers",
+"depPath":"pobj|<-pobj<-to->dep->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Gerry Adams",
+"dest":"Sinn Fein",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Gerry Adams",
+"dest":"Sinn Fein",
+"depPath":"appos|->appos->leader->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Gerry Adams",
+"dest":"Sinn Fein",
+"depPath":"appos|->appos->president->nn->|nn"
+}
+,
+{
+"source":"Gerry Adams",
+"dest":"Sinn Fein",
+"depPath":"appos|->appos->head->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Gerry Adams",
+"dest":"Sinn Fein",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Raymond D. Horton",
+"dest":"Citizens Budget Commission",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Raymond D. Horton",
+"dest":"Citizens Budget Commission",
+"depPath":"nn|<-nn<-president->appos->|appos"
+}
+,
+{
+"source":"Raymond D. Horton",
+"dest":"Citizens Budget Commission",
+"depPath":"appos|->appos->professor->rcmod->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Raymond D. Horton",
+"dest":"Citizens Budget Commission",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Raymond D. Horton",
+"dest":"Citizens Budget Commission",
+"depPath":"rcmod|->rcmod->head->dobj->|dobj"
+}
+,
+{
+"source":"Norman Siegel",
+"dest":"New York Civil Liberties Union",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Norman Siegel",
+"dest":"New York Civil Liberties Union",
+"depPath":"appos|->appos->head->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Norman Siegel",
+"dest":"New York Civil Liberties Union",
+"depPath":"appos|<-appos<-lawyer->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Norman Siegel",
+"dest":"New York Civil Liberties Union",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Norman Siegel",
+"dest":"New York Civil Liberties Union",
+"depPath":"pobj|<-pobj<-of<-prep<-title<-dobj<-misstate->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"C. Fred Bergsten",
+"dest":"Institute for International Economics",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"C. Fred Bergsten",
+"dest":"Institute for International Economics",
+"depPath":"appos|->appos->head->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"C. Fred Bergsten",
+"dest":"Institute for International Economics",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"C. Fred Bergsten",
+"dest":"Institute for International Economics",
+"depPath":"rcmod|->rcmod->run->dobj->|dobj"
+}
+,
+{
+"source":"C. Fred Bergsten",
+"dest":"Institute for International Economics",
+"depPath":"appos|->appos->director->prep->for->pobj->|pobj"
+}
+,
+{
+"source":"Blair Horner",
+"dest":"New York Public Interest Research Group",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Blair Horner",
+"dest":"New York Public Interest Research Group",
+"depPath":"appos|->appos->director->prep->for->pobj->|pobj"
+}
+,
+{
+"source":"Blair Horner",
+"dest":"New York Public Interest Research Group",
+"depPath":"appos|->appos->lobbyist->prep->for->pobj->|pobj"
+}
+,
+{
+"source":"Blair Horner",
+"dest":"New York Public Interest Research Group",
+"depPath":"appos|->appos->lobbyist->prep->with->pobj->|pobj"
+}
+,
+{
+"source":"Blair Horner",
+"dest":"New York Public Interest Research Group",
+"depPath":"appos|->appos->head->prep->of->pobj->branch->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"William J. Casey",
+"dest":"Central Intelligence",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"William J. Casey",
+"dest":"Central Intelligence",
+"depPath":"dep|->dep->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"William J. Casey",
+"dest":"Central Intelligence",
+"depPath":"prep|->prep->as->pobj->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"William J. Casey",
+"dest":"Central Intelligence",
+"depPath":"rcmod|->rcmod->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"William J. Casey",
+"dest":"Central Intelligence",
+"depPath":"rcmod|->rcmod->resign->prep->as->pobj->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Ralph Reed",
+"dest":"Christian Coalition",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Ralph Reed",
+"dest":"Christian Coalition",
+"depPath":"appos|->appos->head->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Ralph Reed",
+"dest":"Christian Coalition",
+"depPath":"appos|->appos->strategist->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Ralph Reed",
+"dest":"Christian Coalition",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Ralph Reed",
+"dest":"Christian Coalition",
+"depPath":"rcmod|->rcmod->transform->dobj->|dobj"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve",
+"depPath":"appos|->appos->chairman->nn->|nn"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve",
+"depPath":"appos|->appos->chairman->poss->|poss"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve",
+"depPath":"dobj|<-dobj<-succeed->prep->as->pobj->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve",
+"depPath":"dobj|<-dobj<-nominate->prep->as->pobj->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve Board",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve Board",
+"depPath":"appos|->appos->chairman->nn->|nn"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve Board",
+"depPath":"appos|->appos->chairman->poss->|poss"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve Board",
+"depPath":"pobj|<-pobj<-of<-prep<-nomination<-dobj<-approve->prep->as->pobj->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve Board",
+"depPath":"nsubj|<-nsubj<-replace->prep->as->pobj->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Gen. Colin L. Powell",
+"dest":"Joint Chiefs of Staff",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Gen. Colin L. Powell",
+"dest":"Joint Chiefs of Staff",
+"depPath":"dobj|<-dobj<-succeed->prep->as->pobj->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Gen. Colin L. Powell",
+"dest":"Joint Chiefs of Staff",
+"depPath":"dobj|<-dobj<-replace->prep->as->pobj->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Gen. Colin L. Powell",
+"dest":"Joint Chiefs of Staff",
+"depPath":"dep|<-dep<-chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Gen. Colin L. Powell",
+"dest":"Joint Chiefs of Staff",
+"depPath":"appos|<-appos<-today->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Gen. Richard B. Myers",
+"dest":"Joint Chiefs of Staff",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Gen. Richard B. Myers",
+"dest":"Joint Chiefs of Staff",
+"depPath":"appos|<-appos<-today->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Gen. Richard B. Myers",
+"dest":"Joint Chiefs of Staff",
+"depPath":"rcmod|->rcmod->step->prep->as->pobj->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Gen. Richard B. Myers",
+"dest":"Joint Chiefs of Staff",
+"depPath":"appos|<-appos<-officer->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Gen. Richard B. Myers",
+"dest":"Joint Chiefs of Staff",
+"depPath":"pobj|<-pobj<-to<-prep<-talk->dobj->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Yasir Arafat",
+"dest":"Palestine Liberation Organization",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Yasir Arafat",
+"dest":"Palestine Liberation Organization",
+"depPath":"appos|->appos->leader->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Yasir Arafat",
+"dest":"Palestine Liberation Organization",
+"depPath":"appos|->appos->chairman->nn->|nn"
+}
+,
+{
+"source":"Yasir Arafat",
+"dest":"Palestine Liberation Organization",
+"depPath":"appos|->appos->head->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Yasir Arafat",
+"dest":"Palestine Liberation Organization",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"David Rebovich",
+"dest":"Rider University",
+"depPath":"appos|->appos->professor->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"David Rebovich",
+"dest":"Rider University",
+"depPath":"appos|->appos->scientist->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"David Rebovich",
+"dest":"Rider University",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"David Rebovich",
+"dest":"Rider University",
+"depPath":"appos|->appos->scientist->nn->|nn"
+}
+,
+{
+"source":"David Rebovich",
+"dest":"Rider University",
+"depPath":"rcmod|->rcmod->teach->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Stephen Gillers",
+"dest":"New York University",
+"depPath":"appos|->appos->professor->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Stephen Gillers",
+"dest":"New York University",
+"depPath":"appos|->appos->professor->nn->|nn"
+}
+,
+{
+"source":"Stephen Gillers",
+"dest":"New York University",
+"depPath":"rcmod|->rcmod->teach->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Stephen Gillers",
+"dest":"New York University",
+"depPath":"nsubj|<-nsubj<-professor->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Stephen Gillers",
+"dest":"New York University",
+"depPath":"appos|->appos->expert->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"John C. Coffee Jr.",
+"dest":"Columbia University",
+"depPath":"appos|->appos->professor->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"John C. Coffee Jr.",
+"dest":"Columbia University",
+"depPath":"appos|->appos->professor->nn->|nn"
+}
+,
+{
+"source":"John C. Coffee Jr.",
+"dest":"Columbia University",
+"depPath":"appos|->appos->expert->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"John C. Coffee Jr.",
+"dest":"Columbia University",
+"depPath":"rcmod|->rcmod->teach->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"John C. Coffee Jr.",
+"dest":"Columbia University",
+"depPath":"appos|->appos->professor->prep->of->pobj->law->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Andrew Zimbalist",
+"dest":"Smith College",
+"depPath":"appos|->appos->professor->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Andrew Zimbalist",
+"dest":"Smith College",
+"depPath":"appos|->appos->economist->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Andrew Zimbalist",
+"dest":"Smith College",
+"depPath":"nsubj|<-nsubj<-professor->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Andrew Zimbalist",
+"dest":"Smith College",
+"depPath":"appos|->appos->professor->nn->|nn"
+}
+,
+{
+"source":"Andrew Zimbalist",
+"dest":"Smith College",
+"depPath":"appos|->appos->economist->nn->|nn"
+}
+,
+{
+"source":"Stephen Gillers",
+"dest":"New York University Law School",
+"depPath":"appos|->appos->professor->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Stephen Gillers",
+"dest":"New York University Law School",
+"depPath":"appos|->appos->expert->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Stephen Gillers",
+"dest":"New York University Law School",
+"depPath":"nsubj|<-nsubj<-teach->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Stephen Gillers",
+"dest":"New York University Law School",
+"depPath":"appos|->appos->professor->nn->|nn"
+}
+,
+{
+"source":"Stephen Gillers",
+"dest":"New York University Law School",
+"depPath":"appos|->appos->dean->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Frank Belluscio",
+"dest":"New Jersey School Boards Association",
+"depPath":"appos|->appos->spokesman->prep->for->pobj->|pobj"
+}
+,
+{
+"source":"Frank Belluscio",
+"dest":"New Jersey School Boards Association",
+"depPath":"appos|->appos->spokesman->prep->with->pobj->|pobj"
+}
+,
+{
+"source":"Vahe Tiryakian",
+"dest":"Department of Buildings",
+"depPath":"appos|->appos->spokesman->prep->for->pobj->|pobj"
+}
+,
+{
+"source":"Vahe Tiryakian",
+"dest":"Department of Buildings",
+"depPath":"appos|->appos->spokesman->prep->for->pobj->city->prep->|prep"
+}
+,
+{
+"source":"Vahe Tiryakian",
+"dest":"Department of Buildings",
+"depPath":"pobj|<-pobj<-to<-prep<-accordng->appos->spokesman->prep->for->pobj->|pobj"
+}
+,
+{
+"source":"Vahe Tiryakian",
+"dest":"Department of Buildings",
+"depPath":"appos|->appos->director->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Mark Regev",
+"dest":"Foreign Ministry",
+"depPath":"appos|->appos->spokesman->prep->for->pobj->|pobj"
+}
+,
+{
+"source":"Mark Regev",
+"dest":"Foreign Ministry",
+"depPath":"appos|->appos->spokesman->nn->|nn"
+}
+,
+{
+"source":"Mark Regev",
+"dest":"Foreign Ministry",
+"depPath":"appos|<-appos<-remark->appos->spokesman->prep->for->pobj->|pobj"
+}
+,
+{
+"source":"Patrick Clark",
+"dest":"Charles J. Hynes",
+"depPath":"appos|->appos->spokesman->prep->for->pobj->|pobj"
+}
+,
+{
+"source":"Patrick Clark",
+"dest":"Charles J. Hynes",
+"depPath":"appos|->appos->spokesman->prep->for->pobj->attorney->appos->|appos"
+}
+,
+{
+"source":"Michael McKeon",
+"dest":"Mr. Pataki",
+"depPath":"appos|->appos->spokesman->prep->for->pobj->|pobj"
+}
+,
+{
+"source":"Michael McKeon",
+"dest":"Mr. Pataki",
+"depPath":"appos|->appos->secretary->poss->|poss"
+}
+,
+{
+"source":"Michael McKeon",
+"dest":"Mr. Pataki",
+"depPath":"appos|->appos->director->poss->|poss"
+}
+,
+{
+"source":"Michael McKeon",
+"dest":"Mr. Pataki",
+"depPath":"appos|->appos->spokesman->poss->|poss"
+}
+,
+{
+"source":"Michael McKeon",
+"dest":"Mr. Pataki",
+"depPath":"appos|->appos->director->prep->for->pobj->|pobj"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Congress",
+"depPath":"nsubj|<-nsubj<-tell->dobj->|dobj"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Congress",
+"depPath":"nsubj|<-nsubj<-urge->dobj->|dobj"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Congress",
+"depPath":"nsubj|<-nsubj<-testify->prep->before->pobj->|pobj"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Congress",
+"depPath":"appos|<-appos<-chairman<-nsubj<-tell->dobj->|dobj"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Congress",
+"depPath":"nsubj|<-nsubj<-tell->dobj->committee->amod->|amod"
+}
+,
+{
+"source":"Mr. Greenspan",
+"dest":"Congress",
+"depPath":"nsubj|<-nsubj<-tell->dobj->|dobj"
+}
+,
+{
+"source":"Mr. Greenspan",
+"dest":"Congress",
+"depPath":"nsubj|<-nsubj<-testify->prep->before->pobj->|pobj"
+}
+,
+{
+"source":"Mr. Greenspan",
+"dest":"Congress",
+"depPath":"nsubj|<-nsubj<-urge->dobj->|dobj"
+}
+,
+{
+"source":"Mr. Greenspan",
+"dest":"Congress",
+"depPath":"poss|<-poss<-testimony->prep->before->pobj->|pobj"
+}
+,
+{
+"source":"Mr. Greenspan",
+"dest":"Congress",
+"depPath":"nsubj|<-nsubj<-tell->dobj->member->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Mr. Greenspan",
+"dest":"Senate Banking Committee",
+"depPath":"nsubj|<-nsubj<-tell->dobj->|dobj"
+}
+,
+{
+"source":"Mr. Greenspan",
+"dest":"Senate Banking Committee",
+"depPath":"nsubj|<-nsubj<-testify->prep->before->pobj->|pobj"
+}
+,
+{
+"source":"Mr. Greenspan",
+"dest":"Senate Banking Committee",
+"depPath":"poss|<-poss<-testimony->prep->to->pobj->|pobj"
+}
+,
+{
+"source":"Mr. Greenspan",
+"dest":"Senate Banking Committee",
+"depPath":"poss|<-poss<-comment->prep->to->pobj->|pobj"
+}
+,
+{
+"source":"Mr. Greenspan",
+"dest":"Senate Banking Committee",
+"depPath":"nsubj|<-nsubj<-appear->prep->before->pobj->|pobj"
+}
+,
+{
+"source":"Bush",
+"dest":"Congress",
+"depPath":"nsubj|<-nsubj<-ask->dobj->|dobj"
+}
+,
+{
+"source":"Bush",
+"dest":"Congress",
+"depPath":"nsubj|<-nsubj<-send->prep->to->pobj->|pobj"
+}
+,
+{
+"source":"Bush",
+"dest":"Congress",
+"depPath":"nsubj|<-nsubj<-urge->dobj->|dobj"
+}
+,
+{
+"source":"Bush",
+"dest":"Congress",
+"depPath":"nn|<-nn<-administration<-nsubj<-ask->dobj->|dobj"
+}
+,
+{
+"source":"Bush",
+"dest":"Congress",
+"depPath":"nsubj|<-nsubj<-tell->dobj->|dobj"
+}
+,
+{
+"source":"Administration",
+"dest":"Congress",
+"depPath":"nsubj|<-nsubj<-ask->dobj->|dobj"
+}
+,
+{
+"source":"Administration",
+"dest":"Congress",
+"depPath":"nsubj|<-nsubj<-tell->dobj->|dobj"
+}
+,
+{
+"source":"Administration",
+"dest":"Congress",
+"depPath":"nsubj|<-nsubj<-notify->dobj->|dobj"
+}
+,
+{
+"source":"Administration",
+"dest":"Congress",
+"depPath":"nsubj|<-nsubj<-send->prep->to->pobj->|pobj"
+}
+,
+{
+"source":"Administration",
+"dest":"Congress",
+"depPath":"nsubj|<-nsubj<-submit->prep->to->pobj->|pobj"
+}
+,
+{
+"source":"Ward McCarthy",
+"dest":"McCarthy Research Associates",
+"depPath":"appos|->appos->director->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Ward McCarthy",
+"dest":"McCarthy Research Associates",
+"depPath":"nsubj|<-nsubj<-be->dep->partner->prep->in->pobj->|pobj"
+}
+,
+{
+"source":"Ward McCarthy",
+"dest":"McCarthy Research Associates",
+"depPath":"appos|->appos->director->rcmod->be->nsubj->|nsubj"
+}
+,
+{
+"source":"Dr. Arthur Caplan",
+"dest":"University of Pennsylvania",
+"depPath":"appos|->appos->director->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Dr. Arthur Caplan",
+"dest":"University of Pennsylvania",
+"depPath":"appos|->appos->ethicist->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Dr. Arthur Caplan",
+"dest":"University of Pennsylvania",
+"depPath":"appos|->appos->bioethicist->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Dr. Arthur Caplan",
+"dest":"University of Pennsylvania",
+"depPath":"rcmod|->rcmod->head->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Dr. Arthur Caplan",
+"dest":"University of Pennsylvania",
+"depPath":"appos|->appos->director->prep->of->pobj->center->poss->|poss"
+}
+,
+{
+"source":"Steven A. Wood",
+"dest":"Bank of America",
+"depPath":"appos|->appos->director->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Dr. Arthur Caplan",
+"dest":"University of Minnesota",
+"depPath":"appos|->appos->director->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Dr. Arthur Caplan",
+"dest":"University of Minnesota",
+"depPath":"appos|->appos->ethicist->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Dr. Arthur Caplan",
+"dest":"University of Minnesota",
+"depPath":"appos|->appos->bioethicist->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Dr. Arthur Caplan",
+"dest":"University of Minnesota",
+"depPath":"rcmod|->rcmod->direct->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Dr. Arthur Caplan",
+"dest":"University of Minnesota",
+"depPath":"dep|<-dep<-fall->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Leonard J. Santow",
+"dest":"Griggs & Santow Inc.",
+"depPath":"appos|->appos->director->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Leonard J. Santow",
+"dest":"Griggs & Santow Inc.",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Donald Fine",
+"dest":"Chase Asset Management",
+"depPath":"appos|->appos->analyst->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Donald Fine",
+"dest":"Chase Asset Management",
+"depPath":"appos|->appos->analyst->prep->for->pobj->|pobj"
+}
+,
+{
+"source":"Donald Fine",
+"dest":"Chase Asset Management",
+"depPath":"appos|->appos->analyst->prep->with->pobj->|pobj"
+}
+,
+{
+"source":"Donald Fine",
+"dest":"Chase Asset Management",
+"depPath":"appos|->appos->analyst->prep->as->pobj->|pobj"
+}
+,
+{
+"source":"Donald J. Fine",
+"dest":"Chase Manhattan Bank",
+"depPath":"appos|->appos->analyst->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Donald J. Fine",
+"dest":"Chase Manhattan Bank",
+"depPath":"appos|->appos->president->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Donald J. Fine",
+"dest":"Chase Manhattan Bank",
+"depPath":"appos|->appos->strategist->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Donald J. Fine",
+"dest":"Chase Manhattan Bank",
+"depPath":"appos|->appos->economist->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Donald J. Fine",
+"dest":"Chase Manhattan Bank",
+"depPath":"appos|->appos->analyst->prep->for->pobj->|pobj"
+}
+,
+{
+"source":"Donald Fine",
+"dest":"Chase Securities",
+"depPath":"appos|->appos->analyst->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Donald Fine",
+"dest":"Chase Securities",
+"depPath":"appos|->appos->analyst->prep->for->pobj->|pobj"
+}
+,
+{
+"source":"Donald Fine",
+"dest":"Chase Securities",
+"depPath":"appos|->appos->strategist->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Donald Fine",
+"dest":"Chase Securities",
+"depPath":"appos|->appos->strategist->prep->for->pobj->|pobj"
+}
+,
+{
+"source":"Donald Fine",
+"dest":"Chase Securities",
+"depPath":"appos|->appos->economist->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Julius Maldutis",
+"dest":"Salomon Brothers",
+"depPath":"appos|->appos->analyst->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Julius Maldutis",
+"dest":"Salomon Brothers",
+"depPath":"appos|->appos->analyst->prep->for->pobj->|pobj"
+}
+,
+{
+"source":"Julius Maldutis",
+"dest":"Salomon Brothers",
+"depPath":"appos|->appos->analyst->prep->with->pobj->|pobj"
+}
+,
+{
+"source":"Julius Maldutis",
+"dest":"Salomon Brothers",
+"depPath":"appos|->appos->director->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"John Casesa",
+"dest":"Merrill Lynch",
+"depPath":"appos|->appos->analyst->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"John Casesa",
+"dest":"Merrill Lynch",
+"depPath":"appos|->appos->analyst->nn->|nn"
+}
+,
+{
+"source":"John Casesa",
+"dest":"Merrill Lynch",
+"depPath":"appos|->appos->analyst->prep->with->pobj->|pobj"
+}
+,
+{
+"source":"John Casesa",
+"dest":"Merrill Lynch",
+"depPath":"appos|->appos->analyst->prep->for->pobj->|pobj"
+}
+,
+{
+"source":"Nets",
+"dest":"Byron Scott",
+"depPath":"nsubj|<-nsubj<-coach->dobj->|dobj"
+}
+,
+{
+"source":"Nets",
+"dest":"Byron Scott",
+"depPath":"nsubj|<-nsubj<-say->nsubj->|nsubj"
+}
+,
+{
+"source":"Nets",
+"dest":"Byron Scott",
+"depPath":"aux|<-aux<-say->nsubj->|nsubj"
+}
+,
+{
+"source":"Nets",
+"dest":"Byron Scott",
+"depPath":"nsubj|<-nsubj<-coach->dep->say->nsubj->|nsubj"
+}
+,
+{
+"source":"Nets",
+"dest":"Byron Scott",
+"depPath":"poss|<-poss<-coach->appos->|appos"
+}
+,
+{
+"source":"Kohlberg",
+"dest":"Kravis",
+"depPath":"nsubj|<-nsubj<-say->nsubj->|nsubj"
+}
+,
+{
+"source":"Kohlberg",
+"dest":"Kravis",
+"depPath":"nsubj|<-nsubj<-buy->nsubj->|nsubj"
+}
+,
+{
+"source":"Kohlberg",
+"dest":"Kravis",
+"depPath":"nsubj|<-nsubj<-have->nsubj->|nsubj"
+}
+,
+{
+"source":"Kohlberg",
+"dest":"Kravis",
+"depPath":"appos|->appos->offer->poss->|poss"
+}
+,
+{
+"source":"Kohlberg",
+"dest":"Kravis",
+"depPath":"dep|<-dep<-offer->nn->|nn"
+}
+,
+{
+"source":"Goldman",
+"dest":"Sachs",
+"depPath":"nsubj|<-nsubj<-say->nsubj->|nsubj"
+}
+,
+{
+"source":"Goldman",
+"dest":"Sachs",
+"depPath":"dep|<-dep<-index->nn->|nn"
+}
+,
+{
+"source":"Goldman",
+"dest":"Sachs",
+"depPath":"nsubj|<-nsubj<-act->nsubj->|nsubj"
+}
+,
+{
+"source":"Goldman",
+"dest":"Sachs",
+"depPath":"dep|<-dep<-partner->nn->|nn"
+}
+,
+{
+"source":"Goldman",
+"dest":"Sachs",
+"depPath":"appos|->appos->index->nn->|nn"
+}
+,
+{
+"source":"Sears",
+"dest":"Roebuck",
+"depPath":"nsubj|<-nsubj<-say->nsubj->|nsubj"
+}
+,
+{
+"source":"Sears",
+"dest":"Roebuck",
+"depPath":"dep|<-dep<-catalogue->nn->|nn"
+}
+,
+{
+"source":"Sears",
+"dest":"Roebuck",
+"depPath":"dep|<-dep<-store->nn->|nn"
+}
+,
+{
+"source":"Sears",
+"dest":"Roebuck",
+"depPath":"nsubj|<-nsubj<-announce->nsubj->|nsubj"
+}
+,
+{
+"source":"Sears",
+"dest":"Roebuck",
+"depPath":"dep|<-dep<-unit->nn->|nn"
+}
+,
+{
+"source":"WASHINGTON",
+"dest":"State Department",
+"depPath":"nsubj|<-nsubj<-say->nsubj->|nsubj"
+}
+,
+{
+"source":"WASHINGTON",
+"dest":"State Department",
+"depPath":"nsubj|<-nsubj<-say->nsubj->official->nn->|nn"
+}
+,
+{
+"source":"WASHINGTON",
+"dest":"State Department",
+"depPath":"appos|->appos->official->nn->|nn"
+}
+,
+{
+"source":"WASHINGTON",
+"dest":"State Department",
+"depPath":"nsubj|<-nsubj<-say->nsubj->spokesman->nn->|nn"
+}
+,
+{
+"source":"WASHINGTON",
+"dest":"State Department",
+"depPath":"nsubj|<-nsubj<-say->dep->official->nn->|nn"
+}
+,
+{
+"source":"Kalman Ruttenstein",
+"dest":"Bloomingdale",
+"depPath":"appos|->appos->president->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Kalman Ruttenstein",
+"dest":"Bloomingdale",
+"depPath":"appos|->appos->president->poss->|poss"
+}
+,
+{
+"source":"Kalman Ruttenstein",
+"dest":"Bloomingdale",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Kalman Ruttenstein",
+"dest":"Bloomingdale",
+"depPath":"appos|->appos->president->prep->for->pobj->direction->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Kalman Ruttenstein",
+"dest":"Bloomingdale",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"William V. Sullivan Jr.",
+"dest":"Witter Reynolds",
+"depPath":"appos|->appos->president->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"William V. Sullivan Jr.",
+"dest":"Witter Reynolds",
+"depPath":"appos|->appos->director->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"William V. Sullivan Jr.",
+"dest":"Witter Reynolds",
+"depPath":"appos|->appos->economist->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"William V. Sullivan Jr.",
+"dest":"Witter Reynolds",
+"depPath":"pobj|<-pobj<-to<-prep<-signal->appos->economist->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"James R. Capra",
+"dest":"Shearson Lehman Government Securities",
+"depPath":"appos|->appos->president->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Joseph Liro",
+"dest":"S. G. Warburg & Company",
+"depPath":"appos|->appos->president->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Joseph Liro",
+"dest":"S. G. Warburg & Company",
+"depPath":"appos|->appos->economist->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"Joseph Liro",
+"dest":"S. G. Warburg & Company",
+"depPath":"appos|->appos->economist->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Joseph Liro",
+"dest":"S. G. Warburg & Company",
+"depPath":"appos|->appos->economist->prep->for->pobj->|pobj"
+}
+,
+{
+"source":"David F. Poltrack",
+"dest":"CBS",
+"depPath":"appos|->appos->president->prep->for->pobj->|pobj"
+}
+,
+{
+"source":"David F. Poltrack",
+"dest":"CBS",
+"depPath":"appos|->appos->president->prep->at->pobj->|pobj"
+}
+,
+{
+"source":"David F. Poltrack",
+"dest":"CBS",
+"depPath":"appos|->appos->president->poss->|poss"
+}
+,
+{
+"source":"David F. Poltrack",
+"dest":"CBS",
+"depPath":"appos|->appos->president->nn->|nn"
+}
+,
+{
+"source":"David F. Poltrack",
+"dest":"CBS",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+]}

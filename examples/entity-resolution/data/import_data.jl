@@ -1,3 +1,5 @@
+using JSON
+
 struct LabeledDataSet
     sentences_numeric::Vector{SentenceNumeric}
     facts_numeric::Vector{FactNumeric}

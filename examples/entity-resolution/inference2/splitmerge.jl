@@ -13,12 +13,13 @@
 end
 
 @gen function sample_smartsplit_relation(tr, current_num_rels)
-    cnt(rel) = tr[:kernel => :verbs => :counts][rel]
-    factors = [
-        exp(-logbeta(cnt(rel) .+ dirichlet_prior_val(tr)))
+    cnt(rel) = get(tr[:kernel => :verbs => :counts], rel, zeros(num_verbs(tr)))
+    logfactors = [
+        -logbeta(cnt(rel) .+ dirichlet_prior_val(tr))
         for rel in map(idx -> GenWorldModels.convert_to_abstract(tr.world, Relation(idx)), 1:current_num_rels)
     ]
-    probs = factors/sum(factors)
+    logprobs = logfactors .- logsumexp(logfactors)
+    probs = exp.(logprobs)
     return {:from_idx} ~ categorical(probs)
 end
 
@@ -26,7 +27,7 @@ end
     abstract_rel = GenWorldModels.convert_to_abstract(tr.world, Relation(from_idx))
     count1 = zeros(Int, num_verbs(tr))
     count2 = zeros(Int, num_verbs(tr))
-    for idx in tr[:kernel => :verbs => :indices_per_entity][abstract_rel]
+    for idx in get(tr[:kernel => :verbs => :indices_per_entity], abstract_rel, ())
         mention = verbs(tr)[idx]
         if is_smart
             p1 = (dirichlet_prior_val(tr) + count1[mention]) / (num_verbs(tr) * dirichlet_prior_val(tr) + sum(count1))
@@ -66,9 +67,14 @@ end
     end
     abstract_other_rels = [GenWorldModels.convert_to_abstract(tr.world, Relation(x)) for x in other_indices]
     factors = [
-        exp(logbeta(cnt(other_rel) + cnt(first_rel) .+ dirichlet_prior_val(tr))) for other_rel in abstract_other_rels
+        logbeta(cnt(other_rel) + cnt(first_rel) .+ dirichlet_prior_val(tr)) for other_rel in abstract_other_rels
     ]
-    probs = factors / sum(factors)
+    logprobs = factors .- logsumexp(factors)
+    probs = exp.(logprobs)
+    if !isapprox(sum(probs), 1.)
+        println("Factors: $factors")
+        println("Prob: $probs")
+    end
     val = {:from_idx2} ~ categorical_from_list(other_indices, probs)
 end
 
@@ -104,7 +110,7 @@ end
     old_rel = @convert_to_abstract(Relation(from_idx))
     true1 = Set()
     true2 = Set()
-    for idx in @read(old[:kernel => :verbs => :indices_per_entity], :disc)[old_rel]
+    for idx in get(@read(old[:kernel => :verbs => :indices_per_entity], :disc), old_rel, ())
         fact = @read(old[:kernel => :sampled_facts => :sampled_facts => idx], :disc)
         entpair = (fact.ent1, fact.ent2)
         to_first = @read(fwd[:to_first => idx], :disc)

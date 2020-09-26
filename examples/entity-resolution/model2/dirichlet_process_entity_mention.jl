@@ -153,6 +153,9 @@ function Gen.update(
     new_tr = DirichletProcessEntityMentionTrace{EntityType}(args, new_counts, get_retval(tr), ent_to_indices, get_score(tr) + Δlogprob)
     (new_tr, Δlogprob, NoChange(), EmptyAddressTree())
 end
+function Gen.update(tr::DirichletProcessEntityMentionTrace, ::Tuple, ::Tuple{NoChange, NoChange}, ::EmptyAddressTree, ::Selection)
+    (tr, 0., NoChange(), EmptyAddressTree())
+end
 
 function Base.getindex(tr::DirichletProcessEntityMentionTrace, addr)
     if addr == :indices_per_entity

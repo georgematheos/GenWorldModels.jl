@@ -10,7 +10,7 @@ using Distributions: Categorical
 logbeta(x::Vector{<:Real}) = sum(loggamma(i) for i in x) - loggamma(sum(x))
 
 const DIRICHLET_PRIOR_VAL = 0.2
-const BETA_PRIOR = (0.2, 1.)
+const BETA_PRIOR = (3, 50)
 NUM_REL_PRIOR_MEAN = 5
 
 include("../../types.jl")
@@ -49,8 +49,8 @@ function run_experiment(data)
     initial_tr = get_initial_trace(sentences, length(data.entity_strings), length(data.verb_strings))
     println("Initial trace generated.")
 
-    run_inference_with_saving!(run_tracked_splitmerge_inference!, initial_tr, 1000, (i, tr) -> nothing;
-        save_freq=5, examine_freq=5,
+    run_inference_with_saving!(run_tracked_splitmerge_inference!, initial_tr, 40000, (i, tr) -> nothing;
+        save_freq=4, examine_freq=4,
         log=true,
         log_freq=10
     )

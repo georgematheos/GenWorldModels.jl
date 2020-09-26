@@ -1,0 +1,751 @@
+{"sentences":[
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve",
+"depPath":"appos|->appos->chairman->nn->|nn"
+}
+,
+{
+"source":"Norman Siegel",
+"dest":"New York Civil Liberties Union",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Bob Dole",
+"dest":"Senate",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve Board",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Richard A. Gephardt",
+"dest":"House",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Randi Weingarten",
+"dest":"United Federation of Teachers",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Fed",
+"depPath":"appos|->appos->chairman->nn->|nn"
+}
+,
+{
+"source":"Gen. Colin L. Powell",
+"dest":"Joint Chiefs of Staff",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Fernando Ferrer",
+"dest":"Bronx",
+"depPath":"appos|->appos->president->nn->|nn"
+}
+,
+{
+"source":"Gen. Richard B. Myers",
+"dest":"Joint Chiefs of Staff",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Bob Dole",
+"dest":"Republican",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Yasir Arafat",
+"dest":"Palestine Liberation Organization",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Dick Armey",
+"dest":"House",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Yugoslav",
+"dest":"Slobodan Milosevic",
+"depPath":"nn|<-nn<-president->appos->|appos"
+}
+,
+{
+"source":"Kenneth E. Raske",
+"dest":"Greater New York Hospital Association",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Brian Cashman",
+"dest":"Yankees",
+"depPath":"appos|->appos->manager->poss->|poss"
+}
+,
+{
+"source":"Bronx Borough",
+"dest":"Fernando Ferrer",
+"depPath":"nn|<-nn<-president->appos->|appos"
+}
+,
+{
+"source":"Joe Torre",
+"dest":"Yankees",
+"depPath":"appos|->appos->manager->poss->|poss"
+}
+,
+{
+"source":"Tom Daschle",
+"dest":"Senate",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Rod Thorn",
+"dest":"Nets",
+"depPath":"appos|->appos->president->poss->|poss"
+}
+,
+{
+"source":"Deng Xiaoping",
+"dest":"China",
+"depPath":"appos|->appos->leader->poss->|poss"
+}
+,
+{
+"source":"Joseph L. Bruno",
+"dest":"Senate",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Soviet",
+"dest":"Mikhail S. Gorbachev",
+"depPath":"nn|<-nn<-president->appos->|appos"
+}
+,
+{
+"source":"Fernando Ferrer",
+"dest":"Bronx Borough",
+"depPath":"appos|->appos->president->nn->|nn"
+}
+,
+{
+"source":"Joseph L. Bruno",
+"dest":"Republican",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Sandra Feldman",
+"dest":"United Federation of Teachers",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Trent Lott",
+"dest":"Senate",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"C. Virginia Fields",
+"dest":"Manhattan",
+"depPath":"appos|->appos->president->nn->|nn"
+}
+,
+{
+"source":"Steve Phillips",
+"dest":"Mets",
+"depPath":"appos|->appos->manager->poss->|poss"
+}
+,
+{
+"source":"Representative Richard A. Gephardt",
+"dest":"House",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"George Young",
+"dest":"Giants",
+"depPath":"appos|->appos->manager->poss->|poss"
+}
+,
+{
+"source":"Radovan Karadzic",
+"dest":"Bosnian Serb",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"George J. Mitchell",
+"dest":"Senate",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Gerry Adams",
+"dest":"Sinn Fein",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Glen Sather",
+"dest":"Rangers",
+"depPath":"appos|->appos->president->poss->|poss"
+}
+,
+{
+"source":"Felix G. Rohatyn",
+"dest":"Municipal Assistance Corporation",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Charles A. Gargano",
+"dest":"Empire State Development Corporation",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Ruth W. Messinger",
+"dest":"Manhattan",
+"depPath":"appos|->appos->president->nn->|nn"
+}
+,
+{
+"source":"C. Fred Bergsten",
+"dest":"Institute for International Economics",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Mr. Dole",
+"dest":"Senate",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Raymond D. Horton",
+"dest":"Citizens Budget Commission",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Serbian",
+"dest":"Slobodan Milosevic",
+"depPath":"nn|<-nn<-president->appos->|appos"
+}
+,
+{
+"source":"Dick Ebersol",
+"dest":"NBC Sports",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Louis Farrakhan",
+"dest":"Nation of Islam",
+"depPath":"appos|->appos->leader->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Juan Antonio Samaranch",
+"dest":"International Olympic Committee",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Nancy Pelosi",
+"dest":"House",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Rocco Landesman",
+"dest":"Jujamcyn Theaters",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Rupert Murdoch",
+"dest":"News Corporation",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Jack Valenti",
+"dest":"Motion Picture Association of America",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Norman Siegel",
+"dest":"New York Civil Liberties Union",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Bob Dole",
+"dest":"Senate",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve Board",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Richard A. Gephardt",
+"dest":"House",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Randi Weingarten",
+"dest":"United Federation of Teachers",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Gen. Colin L. Powell",
+"dest":"Joint Chiefs of Staff",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Gen. Richard B. Myers",
+"dest":"Joint Chiefs of Staff",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Bob Dole",
+"dest":"Republican",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Yasir Arafat",
+"dest":"Palestine Liberation Organization",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Dick Armey",
+"dest":"House",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Kenneth E. Raske",
+"dest":"Greater New York Hospital Association",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Tom Daschle",
+"dest":"Senate",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Rod Thorn",
+"dest":"Nets",
+"depPath":"appos|->appos->president->poss->|poss"
+}
+,
+{
+"source":"Joseph L. Bruno",
+"dest":"Senate",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Joseph L. Bruno",
+"dest":"Republican",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Sandra Feldman",
+"dest":"United Federation of Teachers",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Trent Lott",
+"dest":"Senate",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Representative Richard A. Gephardt",
+"dest":"House",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Radovan Karadzic",
+"dest":"Bosnian Serb",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"George J. Mitchell",
+"dest":"Senate",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Gerry Adams",
+"dest":"Sinn Fein",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Glen Sather",
+"dest":"Rangers",
+"depPath":"appos|->appos->president->poss->|poss"
+}
+,
+{
+"source":"Felix G. Rohatyn",
+"dest":"Municipal Assistance Corporation",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Charles A. Gargano",
+"dest":"Empire State Development Corporation",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"C. Fred Bergsten",
+"dest":"Institute for International Economics",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Mr. Dole",
+"dest":"Senate",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Raymond D. Horton",
+"dest":"Citizens Budget Commission",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Dick Ebersol",
+"dest":"NBC Sports",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Louis Farrakhan",
+"dest":"Nation of Islam",
+"depPath":"appos|->appos->leader->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Juan Antonio Samaranch",
+"dest":"International Olympic Committee",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Nancy Pelosi",
+"dest":"House",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Rocco Landesman",
+"dest":"Jujamcyn Theaters",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Rupert Murdoch",
+"dest":"News Corporation",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Jack Valenti",
+"dest":"Motion Picture Association of America",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Gen. Peter Pace",
+"dest":"Joint Chiefs of Staff",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Steven Spinola",
+"dest":"Real Estate Board of New York",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"L. William Seidman",
+"dest":"Federal Deposit Insurance Corporation",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Dan Rostenkowski",
+"dest":"House Ways and Means Committee",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Blair Horner",
+"dest":"New York Public Interest Research Group",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"William J. Casey",
+"dest":"Central Intelligence",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Richard A. Grasso",
+"dest":"New York Stock Exchange",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Haley Barbour",
+"dest":"Republican National Committee",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Fred Wertheimer",
+"dest":"Democracy",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Ralph Reed",
+"dest":"Christian Coalition",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Joan Claybrook",
+"dest":"Public Citizen",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Robert Gangi",
+"dest":"Correctional Association of New York",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Lou Lamoriello",
+"dest":"Devils",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Gerald Schoenfeld",
+"dest":"Shubert Organization",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Lou Lamoriello",
+"dest":"Devils",
+"depPath":"appos|->appos->president->poss->|poss"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve",
+"depPath":"appos|->appos->chairman->nn->|nn"
+}
+,
+{
+"source":"Norman Siegel",
+"dest":"New York Civil Liberties Union",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Bob Dole",
+"dest":"Senate",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve Board",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Richard A. Gephardt",
+"dest":"House",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Randi Weingarten",
+"dest":"United Federation of Teachers",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Fed",
+"depPath":"appos|->appos->chairman->nn->|nn"
+}
+,
+{
+"source":"Gen. Colin L. Powell",
+"dest":"Joint Chiefs of Staff",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Fernando Ferrer",
+"dest":"Bronx",
+"depPath":"appos|->appos->president->nn->|nn"
+}
+,
+{
+"source":"Gen. Richard B. Myers",
+"dest":"Joint Chiefs of Staff",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Bob Dole",
+"dest":"Republican",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"John H. Sununu",
+"dest":"White House",
+"depPath":"appos|->appos->chief->nn->|nn"
+}
+,
+{
+"source":"Yasir Arafat",
+"dest":"Palestine Liberation Organization",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Dick Armey",
+"dest":"House",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Kenneth E. Raske",
+"dest":"Greater New York Hospital Association",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Tom Daschle",
+"dest":"Senate",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Rod Thorn",
+"dest":"Nets",
+"depPath":"appos|->appos->president->poss->|poss"
+}
+,
+{
+"source":"Joseph L. Bruno",
+"dest":"Senate",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Fernando Ferrer",
+"dest":"Bronx Borough",
+"depPath":"appos|->appos->president->nn->|nn"
+}
+,
+{
+"source":"Joseph L. Bruno",
+"dest":"Republican",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Sandra Feldman",
+"dest":"United Federation of Teachers",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Trent Lott",
+"dest":"Senate",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"C. Virginia Fields",
+"dest":"Manhattan",
+"depPath":"appos|->appos->president->nn->|nn"
+}
+,
+{
+"source":"Representative Richard A. Gephardt",
+"dest":"House",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+]}

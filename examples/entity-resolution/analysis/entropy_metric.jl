@@ -14,6 +14,9 @@ function entropy_of_second_given_first(first::State, second::State)
     first_freqs = first_freqs ./ sum(first_freqs)
     total_ent = 0
     for (freq, first_indices) in zip(first_freqs, rel_to_first_indices)
+        if freq == 0.
+            continue;
+        end
         second_rels = [second.sentence_rels[idx] for idx in first_indices]
         second_rel_freqs = [length(findall(x->x===r, second_rels)) for r in unique(second_rels)]
         second_rel_freqs = second_rel_freqs ./ sum(second_rel_freqs)

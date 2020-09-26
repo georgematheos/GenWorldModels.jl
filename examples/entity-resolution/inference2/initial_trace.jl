@@ -13,9 +13,7 @@ function make_constraints(sentences::Vector{SentenceNumeric}, params::ModelParam
     end
 
     for (r, certainly_true) in enumerate(true_for_rel)
-        set_submap!(constraints, true_entpairs_addr(Relation(r)),
-            choicemap([(entpair, true) for entpair in certainly_true]...)
-        )
+        constraints[true_entpairs_addr(Relation(r))] = certainly_true
     end
 
     return constraints

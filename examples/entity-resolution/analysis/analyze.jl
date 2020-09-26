@@ -44,7 +44,7 @@ function plot_entropies(path)
     gui()
 end
 
-path = realpath(joinpath(@__DIR__, "../out/runs/20200916-15_46_09"))
+path = realpath(joinpath(@__DIR__, "../out/runs/20200919-15_03_45"))
 println("read $path: ", readdir(path))
 plot_entropies(path)
 end

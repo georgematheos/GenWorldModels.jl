@@ -4,8 +4,8 @@ mutable struct AccTracker
     num_rejected_splitmerge::Int
     num_acc_fact_update::Int
     num_rej_fact_update::Int
-    num_acc_sparsity::Int
-    num_rej_sparsity::Int
+    num_fact_assoc_acc::Int
+    num_fact_assoc_rej::Int
 end
 function Base.show(io::IO, trk::AccTracker)
     println(io, "  ACCEPTED SPLIT       : ", trk.num_acc_split)
@@ -13,8 +13,8 @@ function Base.show(io::IO, trk::AccTracker)
     println(io, "  REJECTED Splitmerge  : ", trk.num_rejected_splitmerge)
     println(io, "  NUM ACC FACT UPDATE  : ", trk.num_acc_fact_update)
     println(io, "  NUM REJ FACT UPDATE  : ", trk.num_rej_fact_update)
-    println(io, "  NUM ACC SPARSITY     : ", trk.num_acc_sparsity)
-    println(io, "  NUM REJ  SPARSITY    : ", trk.num_rej_sparsity)
+    println(io, "  NUM ACC ASSOC        : ", trk.num_fact_assoc_acc)
+    println(io, "  NUM REJ ASSOC        : ", trk.num_fact_assoc_rej)
 end
 
 """
@@ -113,12 +113,11 @@ end
 end
 
 function sparsity_update(tr, acc_tracker)
-    idx = uniform_discrete(1, tr[:world => :num_relations => ()])
-    tr, acc = mh(tr, sparsity_proposal, (idx,))
-    if acc
-        acc_tracker.num_acc_sparsity += 1
-    else
-        acc_tracker.num_rej_sparsity += 1
+    for idx=1:tr[:world => :num_relations => ()]
+        tr, acc = mh(tr, sparsity_proposal, (idx,))
+        if !acc
+            println("sparsity proposal not accepted!")
+        end
     end
     tr
 end
@@ -131,28 +130,59 @@ end
     {:world => :verb_prior => Relation(idx) => :prior} ~ dirichlet(count .+ DIRICHLET_PRIOR_VAL)
 end
 function dirichlet_update(tr, acc_tracker)
-    idx = uniform_discrete(1, tr[:world => :num_relations => ()])
-    if has_value(get_choices(tr), :world => :verb_priors => Relation(idx) => :prior)
-        tr, acc = mh(tr, dirichlet_proposal, (idx,))
-        if !acc
-            println("dirichlet prop not accepted!")
+    #idx = uniform_discrete(1, tr[:world => :num_relations => ()])
+    for idx=1:tr[:world => :num_relations => ()]
+        if has_value(get_choices(tr), :world => :verb_priors => Relation(idx) => :prior)
+            tr, acc = mh(tr, dirichlet_proposal, (idx,))
+            if !acc
+                println("dirichlet prop not accepted!")
+            end
+            return tr
         end
-        return tr
     end
     return tr
 end
 
 function splitmerge_inference_iter(tr, acc_tracker, splitmerge_type)
-    type = categorical([0.5, 0.1, 0.3, 0.1])
-    # type = 3
+    type = categorical([0.45, 0.1, 0.45])
     if type == 1
         tr = update_random_fact(tr, acc_tracker)
     elseif type == 2
         tr = sparsity_update(tr, acc_tracker)
-    elseif type == 3
-        tr = splitmerge_update(tr, acc_tracker, splitmerge_type)
-    else
         tr = dirichlet_update(tr, acc_tracker)
+        tr = splitmerge_update(tr, acc_tracker, splitmerge_type)
+    elseif type == 3
+        tr = fact_assoc_update(tr, acc_tracker)
+    end
+       
+    return tr
+end
+
+@dist uniform_from_list(lst) = lst[uniform_discrete(1, length(lst))]
+@gen function fact_assoc_proposal(tr, sentence_idx)
+   nrels = tr[:world => :num_relations => ()]
+   fact = GenWorldModels.convert_to_concrete(tr.world, tr[:kernel => :facts => :sampled_facts => sentence_idx])
+   (old_rel, ent1, ent2) = fact.origin
+
+   possible_rels = [Relation(r) for r=1:nrels if tr[:world => :num_facts => (Relation(r), ent1, ent2)]]
+   new_rel ~ uniform_from_list(possible_rels)
+   new_fact = GenWorldModels.convert_to_abstract(tr.world, Fact((new_rel, ent1, ent2), 1))
+   return (new_fact, old_rel)
+end
+@involution function fact_assoc_inv(model_args, proposal_args, proposal_retval)
+   idx = proposal_args[1]
+   (new_fact, old_rel) = proposal_retval
+   @write_discrete_to_model(:kernel => :facts => :sampled_facts => idx, new_fact)
+   @write_discrete_to_proposal(:new_rel, old_rel)
+end
+
+function fact_assoc_update(tr, acc_tracker)
+    idx = uniform_discrete(1, length(get_retval(tr)))
+    tr, acc = mh(tr, fact_assoc_proposal, (idx,), fact_assoc_inv, check=false)
+    if acc
+        acc_tracker.num_fact_assoc_acc += 1
+    else
+        acc_tracker.num_fact_assoc_rej += 1
     end
     return tr
 end

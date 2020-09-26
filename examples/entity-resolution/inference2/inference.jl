@@ -55,7 +55,7 @@ function run_tracked_splitmerge_inference!(initial_tr, num_iters, examine!;
         end
         our_freq = gcd(examine_freq, log_freq)
     else
-        out_examine! = examine!
+        our_examine! = examine!
         our_freq = examine_freq
     end
     run_inference!(initial_tr, inference_iter, num_iters, our_examine!; examine_freq=our_freq)
@@ -91,7 +91,7 @@ a split/merge update or an update to which relation is assigned to each sentence
 of all the indices in which these entpairs appear.
 """
 function splitmerge_inference_iter(tr, acc_tracker, splitmerge_type, entpair_to_indices)
-    do_splitmerge = bernoulli(0.2)
+    do_splitmerge = bernoulli(0.5)
     if do_splitmerge
        tr = splitmerge_update(tr, acc_tracker, splitmerge_type)
     else
