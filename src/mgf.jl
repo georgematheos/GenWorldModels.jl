@@ -60,6 +60,14 @@ Base.getindex(mgf::MemoizedGenerativeFunction, key) = MemoizedGenerativeFunction
 # Argdiff propagation for MGF and MGFCall #
 ###########################################
 
+struct KeyChangedDiff <: Gen.Diff
+    diff::Gen.Diff
+end
+struct ValueChangedDiff <: Gen.Diff
+    diff::Gen.Diff
+end
+struct ToBeUpdatedDiff <: Gen.Diff end
+
 ### world[addr] diffs ###
 
 no_addr_change_error() = error("Changing the address of a `lookup_or_generate` in updates is not supported.")
@@ -67,105 +75,92 @@ Base.getindex(world::World, addr::Diffed) = no_addr_change_error()
 Base.getindex(world::World, addr::Diffed{<:Any, NoChange}) = Diffed(world[strip_diff(addr)], NoChange())
 Base.getindex(world::Diffed{<:World}, addr::Diffed) = no_addr_change_error()
 Base.getindex(world::Diffed{<:World}, addr::Diffed{<:Any, NoChange}) = world[strip_diff(addr)]
-
-function Base.getindex(world::Diffed{<:World, WorldUpdateDiff}, addr::CallAddr)
-    mgf = strip_diff(world)[addr]
-    diff = get_diff(world)[addr] # will be a WorldUpdateAddrDiff
-    Diffed(mgf, diff)
-end
 Base.getindex(world::Diffed{<:World, UnknownChange}, addr::CallAddr) = Diffed(strip_diff(world)[addr], UnknownChange())
 Base.getindex(world::Diffed{<:World, NoChange}, addr::CallAddr) = Diffed(strip_diff(world)[addr], NoChange())
 
-### SIMPLE MGFCall diff propagation (where no idx --> id conversion is needed) ###
+# the main one is: a diffed world --> a diffed mgf with a WorldUpdateDiff
+Base.getindex(world::Diffed{<:World, WorldUpdateDiff}, addr::CallAddr) = Diffed(strip_diff(world)[addr], WorldUpdateDiff())
 
-"""
-    MGFCallKeyChangeDiff
+### MGFCall diff propagation ###
 
-Denotes that a memoized gen function call has had its key changed.
-(The MGF call may or may not have also have had its value changed.)
-"""
-struct MGFCallKeyChangeDiff <: Gen.Diff
-    key_diff::Gen.Diff
-end
-
-"""
-    MGFCallValChangeDiff
-
-Denotes that a memoized gen function call which has not had its key change
-has had its value change (due to a change in the value for this call in the world
-associated with the MGFCall).
-"""
-struct MGFCallValChangeDiff <: Gen.Diff
-    diff::Diff
-end
-
-function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateAddrDiff}, key)
-    mgf_call = strip_diff(mgf)[key]
-    diff = get_diff(mgf)[key] # may be a nochange, if !has_diff_for_index(get_diff(mgf), key)
-    # unless this is either NoChange or ToBeUpdated, we want to make sure `update` knows that this is just
-    # a normal diff which comes from a value change, and doesn't need to trigger special update behavior
-    if diff !== NoChange() && diff !== ToBeUpdatedDiff() && diff !== IDAssociationChanged()
-        diff = MGFCallValChangeDiff(diff)
-    end
-
-    Diffed(mgf_call, diff)
-end
-
-function Base.getindex(mgf::MemoizedGenerativeFunction, key::Diffed)
-    key_diff = get_diff(key)
-    key = strip_diff(key)
-    mgf_call = mgf[key]
-    Diffed(mgf_call, MGFCallKeyChangeDiff(key_diff))
-end
-
-# key diff supercedes a diff on the world because we ALWAYS need to run an update on the world
-# to communicate a dependency change when the key changes, while we sometimes don't run a dependency
-# change update when there's only a change to the world
-function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateAddrDiff}, key::Diffed)
-    mgf_call = strip_diff(mgf)[strip_diff(key)]
-    if get_diff(key) == NoChange()
-        # if there's no diff on the key, resort to our getindex for undiffed keys
-        mgf[strip_diff(key)]
-    else
-        Diffed(mgf_call, MGFCallKeyChangeDiff(get_diff(key)))
-    end
-end
-
+Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key::Diffed{<:Any, NoChange}) = mgf[strip_diff(key)]
 Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, UnknownChange}, key) = Diffed(strip_diff(mgf)[strip_diff(key)], UnknownChange())
 Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, NoChange}, key) = Diffed(strip_diff(mgf)[key], NoChange())
 
-### Overwrite this method for the case where we need idx --> id conversion so we can check if the associated id has changed ###
-struct WorldDiffedNoKeyChange <: Gen.Diff end
-function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateAddrDiff}, key::OUPMType{Int})
-    Diffed(strip_diff(mgf)[key], WorldDiffedNoKeyChange())
+# keychange
+function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key::Diffed)
+    Diffed(strip_diff(mgf)[strip_diff(key)], KeyChangedDiff(get_diff(key)))
 end
+
+# valchange, tobeupdated, or nochange
+function _standard_lookup_dispatch(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key)
+    mgf = strip_diff(mgf)
+    wrld = world(mgf)
+    c = Call(addr(mgf), key)
+
+    if haskey(wrld.state.diffs, c)
+        Diffed(mgf[key], ValueChangedDiff(wrld.state.diffs[c]))
+    else
+        if already_updated(wrld, c)
+            Diffed(mgf[key], NoChange())
+        else
+            Diffed(mgf[key], ToBeUpdatedDiff())
+        end
+    end
+end
+Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key) = _standard_lookup_dispatch(mgf, key)
+Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key::Tuple{}) = _standard_lookup_dispatch(mgf, key)
+
+function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key::ConcreteIndexOUPMObject)
+    Diffed(strip_diff(mgf)[key], ToBeUpdatedDiff())
+end
+Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction, WorldUpdateDiff}, key::Tuple{Vararg{<:ConcreteIndexOUPMObject}}) = Diffed(strip_diff(mgf)[key], ToBeUpdatedDiff())
+
+# get abstract form!
+function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction{<:Any, _get_abstract_addr}, WorldUpdateDiff}, key::ConcreteIndexOUPMObject)
+    mgf = strip_diff(mgf)
+    wrld = world(mgf)
+    c = Call(addr(mgf), key)
+    if has_val(wrld, c)
+        if haskey(wrld.state.diffs, c)
+            Diffed(mgf[key], ValueChangedDiff(wrld.state.diffs[c]))
+        else
+            Diffed(mgf[key], NoChange())
+        end
+    else
+        Diffed(mgf[key], ToBeUpdatedDiff())
+    end
+end
+# to avoid ambiguity we need to define:
+function Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction{<:Any, _get_abstract_addr}, WorldUpdateDiff}, key::Diffed)
+    Diffed(strip_diff(mgf)[strip_diff(key)], KeyChangedDiff(get_diff(key)))
+end
+Base.getindex(mgf::Diffed{<:MemoizedGenerativeFunction{<:Any, _get_abstract_addr}, WorldUpdateDiff}, key::Diffed{<:Any, NoChange}) = mgf[strip_diff(key)]
 
 ###################################################
 # Diffs for `world`, `key`, and `addr` of MGFCall #
 ###################################################
-# world object always has a world update diff
-function world(call::Diffed{<:MemoizedGenerativeFunctionCall})
+# world object always has a world update diff for any of the custom update types
+function world(call::Diffed{<:MemoizedGenerativeFunctionCall, <:Union{ToBeUpdatedDiff, KeyChangedDiff, ValueChangedDiff}})
     wrld = world(strip_diff(call))
-    Diffed(wrld, WorldUpdateDiff(wrld))
+    Diffed(wrld, WorldUpdateDiff())
 end
 function world(call::Diffed{<:MemoizedGenerativeFunctionCall, NoChange})
     wrld = world(strip_diff(call))
     Diffed(wrld, NoChange())
 end
 
-# there are several mgf_call diffs which denote there is no keychange
-key(call::Diffed{<:MemoizedGenerativeFunctionCall, WorldDiffedNoKeyChange}) = Diffed(key(strip_diff(call)), NoChange())
 key(call::Diffed{<:MemoizedGenerativeFunctionCall, NoChange}) = Diffed(key(strip_diff(call)), NoChange())
-key(call::Diffed{<:MemoizedGenerativeFunctionCall, MGFCallValChangeDiff}) = Diffed(key(strip_diff(call)), NoChange())
+key(call::Diffed{<:MemoizedGenerativeFunctionCall, ValueChangedDiff}) = Diffed(key(strip_diff(call)), NoChange())
 key(call::Diffed{<:MemoizedGenerativeFunctionCall, ToBeUpdatedDiff}) = Diffed(key(strip_diff(call)), NoChange())
-key(call::Diffed{<:MemoizedGenerativeFunctionCall, MGFCallKeyChangeDiff}) = Diffed(key(strip_diff(call)), get_diff(call).key_diff)
+key(call::Diffed{<:MemoizedGenerativeFunctionCall, KeyChangedDiff}) = Diffed(key(strip_diff(call)), get_diff(call).diff)
 
 # if diffed with a different diff, we have to put UnknownChange for the key
 key(call::Diffed{<:MemoizedGenerativeFunctionCall}) = Diffed(key(strip_diff(call)), UnknownChange())
 
-# for all the custom diff types, they communicate that the address has not changed.
+# for all the custom diff types, there is no change to the address of the MGF call
 function addr(call::Diffed{<:MemoizedGenerativeFunctionCall, <:Union{
-    WorldDiffedNoKeyChange, NoChange, MGFCallKeyChangeDiff, ToBeUpdatedDiff, MGFCallKeyChangeDiff, WorldDiffedNoKeyChange
+    NoChange, KeyChangedDiff, ToBeUpdatedDiff, ValueChangedDiff
 }})
     Diffed(addr(strip_diff(call)), NoChange())
 end

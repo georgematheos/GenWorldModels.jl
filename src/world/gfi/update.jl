@@ -3,15 +3,17 @@ include("../oupm_updates.jl")
 # NOTE: The algorithm for updating the world is described and explained in pseudocode
 # and in english in `update_algorithm.md`.
 
+struct WorldUpdateDiff <: Gen.Diff end
+
 ####################
 # UpdateWorldState #
 ####################
 mutable struct UpdateWorldState <: WorldState
+    previous_world::World
     spec::Gen.UpdateSpec
     externally_constrained_addrs::Selection
     weight::Float64 # total weight of all updates
     discard::DynamicChoiceMap # discard for all world calls
-    original_id_table::IDTable # id table from before this update started
     # the following fields are used for the update algorithm as described in `update_algorithm.md`
     update_queue::PriorityQueue{Call, Int} # queued updates
     fringe_bottom::Int # INVARIANT: every call with topological index < fringe_bottom has been updated if it needs to be
@@ -28,14 +30,16 @@ mutable struct UpdateWorldState <: WorldState
     # the choicemap each call which was updated/generated had before the update/generate (if generated, is EmptyChoiceMap)
     original_choicemaps::Dict{Call, ChoiceMap}
     world_update_complete::Bool # once we have finished updating all the calls and move to update the kernel, this goes from false to true
+    ### for object set tracking: ###
+    origins_with_id_table_updates::Dict{Symbol, Set} # stores typename => set_of_origins_with_update
 end
-function UpdateWorldState(world)
+function UpdateWorldState(old_world)
     UpdateWorldState(
+        old_world,
         EmptyAddressTree(), # spec
         EmptySelection(), # externally_constrained_addrs
         0., # weight
         choicemap(), # discard
-        world.id_table,
         PriorityQueue{Call, Int}(), # update_queue
         0, 0, # fringe_bottom, fringe_top
         Set{Call}(), Set{Call}(), Dict{Call, Diff}(), # visited, calls_whose_dependencies_have_diffs, diffs
@@ -44,11 +48,21 @@ function UpdateWorldState(world)
         Queue{Call}(), # call_update_order
         Set{Call}(), # calls_which_must_be_deleted
         Dict{Call, ChoiceMap}(), # original_choicemaps
-        false # world is up to date
+        false, # world is up to date
+        Dict{Symbol, Set}()
     )
 end
 
 generate_fn(::UpdateWorldState) = Gen.generate
+
+function _previous_world(world::World)
+    @assert world.state isa UpdateWorldState "Currently we only allow accessing the previous world during an update."
+    world.state.previous_world
+end
+function _get_origins_with_id_table_updates(world, typename)
+    @assert world.state isa UpdateWorldState "expected UpdateWorldState; got $(world.state)"
+    get(world.state.origins_with_id_table_updates, typename, ())
+end
 
 #################################
 # Count and dependency tracking #
@@ -122,11 +136,7 @@ function remove_call!(world, call)
     return get_choices(tr)
 end
 
-remove_call!(world, call::Call{_world_args_addr}) = EmptyAddressTree()
-remove_call!(world, call::Call{_get_index_addr}) = EmptyAddressTree()
-function remove_call!(world, call::Call{<:OUPMType})
-    EmptyAddressTree() # TODO: remove the id/idx pairing from the ID table
-end
+remove_call!(_, ::_NonMGFCall) = EmptyAddressTree()
 
 
 ##########################
@@ -156,19 +166,6 @@ function update_world_args_and_enqueue_downstream!(world, new_world_args, world_
     end
 end
 
-
-"""
-    perform_oupm_moves_and_enqueue_downstream!(world, oupm_updates)
-
-Performs all the oupm updates in `oupm_updates` in order, and enqueues
-any calls which look at the indices for changed identifiers.
-"""
-function perform_oupm_moves_and_enqueue_downstream!(world, oupm_updates)
-    for oupm_update in oupm_updates
-        perform_oupm_move_and_enqueue_downstream!(world, oupm_update)
-    end
-end
-
 """
     run_subtrace_updates!(world)
 
@@ -184,9 +181,10 @@ function run_subtrace_updates!(world)
                 fringe_top = world.call_sort[call]
             end
             world.state.fringe_bottom = world.call_sort[call]
-            update_or_generate!(world, call)
+            update_or_generate!(world, call; called_from_top=true)
         end
     end
+    reorder_update_cycle!(world)
 end
 
 """
@@ -220,7 +218,7 @@ end
 This function also performs the needed bookkeeping for the update algorithm
 to update the dependency structure.
 """
-function update_or_generate!(world, call)
+function update_or_generate!(world, call; called_from_top=false)
     if call in world.state.call_stack
         error("This update will induce a cycle in the topological ordering of the calls in the world!  Call $call will need to have been generated in order to generate itself.")
     end
@@ -238,7 +236,7 @@ function update_or_generate!(world, call)
         run_gen_generate!(world, call, spec)
         pop!(world.state.call_stack)
         retdiff = UnknownChange()
-    elseif there_is_spec_for_call || dependency_has_argdiffs
+    elseif there_is_spec_for_call || dependency_has_argdiffs || !called_from_top
         push!(world.state.call_stack, call)
         ext_const_addrs = get_subtree(world.state.externally_constrained_addrs, addr(call) => key(call))
         retdiff = run_gen_update!(world, call, spec, ext_const_addrs)
@@ -267,7 +265,7 @@ function run_gen_update!(world, call, spec, ext_const_addrs)
     new_tr, weight, retdiff, discard = Gen.update(
         old_tr,
         (world, key(call)),
-        (WorldUpdateDiff(world), NoChange()),
+        (WorldUpdateDiff(), NoChange()),
         spec,
         ext_const_addrs
     )
@@ -441,12 +439,12 @@ as specified, and perform the specified open universe moves, then return
 the new world object.
 This will not yet update any memoized generative function calls.
 """
-function begin_update(world::World, oupm_moves::Tuple, new_world_args::NamedTuple, world_argdiffs::NamedTuple)
-    @assert (world.state isa NoChangeWorldState) "cannot initiate an update from a $(typeof(world.state))"
+function begin_update(old_world::World, oupm_moves::Tuple, new_world_args::NamedTuple, world_argdiffs::NamedTuple)
+    @assert (old_world.state isa NoChangeWorldState) "cannot initiate an update from a $(typeof(world.state))"
 
     # shallow copy the world and put in update mode
-    world = World(world)
-    world.state = UpdateWorldState(world)
+    world = World(old_world)
+    world.state = UpdateWorldState(old_world)
 
     # update the world args, and enqueue all the
     # calls which look up these world args to be updated
@@ -464,8 +462,6 @@ end
 
 Update all the calls in the `world` according to the given update spec,
 with weight determined by the given `ext_const_addrs`.
-Returns the `WorldUpdateDiff` object reflecting the changes
-to the memoized generative functions.
 """
 function update_mgf_calls!(world::World, spec::Gen.UpdateSpec, ext_const_addrs::Gen.Selection)
     world.state.spec = spec
@@ -479,8 +475,6 @@ function update_mgf_calls!(world::World, spec::Gen.UpdateSpec, ext_const_addrs::
     # note that we are done updating the world, and are
     # now in the process of updating the kernel
     world.state.world_update_complete = true
-
-    return WorldUpdateDiff(world)
 end
 
 """
@@ -523,21 +517,27 @@ function end_update!(world::World, kernel_discard::ChoiceMap, check_constrained_
     return retval
 end
 
-function lookup_or_generate_during_world_update!(world, call, reason_for_call)
+@inline function already_updated(world, call)
+    world.state.world_update_complete || (world.call_sort[call] < world.state.fringe_bottom || call in world.state.visited)
+end
+
+function lookup_or_generate_during_world_update!(world, call, is_new_lookup)
     no_val = !has_val(world, call)
     if no_val && is_mgf_call(call)
         # add this call to the sort, at the end for now
         world.call_sort = add_call_to_end(world.call_sort, call)
     end
 
-    # if we haven't yet handled the update for this call, we have to do that before proceeding
-    if no_val || (world.call_sort[call] >= world.state.fringe_bottom && !(call in world.state.visited))
+    # if there is no value, we must generate one.
+    # if this is not a new lookup, then this update call must be because we need
+    # to run an update for the call.
+    # if this is a new lookup with a value, but we haven't updated this position yet,
+    # we still have to run an update just in case
+    if no_val || !is_new_lookup || !already_updated(world, call)
         update_or_generate!(world, call)
     end
 
-    # if we `generate`d, or did a key change update, this is a new lookup
-    # (if on the other hand this update occurred due to a `ToBeUpdatedDiff`, it is not a new lookup)
-    if reason_for_call == :generate || reason_for_call == :key_change
+    if is_new_lookup
         note_new_lookup!(world, call, world.state.call_stack)    
     end
 
@@ -568,18 +568,14 @@ end
 """
     lookup_or_generate_during_update!(world, call)
 
-This should be called when the world is in an update state, and one of the following occurs:
-- There is a call to `Gen.generate` for `call`; in this case we should have `reason_for_call = :generate`
-- There is a call to `Gen.update` for what used to be a different key,
-but is being updated so it is now a lookup for `call`.  In this case we should have
-`reason_for_call = :key_change`
-- There is a call to `Gen.update` for a lookup for a key which is diffed with a `ToBeUpdatedDiff`
-in the world.  In this case we should have `reason_for_call = :to_be_updated`
+This should be called when the world is in an update state.  It can either be run because
+this is a new lookup which is being made in the world, or because we need to update an old
+lookup.  `is_new_lookup` should be true in the first case and false in the second.
 """
-function lookup_or_generate_during_update!(world, call, reason_for_call)
+function lookup_or_generate_during_update!(world, call, is_new_lookup)
     if world.state.world_update_complete
         lookup_or_generate_during_kernel_update!(world, call)
     else
-        lookup_or_generate_during_world_update!(world, call, reason_for_call) 
+        lookup_or_generate_during_world_update!(world, call, is_new_lookup) 
     end
 end

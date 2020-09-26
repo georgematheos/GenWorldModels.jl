@@ -163,33 +163,44 @@ macro copy(src, dest)
     return quote copy($(esc(bij_state)), $(esc(src)), $(esc(dest))) end
 end
 
-macro birth(ObjectType, idx)
+macro birth(obj)
     quote
-        move = BirthMove($(esc(ObjectType)), $(esc(idx)))
+        move = BirthMove($(esc(obj)))
         apply_oupm_move($(esc(bij_state)), move)
     end
 end
-macro death(ObjectType, idx)
+macro death(obj)
     quote
-        move = DeathMove($(esc(ObjectType)), $(esc(idx)))
+        move = DeathMove($(esc(obj)))
         apply_oupm_move($(esc(bij_state)), move)
     end
 end
-macro split(ObjectType, from_idx, to_idx1, to_idx2)
+macro split(from_obj, to_idx1, to_idx2, moves_...)
+    if length(moves_) == 0
+        moves = ()
+    else
+        moves = moves_[1]
+    end
+
     quote
-        move = SplitMove($(esc(ObjectType)), $(esc(from_idx)), $(esc(to_idx1)), $(esc(to_idx2)))
+        move = SplitMove($(esc(from_obj)), $(esc(to_idx1)), $(esc(to_idx2)), $(esc(moves)))
         apply_oupm_move($(esc(bij_state)), move)
     end
 end
-macro merge(ObjectType, to_idx, from_idx1, from_idx2)
+macro merge(to_obj, from_idx1, from_idx2, moves_...)
+    if length(moves_) == 0
+        moves = ()
+    else
+        moves = moves_[1]
+    end
     quote
-        move = MergeMove($(esc(ObjectType)), $(esc(to_idx)), $(esc(from_idx1)), $(esc(from_idx2)))
+        move = MergeMove($(esc(to_obj)), $(esc(from_idx1)), $(esc(from_idx2)), $(esc(moves)))
         apply_oupm_move($(esc(bij_state)), move)
     end
 end
-macro move(ObjectType, from_idx, to_idx)
+macro move(from, to)
     quote
-        move = MoveMove($(esc(ObjectType)), $(esc(from_idx)), $(esc(to_idx)))
+        move = MoveMove($(esc(from)), $(esc(to)))
         apply_oupm_move($(esc(bij_state)), move)
     end
 end
@@ -199,6 +210,13 @@ macro save_for_reverse_regenerate(address)
 end
 macro regenerate(address)
     quote _regenerate($(esc(bij_state)), $(esc(address))) end
+end
+
+macro convert_to_abstract(object)
+    quote convert_to_abstract($(esc(bij_state)), $(esc(object))) end
+end
+macro convert_to_concrete(object)
+    quote convert_to_concrete($(esc(bij_state)), $(esc(object))) end
 end
 
 # TODO make more consistent by allowing us to read any hierarchical address,
@@ -466,6 +484,14 @@ function _regenerate(::JacobianPassState, _)
     nothing
 end
 
+function convert_to_abstract(state::Union{FirstPassState, JacobianPassState}, object::ConcreteIndexOUPMObject)
+    convert_to_abstract(state.model_trace.world, object::ConcreteIndexOUPMObject)
+end
+function convert_to_concrete(state::Union{FirstPassState, JacobianPassState}, object)
+    convert_to_concrete(state.model_trace.world, object)
+end
+
+
 #################################
 # computing jacobian correction #
 #################################
@@ -593,12 +619,70 @@ function jacobian_correction(transform::OUPMInvolutionDSLProgram, prev_model_tra
     return correction
 end
 
+function get_differences(c1, c2)
+    in1not2 = []
+    in2not1 = []
+    diffval = []
+
+    for (addr, sub1) in get_subtrees_shallow(c1)
+        isempty(sub1) && continue
+        sub2 = get_subtree(c2, addr)
+        if isempty(sub2)
+            push!(in1not2, addr)
+        elseif sub1 isa Value && sub2 isa Value
+            if !isapprox(get_value(sub1), get_value(sub2))
+                push!(diffval, addr)
+            end
+        else
+            (sub1not2, sub2not1, subdiffvals) = get_differences(sub1, sub2)
+            for x in sub1not2
+                push!(in1not2, addr => x)
+            end
+            for x in sub2not1
+                push!(in2not1, addr => x)
+            end
+            for x in subdiffvals
+                push!(diffval, addr => x)
+            end
+        end
+    end
+    for (addr, sub2) in get_subtrees_shallow(c2)
+        isempty(sub2) && continue
+        sub1 = get_subtree(c1, addr)
+        if isempty(sub1)
+            push!(in2not1, addr)
+        end
+    end
+
+    return (in1not2, in2not1, diffval)
+end
+
+function errorlog_on_differences(c1, c2)
+    (in1not2, in2not1, diffval) = get_differences(c1, c2)
+    strs = []
+    for addr in in1not2
+        push!(strs, "\n  Found in 1 but not 2: $addr")
+    end
+    for addr in in2not1
+        push!(strs, "\n  Found in 2 but not 1: $addr")
+    end
+    for addr in diffval
+        push!(strs, "\n  Different vals at: $addr is $(c1[addr]) in first and $(c2[addr]) in second")
+    end
+
+    if !isempty(strs)
+        @error("differences: $(strs...)")
+    end
+end
+
 function check_round_trip(trace, trace_rt)
     choices = get_choices(trace)
     choices_rt = get_choices(trace_rt)
     if !isapprox(choices, choices_rt)
-        @error("choices: $(sprint(show, "text/plain", choices))")
-        @error("choices after round trip: $(sprint(show, "text/plain", choices_rt))")
+        # @error("choices: $(sprint(show, "text/plain", choices))")
+        # @error("choices after round trip: $(sprint(show, "text/plain", choices_rt))")
+        @error("Choices did not match after round trip!  Differences:")
+        errorlog_on_differences(choices, choices_rt)
         error("transform round trip check failed")
     end
     return nothing
@@ -703,4 +787,5 @@ export @oupm_involution
 export @read, @write, @copy, @tcall
 export @birth, @death, @split, @merge, @move
 export @regenerate, @save_for_reverse_regenerate
+export @convert_to_abstract, @convert_to_concrete
 export OUPMInvolutionDSLProgram, OUPMMHKernel

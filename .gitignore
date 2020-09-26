@@ -1,0 +1,4 @@
+examples/entity-resolution/out
+examples/entity-resolution/figuresmaster/ipynbs/*.wav
+.vscode
+**/*/.ipynb_checkpoints/**/*

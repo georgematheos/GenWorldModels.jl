@@ -21,9 +21,17 @@ include("call.jl") # `Call` type
 # special addresses for world args and getting the index of a OUPM object
 const _world_args_addr = :args
 const _get_index_addr = :index
-@inline function is_mgf_call(c::Call)
-    addr(c) isa Symbol && addr(c) !== _world_args_addr && addr(c) !== _get_index_addr
-end
+const _get_origin_addr = :origin
+const _get_abstract_addr = :abstract
+const _get_concrete_addr = :concrete
+const _special_addrs = (_world_args_addr, _get_index_addr, _get_origin_addr, _get_abstract_addr, _get_concrete_addr)
+const _NonMGFCall = Union{(Call{a} for a in _special_addrs)...}
+is_mgf_call(c::Call{_world_args_addr}) = false
+is_mgf_call(c::Call{_get_index_addr}) = false
+is_mgf_call(c::Call{_get_origin_addr}) = false
+is_mgf_call(c::Call{_get_abstract_addr}) = false
+is_mgf_call(c::Call{_get_concrete_addr}) = false
+is_mgf_call(c::Call) = true
 
 # data structures
 include("data_structures/traces.jl") # `Traces` data structure to store subtraces
@@ -59,7 +67,7 @@ end
 
 World(w::World{A,G,N}) where {A,G,N} = World{A,G,N}(w.gen_fns, w.state, w.traces, w.world_args, w.lookup_counts, w.call_sort, w.id_table, w.total_score, w.metadata_addr)
 
-function World{addrs, GenFnTypes, WorldArgnames}(gen_fns, world_args::NamedTuple{WorldArgnames}, oupm_types::Tuple) where {addrs, GenFnTypes, WorldArgnames}
+function World{addrs, GenFnTypes, WorldArgnames}(gen_fns, world_args::NamedTuple{WorldArgnames}) where {addrs, GenFnTypes, WorldArgnames}
     w = World{addrs, GenFnTypes, WorldArgnames}(
         gen_fns,
         NoChangeWorldState(),
@@ -67,7 +75,7 @@ function World{addrs, GenFnTypes, WorldArgnames}(gen_fns, world_args::NamedTuple
         world_args,
         LookupCounts(),
         CallSort(),
-        IDTable(oupm_types),
+        IDTable(),
         0.
     )
     # note a call for every world arg
@@ -77,12 +85,24 @@ function World{addrs, GenFnTypes, WorldArgnames}(gen_fns, world_args::NamedTuple
     return w
 end
 
-function World(addrs::NTuple{n, Symbol}, gen_fns::NTuple{n, Gen.GenerativeFunction}, world_args::NamedTuple{Names}, oupm_types::Tuple) where {n, Names}
-    World{addrs, typeof(gen_fns), Names}(gen_fns, world_args, oupm_types)
+function World(addrs::NTuple{n, Symbol}, gen_fns::NTuple{n, Gen.GenerativeFunction}, world_args::NamedTuple{Names}) where {n, Names}
+    for a in addrs
+        @assert !(a in _special_addrs) "Cannot use reserved address $a as an MGF address."
+    end
+
+    World{addrs, typeof(gen_fns), Names}(gen_fns, world_args)
 end
 
 # TODO: Could make this more informative by showing what calls it has in it
-Base.show(io::IO, world::World{addrs, <:Any}) where {addrs} = print(io, "world{$addrs}")
+function Base.show(io::IO, ::Type{<:World{addrs}}) where {addrs}
+    print(io, "World{")
+    print(io, addrs)
+    print(io, "}")
+end
+function Base.show(io::IO, world::World)
+    print(io, typeof(world))
+    print(io, "()")
+end
 
 metadata_addr(world::World) = world.metadata_addr
 
@@ -125,71 +145,44 @@ end
 @inline get_gen_fn(world::World, addr::Symbol) = get_gen_fn(world, Val(addr))
 @inline get_gen_fn(world::World, ::Call{addr}) where {addr} = get_gen_fn(world, addr)
 
+function cannot_change_retval_due_to_diffs(world::W, addr::CallAddr, argtype) where {W}
+    gen_fn = get_gen_fn(world, addr)
+    # return needs_nonempty_spec_for_output_change(tracetype)
+    # return can_statically_guarantee_nochange_on_update(tracetype, Tuple{WorldUpdateDiff, NoChange}, EmptyAddressTree)
+    println("Argtype: $argtype")
+    rettype = Core.Compiler.return_type(
+        Gen.update,
+        Tuple{Gen.get_trace_type(gen_fn), Tuple{W, argtype}, Tuple{WorldUpdateDiff, NoChange}, EmptyAddressTree, AllSelection}
+    )
+    retdiff_statically_known = hasproperty(rettype, :parameters) && length(rettype.parameters) >= 3
+    return retdiff_statically_known && rettype.parameters[3] == NoChange
+end
+
 @inline get_all_calls_which_look_up(world::World, call) = get_all_calls_which_look_up(world.lookup_counts, call)
 @inline get_trace(world::World, call::Call) = get_trace(world.traces, call)
 @inline total_score(world::World) = world.total_score
+
 @generated function get_val(world::World, call::Call{call_addr}) where {call_addr}
     if call_addr == _world_args_addr
         quote world.world_args[key(call)] end
     elseif call_addr == _get_index_addr
-        quote get_idx(world.id_table, key(call)) end
-    elseif call_addr isa Type{<:OUPMType}
-        quote call_addr(get_id(world.id_table, call_addr, key(call))) end
-    else
+        quote world.id_table[key(call)].idx end
+    elseif call_addr == _get_origin_addr
+        quote world.id_table[key(call)].origin end
+    elseif call_addr in (_get_abstract_addr, _get_concrete_addr)
+        quote world.id_table[key(call)] end
+    else # is mgf call
         quote get_retval(get_trace(world, call)) end
     end
 end
 @generated function has_val(world::World, call::Call{call_addr}) where {call_addr}
     if call_addr == _world_args_addr
         quote haskey(world.world_args, key(call)) end
-    elseif call_addr == _get_index_addr
-        quote has_id(world.id_table, key(call)) end
-    elseif call_addr isa Type{<:OUPMType}
-        quote has_idx(world.id_table, call_addr, key(call)) end
+    elseif call_addr in (_get_index_addr, _get_origin_addr, _get_abstract_addr, _get_concrete_addr)
+        quote haskey(world.id_table, key(call)) end
     else
         quote has_trace(world.traces, call) end
     end
-end
-
-@inline convert_key_to_id_form(world, key) = key
-@inline function convert_key_to_id_form(world, key::OUPMType{Int})
-    type = oupm_type(key)
-    id = get_id(world.id_table, type, key.idx_or_id)
-    type(id) 
-end
-
-@inline convert_key_to_id_form!(world, key) = key
-@inline function convert_key_to_id_form!(world, key::OUPMType{Int})
-    type = oupm_type(key)
-    idx = key.idx_or_id
-    if has_idx(world.id_table, type, idx)
-        id = get_id(world.id_table, type, idx)
-    else
-        id = generate_id_for_call!(world, Call(type, idx))
-    end
-    return type(id)
-end
-
-@inline convert_key_to_idx_form(world, key) = key
-@inline function convert_key_to_idx_form(world, key::OUPMType{UUID})
-    type = oupm_type(key)
-    idx = get_idx(world.id_table, type, key.idx_or_id)
-    type(idx)
-end
-
-"""
-    generate_id_for_call!(world, call)
-
-Given a `call` whose address is an open universe type `T`, and whose
-key is an index `idx`, where there is currently no identifier associated
-with `T(idx)` in the world, generate an identifier for this.
-"""
-function generate_id_for_call!(world::World, call::Call)
-    T = addr(call)
-    (world.id_table, id) = add_identifier_for(world.id_table, T, key(call))
-    note_new_call!(world, call)
-    note_new_call!(world, Call(_get_index_addr, T(id)))
-    return id
 end
 
 """
@@ -219,10 +212,10 @@ function generate_value!(world, call, constraints)
 
     return weight
 end
-function generate_value!(world, call::Call{<:OUPMType}, ::EmptyAddressTree)
+function generate_value!(world, call::Call{_get_abstract_addr}, ::EmptyAddressTree)
     @assert !(world.state isa NoChangeWorldState)
     @assert !has_val(world, call)
-    generate_id_for_call!(world, call)
+    generate_abstract_object!(world, key(call))
     return 0.
 end
 
@@ -236,9 +229,9 @@ it could alter the dependency structure/lookup counts of the world, `lookup_or_g
 should be called.
 Will return the value that the given `call` returns after the generation/execution.
 """
-function lookup_or_generate!(world::World, call::Call; reason_for_call=:generate)    
+function lookup_or_generate!(world::World, call::Call, is_new_lookup)    
     if world.state isa UpdateWorldState
-        lookup_or_generate_during_update!(world, call, reason_for_call)
+        lookup_or_generate_during_update!(world, call, is_new_lookup)
     elseif world.state isa GenerateWorldState
         lookup_or_generate_during_generate!(world, call)
     else
@@ -246,7 +239,7 @@ function lookup_or_generate!(world::World, call::Call; reason_for_call=:generate
     end
 end
 
-include("world_diffs.jl")
+include("id_interface.jl") # wrappers for conversion abstract <--> concrete; methods to generate abstract objects
 include("gfi/generate.jl")
 include("gfi/assess.jl")
 include("gfi/propose.jl")

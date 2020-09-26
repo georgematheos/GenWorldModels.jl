@@ -19,22 +19,7 @@ function Gen.get_choices(tr::UsingWorldTrace)
     full_choices = StaticChoiceMap(
         (
             kernel=get_choices(tr.kernel_tr),
-            world=to_idx_repr(tr.world, get_choices(tr.world))
-        )
-    )
-    
-    # return a choicemap which filters out all the choices addressed with `metadata_addr`,
-    # since these are just used for internal tracking and should not be exposed
-    AddressFilterChoiceMap(
-        full_choices,
-        addr -> addr != metadata_addr(tr.world)
-    )
-end
-function get_id_choices(tr::UsingWorldTrace)
-    full_choices = StaticChoiceMap(
-        (
-            kernel=get_choices(tr.kernel_tr),
-            world=get_choices(tr.world)
+            world=to_concrete_repr(tr.world, get_choices(tr.world))
         )
     )
     
@@ -51,18 +36,16 @@ struct UsingWorld{num_world_args, num_mgfs, V, Tr} <: Gen.GenerativeFunction{V, 
     mgf_addrs::NTuple{num_mgfs, Symbol}
     memoized_gen_fns::NTuple{num_mgfs, GenerativeFunction}
     world_arg_addrs::NTuple{num_world_args, Symbol}
-    oupm_types::Tuple
 end
 function UsingWorld(
     kernel::GenerativeFunction,
     addr_to_gen_fn::Vararg{Pair{Symbol, <:GenerativeFunction}};
-    world_args=(),
-    oupm_types=()
+    world_args=()
 )
     mgf_addrs = Tuple([addr for (addr, gen_fn) in addr_to_gen_fn])
     @assert all(mgf_addrs .!= :kernel) ":kernel may not be a memoized generative function address"
     gen_fns = Tuple([gen_fn for (addr, gen_fn) in addr_to_gen_fn])
-    UsingWorld(kernel, mgf_addrs, gen_fns, world_args, oupm_types)
+    UsingWorld(kernel, mgf_addrs, gen_fns, world_args)
 end
 
 function Base.getindex(tr::UsingWorldTrace, addr::Pair)
@@ -73,18 +56,27 @@ function Base.getindex(tr::UsingWorldTrace, addr::Pair)
         # TODO: if there is only one call for a MGF, we should be able to just look up that address
 
         mgf_addr, rest = second
-        try 
+        try
+            if mgf_addr == _world_args_addr
+                return tr.world.world_args[rest]
+            end
+
             if rest isa Pair
                 key, remaining = rest
-                key = convert_key_to_id_form(tr.world, key)
+                key = convert_to_abstract(tr.world, key)
                 return get_trace(tr.world, Call(mgf_addr, key))[remaining]
             else
-                key = convert_key_to_id_form(tr.world, rest)
+                key = convert_to_abstract(tr.world, rest)
                 return get_trace(tr.world, Call(mgf_addr, key))[]
             end
-        catch
+        catch e
             key = rest isa Pair ? rest[1] : rest
-            error("No lookup for $(mgf_addr => key) found in the world.")
+            if e isa KeyError
+                error("No lookup for $(mgf_addr => key) found in the world.")
+            else
+                stacktrace(catch_backtrace())
+                throw(e)
+            end
         end
     else
         error("Invalid address")
@@ -160,8 +152,8 @@ end
 function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; check_proper_usage=true, check_all_constraints_used=true)
     world_args, kernel_args = extract_world_args(gen_fn, args)
 
-    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args, gen_fn.oupm_types)
-    world_constraints = to_id_repr!(world, get_submap(constraints, :world))
+    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
+    world_constraints = to_abstract_repr!(world, get_submap(constraints, :world))
     begin_generate!(world, world_constraints)
     kernel_tr, kernel_weight = generate(gen_fn.kernel, (world, kernel_args...), get_submap(constraints, :kernel))
     world_weight = end_generate!(world, check_all_constraints_used)
@@ -180,7 +172,7 @@ end
 function Gen.simulate(gen_fn::UsingWorld, args::Tuple; check_proper_usage=true, check_all_constraints_used=true)
     world_args, kernel_args = extract_world_args(gen_fn, args)
 
-    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args, gen_fn.oupm_types)
+    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
     begin_simulate!(world)
     kernel_tr = simulate(gen_fn.kernel, (world, kernel_args...))
     end_simulate!(world, check_all_constraints_used)
@@ -198,7 +190,7 @@ end
 function Gen.propose(gen_fn::UsingWorld, args::Tuple)
     world_args, kernel_args = extract_world_args(gen_fn, args)
 
-    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args, gen_fn.oupm_types)
+    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
     begin_propose!(world)
     kernel_choices, kernel_weight, retval = propose(gen_fn.kernel, (world, kernel_args...))
     world_choices, world_weight = end_propose!(world)
@@ -214,7 +206,7 @@ end
 function Gen.assess(gen_fn::UsingWorld, args::Tuple, choices::ChoiceMap)
     world_args, kernel_args = extract_world_args(gen_fn, args)
 
-    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args, gen_fn.oupm_types)
+    world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
     begin_assess!(world, get_submap(choices, :world))
     kernel_weight, retval = assess(gen_fn.kernel, (world, kernel_args...), get_submap(choices, :kernel))
     world_weight = end_assess!(world)
@@ -246,16 +238,16 @@ function _update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
 
     # update all the nodes in the world.  pass in the updatespec and externally_constrained_addrs
     # converted so that they use identifier representation for objects
-    id_spec = to_id_repr!(world, get_subtree(main_spec, :world))
+    id_spec = to_abstract_repr!(world, get_subtree(main_spec, :world))
     
     # use the original `world` object before the update to convert the externally constrained addresses,
     # because the reverse constraints will use the id_table in its state after the reverse id table update occurs
-    id_ext_const_addrs = to_id_repr(tr.world, get_subtree(externally_constrained_addrs, :world))
+    id_ext_const_addrs = to_abstract_repr(tr.world, get_subtree(externally_constrained_addrs, :world))
     
-    world_diff = update_mgf_calls!(world, id_spec, id_ext_const_addrs)
+    update_mgf_calls!(world, id_spec, id_ext_const_addrs)
 
     (new_kernel_tr, kernel_weight, kernel_retdiff, kernel_discard) = update(
-        tr.kernel_tr, (world, kernel_args...), (world_diff, argdiffs...), get_subtree(main_spec, :kernel), get_subtree(externally_constrained_addrs, :kernel)
+        tr.kernel_tr, (world, kernel_args...), (WorldUpdateDiff(), argdiffs...), get_subtree(main_spec, :kernel), get_subtree(externally_constrained_addrs, :kernel)
     )
 
     world_weight, world_discard = end_update!(world, kernel_discard, check_no_constrained_calls_deleted)
@@ -265,7 +257,7 @@ function _update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
     weight = kernel_weight + world_weight
     discard = StaticChoiceMap(
         (
-            world=to_idx_repr(tr.world, world_discard), # use the id_table from the trace's world, so we have the pre-update idx association
+            world=to_concrete_repr(tr.world, world_discard), # use the id_table from the trace's world, so we have the pre-update idx association
             kernel=kernel_discard
         )
     )

@@ -42,7 +42,6 @@ end
 
 # world args and looking up object indices are always before all MGF calls in the sort
 # and cannot have their indices changed
-const _StaticPositionCall = Union{Call{_world_args_addr}, Call{_get_index_addr}, Call{<:OUPMType{Int}}}
-Base.getindex(::CallSort, ::_StaticPositionCall) = -1
-change_index_to(srt::CallSort, ::_StaticPositionCall, ::Int) = srt
-remove_call(srt::CallSort, call::_StaticPositionCall) = srt
+Base.getindex(::CallSort, ::_NonMGFCall) = -1
+change_index_to(srt::CallSort, ::_NonMGFCall, ::Int) = srt
+remove_call(srt::CallSort, call::_NonMGFCall) = srt

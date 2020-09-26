@@ -1,0 +1,151 @@
+{"sentences":[
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve",
+"depPath":"appos|->appos->chairman->nn->|nn"
+}
+,
+{
+"source":"Norman Siegel",
+"dest":"New York Civil Liberties Union",
+"depPath":"appos|->appos->director->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Bob Dole",
+"dest":"Senate",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Federal Reserve Board",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Richard A. Gephardt",
+"dest":"House",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Randi Weingarten",
+"dest":"United Federation of Teachers",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Alan Greenspan",
+"dest":"Fed",
+"depPath":"appos|->appos->chairman->nn->|nn"
+}
+,
+{
+"source":"Gen. Colin L. Powell",
+"dest":"Joint Chiefs of Staff",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Fernando Ferrer",
+"dest":"Bronx",
+"depPath":"appos|->appos->president->nn->|nn"
+}
+,
+{
+"source":"Gen. Richard B. Myers",
+"dest":"Joint Chiefs of Staff",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Bob Dole",
+"dest":"Republican",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Yasir Arafat",
+"dest":"Palestine Liberation Organization",
+"depPath":"appos|->appos->chairman->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Dick Armey",
+"dest":"House",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Yugoslav",
+"dest":"Slobodan Milosevic",
+"depPath":"nn|<-nn<-president->appos->|appos"
+}
+,
+{
+"source":"Kenneth E. Raske",
+"dest":"Greater New York Hospital Association",
+"depPath":"appos|->appos->president->prep->of->pobj->|pobj"
+}
+,
+{
+"source":"Brian Cashman",
+"dest":"Yankees",
+"depPath":"appos|->appos->manager->poss->|poss"
+}
+,
+{
+"source":"Bronx Borough",
+"dest":"Fernando Ferrer",
+"depPath":"nn|<-nn<-president->appos->|appos"
+}
+,
+{
+"source":"Joe Torre",
+"dest":"Yankees",
+"depPath":"appos|->appos->manager->poss->|poss"
+}
+,
+{
+"source":"Tom Daschle",
+"dest":"Senate",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Rod Thorn",
+"dest":"Nets",
+"depPath":"appos|->appos->president->poss->|poss"
+}
+,
+{
+"source":"Deng Xiaoping",
+"dest":"China",
+"depPath":"appos|->appos->leader->poss->|poss"
+}
+,
+{
+"source":"Joseph L. Bruno",
+"dest":"Senate",
+"depPath":"appos|->appos->leader->nn->|nn"
+}
+,
+{
+"source":"Soviet",
+"dest":"Mikhail S. Gorbachev",
+"depPath":"nn|<-nn<-president->appos->|appos"
+}
+,
+{
+"source":"Fernando Ferrer",
+"dest":"Bronx Borough",
+"depPath":"appos|->appos->president->nn->|nn"
+}
+]}

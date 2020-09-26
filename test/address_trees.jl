@@ -45,28 +45,39 @@ end
     end
 end
 
-@testset "to_id_repr and to_idx_repr" begin
-    world = World((), (), NamedTuple(), (IDTestType1, IDTestType2))
-    world.id_table, id11 = GenWorldModels.add_identifier_for(world.id_table, IDTestType1, 1)
-    world.id_table, id12 = GenWorldModels.add_identifier_for(world.id_table, IDTestType1, 2)
-    world.id_table, id21 = GenWorldModels.add_identifier_for(world.id_table, IDTestType2, 1)
-    world.id_table, id25 = GenWorldModels.add_identifier_for(world.id_table, IDTestType2, 5)
+@testset "to_abstract_repr and to_concrete_repr" begin
+    world = World((), (), NamedTuple())
+    a11 = GenWorldModels.generate_abstract_object!(world, IDTestType1(1))
+    a12 = GenWorldModels.generate_abstract_object!(world, IDTestType1(2))
+    a21 = GenWorldModels.generate_abstract_object!(world, IDTestType2(1))
+    a25 = GenWorldModels.generate_abstract_object!(world, IDTestType2(5))
 
     id_choicemap = choicemap(
-        (:vol => IDTestType1(id11) => :val, 11),
-        (:vol => IDTestType1(id12) => :val, 12),
-        (:vol => IDTestType2(id21) => :val, 21),
-        (:vol => IDTestType2(id25) => :val, 25)
+        (:vol => a11 => :val, 11),
+        (:vol => a12 => :val, 12),
+        (:vol => a21 => :val, 21),
+        (:vol => a25 => :val, 25),
+        (:num => (a11, a21) => :val, 11 + 21) # tuples should be converted too
     )
     idx_choicemap = choicemap(
         (:vol => IDTestType1(1) => :val, 11),
         (:vol => IDTestType1(2) => :val, 12),
         (:vol => IDTestType2(1) => :val, 21),
-        (:vol => IDTestType2(5) => :val, 25)
+        (:vol => IDTestType2(5) => :val, 25),
+        (:num => (IDTestType1(1), IDTestType2(1)) => :val, 11 + 21)
     )
 
-    @test GenWorldModels.to_id_repr(world, idx_choicemap) == id_choicemap
-    @test GenWorldModels.to_idx_repr(world, id_choicemap) == idx_choicemap
+    @test GenWorldModels.to_abstract_repr(world, idx_choicemap) == id_choicemap
+    @test GenWorldModels.to_concrete_repr(world, id_choicemap) == idx_choicemap
+
+    # we should be able to convert tuples with some abstract and somce concrete
+    id_choicemap2 = choicemap(
+        (:vol => a11 => :val, 11),
+        (:vol => a12 => :val, 12),
+        (:vol => a21 => :val, 21),
+        (:vol => a25 => :val, 25),
+        (:num => (a11, IDTestType2(1)) => :val, 11 + 21) # tuples should be converted too
+    )
 end
 
 end
