@@ -19,6 +19,7 @@ export lookup_or_generate, UsingWorld, World, mgfcall_map
 include("involution_dsl.jl")
 
 include("object_set/object_set.jl")
+include("dict_map.jl")
 
 @load_generated_functions()
 

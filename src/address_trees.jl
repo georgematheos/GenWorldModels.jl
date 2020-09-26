@@ -83,10 +83,10 @@ end
 Convert the given address tree for the world where all MGF calls use the concrete representation
 to have all the MGF keys use abstract representation instead.
 """
-function to_abstract_repr(world::World, tree::Gen.AddressTree{LT}) where {LT}
+function to_abstract_repr(world::World, tree::Gen.AddressTree{LT}; depth=2) where {LT}
     to_abst(key) = convert_to_abstract(world, key)
     to_conc(key) = convert_to_concrete(world, key)
-    ConvertKeyAtDepthAddressTree{LT, 2, typeof(to_abst), typeof(to_conc)}(tree, to_abst, to_conc)
+    ConvertKeyAtDepthAddressTree{LT, depth, typeof(to_abst), typeof(to_conc)}(tree, to_abst, to_conc)
 end
 
 """
@@ -95,10 +95,10 @@ end
 Convert the given address tree for the world where all MGF calls use abstract representation
 to have all the MGF keys use concrete representation instead.
 """
-function to_concrete_repr(world::World, tree::Gen.AddressTree{LT}) where {LT}
+function to_concrete_repr(world::World, tree::Gen.AddressTree{LT}; depth=2) where {LT}
     to_abst(key) = convert_to_abstract(world, key)
     to_conc(key) = convert_to_concrete(world, key)
-    ConvertKeyAtDepthAddressTree{LT, 2, typeof(to_conc), typeof(to_abst)}(tree, to_conc, to_abst)
+    ConvertKeyAtDepthAddressTree{LT, depth, typeof(to_conc), typeof(to_abst)}(tree, to_conc, to_abst)
 end
 
 """
@@ -108,8 +108,8 @@ Convert the given address tree for the world where all MGF calls use concrete re
 to have all the MGF keys use id representation instead; lazily generate an abstract form in the world for any
 concrete object for which there is currently no abstract form in the world.
 """
-function to_abstract_repr!(world::World, tree::Gen.AddressTree{LT}) where {LT}
+function to_abstract_repr!(world::World, tree::Gen.AddressTree{LT}; depth=2) where {LT}
     to_abst!(key) = convert_to_abstract!(world, key)
     to_conc(key) = convert_to_concrete(world, key)
-    ConvertKeyAtDepthAddressTree{LT, 2, typeof(to_abst!), typeof(to_conc)}(tree, to_abst!, to_conc)
+    ConvertKeyAtDepthAddressTree{LT, depth, typeof(to_abst!), typeof(to_conc)}(tree, to_abst!, to_conc)
 end
