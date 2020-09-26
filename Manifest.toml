@@ -110,6 +110,7 @@ version = "1.1.1"
 
 [[FunctionalCollections]]
 git-tree-sha1 = "8b2de4b68d05150c59163bdf0967b433cf622a6d"
+pinned = true
 repo-rev = "abstractset"
 repo-url = "https://github.com/georgematheos/FunctionalCollections.jl"
 uuid = "de31a74c-ac4f-5751-b3fd-e18cd04993ca"
@@ -117,11 +118,12 @@ version = "0.5.1"
 
 [[Gen]]
 deps = ["DataStructures", "Distributions", "ForwardDiff", "FunctionalCollections", "JSON", "LinearAlgebra", "MacroTools", "Random", "ReverseDiff", "SpecialFunctions"]
-git-tree-sha1 = "5efaee87743f1255b47bb6971de07d6c3423bb19"
+git-tree-sha1 = "437508e4ffda64d8c52338cf9f224659cec8a43c"
+pinned = true
 repo-rev = "sets"
 repo-url = "https://github.com/georgematheos/Gen"
 uuid = "ea4f424c-a589-11e8-07c0-fd5c91b9da4a"
-version = "0.3.5"
+version = "0.4.0"
 
 [[IJulia]]
 deps = ["Base64", "Conda", "Dates", "InteractiveUtils", "JSON", "Markdown", "MbedTLS", "Pkg", "Printf", "REPL", "Random", "SoftGlobalScope", "Test", "UUIDs", "ZMQ"]
