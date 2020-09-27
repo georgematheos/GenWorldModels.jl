@@ -16,6 +16,10 @@ include("using_world.jl")
 
 export lookup_or_generate, UsingWorld, World, mgfcall_map
 
+export to_abstract_repr, to_abstract_repr!, to_concrete_repr
+export convert_to_abstract, concert_to_abstract!, concert_to_concrete
+export values_to_abstract, values_to_abstract!, values_to_concrete
+
 include("involution_dsl.jl")
 
 include("object_set/object_set.jl")

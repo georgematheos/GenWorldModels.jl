@@ -113,3 +113,57 @@ function to_abstract_repr!(world::World, tree::Gen.AddressTree{LT}; depth=2) whe
     to_conc(key) = convert_to_concrete(world, key)
     ConvertKeyAtDepthAddressTree{LT, depth, typeof(to_abst!), typeof(to_conc)}(tree, to_abst!, to_conc)
 end
+
+"""
+    ConvertValueChoiceMap(choicemap::ChoiceMap, convert::Function)
+
+Returns a choicemap which lazily applies the function `convert`
+to every value of the given choicemap.
+"""
+struct ConvertValueChoiceMap{C} <: Gen.AddressTree{Value}
+    cm::C
+    convert::Function
+    ConvertValueChoiceMap(cm::C, convert::Function) where {C <: Gen.ChoiceMap} = new{C}(cm, convert)
+end
+ConvertValueChoiceMap(::EmptyAddressTree, convert::Function) = EmptyAddressTree()
+ConvertValueChoiceMap(v::Value, convert::Function) = Value(convert(get_value(v)))
+Gen.get_subtree(c::ConvertValueChoiceMap, a) = ConvertValueChoiceMap(get_subtree(c.cm, a), c.convert)
+Gen.get_subtrees_shallow(c::ConvertValueChoiceMap) = (
+    (a, ConvertValueChoiceMap(sub, c.convert)) for (a, sub) in get_subtrees_shallow(c.cm)
+)
+
+"""
+    values_to_abstract(world::World, cm::ChoiceMap)
+
+Return a choicemap which converts all concrete OUPM object values in `cm` to abstract form.
+Will error if a concrete OUPM object appears as a value which is not associated with
+an abstract object in the world.
+"""
+function values_to_abstract(world::World, cm::ChoiceMap)
+    convert(val) = convert_to_abstract(world, val)
+    ConvertValueChoiceMap(cm, convert)
+end
+
+"""
+    values_to_abstract!(world::World, cm::ChoiceMap)
+
+Return a choicemap which converts all concrete OUPM object values in `cm` to abstract form.
+Will create a new association in the world if a concrete OUPM object appears as a value
+which is not currently associated with an abstract object in the world.
+"""
+function values_to_abstract!(world::World, cm::ChoiceMap)
+    convert(val) = convert_to_abstract!(world, val)
+    ConvertValueChoiceMap(cm, convert)
+end
+
+"""
+    values_to_concrete(world::World, cm::ChoiceMap)
+
+Return a choicemap which converts all abstract OUPM object values in `cm` to concrete form.
+Will error if an abstract OUPM object appears as a value which is not associated with
+an concrete object in the world.
+"""
+function values_to_concrete(world::World, cm::ChoiceMap)
+    convert(val) = convert_to_concrete(world, val)
+    ConvertValueChoiceMap(cm, convert)
+end
