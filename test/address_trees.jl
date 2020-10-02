@@ -78,6 +78,12 @@ end
         (:vol => a25 => :val, 25),
         (:num => (a11, IDTestType2(1)) => :val, 11 + 21) # tuples should be converted too
     )
+
+    abst = choicemap((:x, a11), (:y, a21))
+    conc = choicemap((:x, IDTestType1(1)), (:y, IDTestType2(1)))
+    @test values_to_concrete(world, abst) == conc
+    @test values_to_abstract(world, conc) == abst
+    @test values_to_abstract!(world, conc) == abst
 end
 
 end

@@ -120,50 +120,52 @@ end
 Returns a choicemap which lazily applies the function `convert`
 to every value of the given choicemap.
 """
-struct ConvertValueChoiceMap{C} <: Gen.AddressTree{Value}
-    cm::C
+struct ConvertValueAddressTree{LeafType, TreeType} <: Gen.AddressTree{LeafType}
+    tree::TreeType
     convert::Function
-    ConvertValueChoiceMap(cm::C, convert::Function) where {C <: Gen.ChoiceMap} = new{C}(cm, convert)
+    function ConvertValueAddressTree(tree::TreeType, convert::Function) where {LeafType, TreeType <: Gen.AddressTree{LeafType}}
+        new{LeafType, TreeType}(tree, convert)
+    end
 end
-ConvertValueChoiceMap(::EmptyAddressTree, convert::Function) = EmptyAddressTree()
-ConvertValueChoiceMap(v::Value, convert::Function) = Value(convert(get_value(v)))
-Gen.get_subtree(c::ConvertValueChoiceMap, a) = ConvertValueChoiceMap(get_subtree(c.cm, a), c.convert)
-Gen.get_subtrees_shallow(c::ConvertValueChoiceMap) = (
-    (a, ConvertValueChoiceMap(sub, c.convert)) for (a, sub) in get_subtrees_shallow(c.cm)
+ConvertValueAddressTree(::EmptyAddressTree, ::Function) = EmptyAddressTree()
+ConvertValueAddressTree(v::Value, convert::Function) = Value(convert(get_value(v)))
+Gen.get_subtree(c::ConvertValueAddressTree, a) = ConvertValueAddressTree(get_subtree(c.tree, a), c.convert)
+Gen.get_subtrees_shallow(c::ConvertValueAddressTree) = (
+    (a, ConvertValueAddressTree(sub, c.convert)) for (a, sub) in get_subtrees_shallow(c.tree)
 )
 
 """
-    values_to_abstract(world::World, cm::ChoiceMap)
+    values_to_abstract(world::World, tree::Gen.AddressTree)
 
-Return a choicemap which converts all concrete OUPM object values in `cm` to abstract form.
+Return an address tree which converts all concrete OUPM object values in `tree` to abstract form.
 Will error if a concrete OUPM object appears as a value which is not associated with
 an abstract object in the world.
 """
-function values_to_abstract(world::World, cm::ChoiceMap)
+function values_to_abstract(world::World, tree::Gen.AddressTree)
     convert(val) = convert_to_abstract(world, val)
-    ConvertValueChoiceMap(cm, convert)
+    ConvertValueAddressTree(tree, convert)
 end
 
 """
-    values_to_abstract!(world::World, cm::ChoiceMap)
+    values_to_abstract!(world::World, tree::Gen.AddressTree)
 
-Return a choicemap which converts all concrete OUPM object values in `cm` to abstract form.
+Return an address tree which converts all concrete OUPM object values in `tree` to abstract form.
 Will create a new association in the world if a concrete OUPM object appears as a value
 which is not currently associated with an abstract object in the world.
 """
-function values_to_abstract!(world::World, cm::ChoiceMap)
+function values_to_abstract!(world::World, tree::Gen.AddressTree)
     convert(val) = convert_to_abstract!(world, val)
-    ConvertValueChoiceMap(cm, convert)
+    ConvertValueAddressTree(tree, convert)
 end
 
 """
-    values_to_concrete(world::World, cm::ChoiceMap)
+    values_to_concrete(world::World, tree::Gen.AddressTree)
 
-Return a choicemap which converts all abstract OUPM object values in `cm` to concrete form.
+Return an address tree which converts all abstract OUPM object values in `tree` to concrete form.
 Will error if an abstract OUPM object appears as a value which is not associated with
 an concrete object in the world.
 """
-function values_to_concrete(world::World, cm::ChoiceMap)
+function values_to_concrete(world::World, tree::Gen.AddressTree)
     convert(val) = convert_to_concrete(world, val)
-    ConvertValueChoiceMap(cm, convert)
+    ConvertValueAddressTree(tree, convert)
 end
