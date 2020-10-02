@@ -395,10 +395,10 @@ end
 function update_lookup_counts_according_to_discard!(world, discard, call_discard_comes_from...)
     for (address, submap) in get_submaps_shallow(discard)
         if address == metadata_addr(world)
-            (mgf_addr, key) = first(get_values_shallow(submap))
-            call = Call(mgf_addr, key)
-            removed_trace_choicemap = remove_lookup!(world, call, call_discard_comes_from...)
-            update_lookup_counts_according_to_discard!(world, removed_trace_choicemap, call)
+            for (call, _) in get_submaps_shallow(submap)
+                removed_trace_choicemap = remove_lookup!(world, call, call_discard_comes_from...)
+                update_lookup_counts_according_to_discard!(world, removed_trace_choicemap, call)        
+            end
         else
             update_lookup_counts_according_to_discard!(world, submap, call_discard_comes_from...)
         end

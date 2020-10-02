@@ -98,7 +98,7 @@ end
 Gen.get_retval(tr::SimpleLookupOrGenerateTrace) = tr.val
 function Gen.get_choices(tr::SimpleLookupOrGenerateTrace)
     # TODO: use static choicemap
-    choicemap((metadata_addr(tr.call.world) => addr(tr.call), key(tr.call)))
+    choicemap((metadata_addr(tr.call.world) => call(tr.call), nothing))
 end
 Gen.get_args(tr::SimpleLookupOrGenerateTrace) = (tr.call,)
 

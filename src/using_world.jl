@@ -87,15 +87,21 @@ end
 # generate #
 ############
 
-function count_appearances_of_value_deep(choicemap::ChoiceMap, addr, value)
-    count = 0
-    if has_value(choicemap, addr) && choicemap[addr] == value
-        count += 1
+function count_appearances_of_values_deep(choicemap, meta_address)
+    counts = DefaultDict{Call, Int}(0)
+    count_appearances_of_values_deep!(choicemap, meta_address, counts)
+    return counts
+end
+function count_appearances_of_values_deep!(choicemap::ChoiceMap, meta_address, counts)
+    for (addr, submap) in get_submaps_shallow(choicemap)
+        if addr == meta_address
+            for (call, _) in get_submaps_shallow(get_submap(choicemap, meta_address))
+                counts[call] += 1
+            end
+        else
+            count_appearances_of_values_deep!(submap, meta_address, counts)
+        end
     end
-    for (_, submap) in get_submaps_shallow(choicemap)
-        count += count_appearances_of_value_deep(submap, addr, value)
-    end
-    return count
 end
 
 """
@@ -113,12 +119,11 @@ function check_world_counts_agree_with_generate_choicemaps(world, kernel_tr)
     states that it was looked up $actual_counts times.
     """
     kernel_choices = get_choices(kernel_tr)
+    counts = count_appearances_of_values_deep(kernel_choices, metadata_addr(world))
     for (mgf_addr, mgf_submap) in get_submaps_shallow(get_choices(world))
         for (lookup_key, submap) in get_submaps_shallow(mgf_submap)
             num_expected_kernel_lookups = get_number_of_expected_kernel_lookups(world.lookup_counts, Call(mgf_addr, lookup_key))
-            num_actual_kernel_lookups = count_appearances_of_value_deep(kernel_choices, 
-                metadata_addr(world) => mgf_addr, lookup_key
-            )
+            num_actual_kernel_lookups = counts[Call(mgf_addr, lookup_key)]
 
             if num_expected_kernel_lookups < num_actual_kernel_lookups
                 # I don't see how this could ever occur, but might as well check for it
@@ -282,4 +287,4 @@ end
     return (new_tr, weight, retdiff, reverse_update_spec)
 end
 
-# TODO: gradients?
+# TODO: gradients
