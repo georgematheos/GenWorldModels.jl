@@ -29,6 +29,8 @@ mutable struct UpdateWorldState <: WorldState
     calls_updated_to_unsupported_trace::Set{Call}
     # the choicemap each call which was updated/generated had before the update/generate (if generated, is EmptyChoiceMap)
     original_choicemaps::Dict{Call, ChoiceMap}
+    # the weight accumulated for each update
+    update_weights::Dict{Call, Float64}
     world_update_complete::Bool # once we have finished updating all the calls and move to update the kernel, this goes from false to true
     ### for object set tracking: ###
     origins_with_id_table_updates::Dict{Symbol, Set} # stores typename => set_of_origins_with_update
@@ -48,6 +50,7 @@ function UpdateWorldState(old_world)
         Queue{Call}(), # call_update_order
         Set{Call}(), # calls_which_must_be_deleted
         Dict{Call, ChoiceMap}(), # original_choicemaps
+        Dict{Call, Float64}(), # update weights
         false, # world is up to date
         Dict{Symbol, Set}()
     )
@@ -105,20 +108,30 @@ function remove_call!(world, call)
 
     remove_call_from_sort!(world, call)
 
-    if score != -Inf
-        world.total_score -= score
+    if has_val(world.state.previous_world, call)
+        prev_trace = get_trace(world.state.previous_world, call)
 
+        if score != -Inf
+            world.total_score -= score
+    
+            if haskey(world.state.update_weights, call)
+                # turns out, we shouldn't have incorporated the update weight for this call!
+                world.state.weight -= world.state.update_weights[call]
+            end
+        else
+            world.total_score -= get_score(prev_trace)
+            delete!(world.state.calls_updated_to_unsupported_trace, call)
+        end
+    
         ext_const_addrs = get_subtree(world.state.externally_constrained_addrs, addr(call) => key(call))
         if ext_const_addrs === AllSelection()
-            world.state.weight -= score
+            world.state.weight -= get_score(prev_trace)
         else
-            world.state.weight -= project(tr, ext_const_addrs)
+            world.state.weight -= project(prev_trace, ext_const_addrs)
         end
     else
-        # if we are removing a trace with score -Inf, note that we are deleting it
-        # no need to update worldscore or weight, since we would have done this in run_gen_update
-        # (which should be the only place where 0 probability traces can arise, if UsingWorld is used correctly)
-        delete!(world.state.calls_updated_to_unsupported_trace, call)
+        world.total_score -= score
+        world.state.weight -= world.state.update_weights[call]
     end
 
     if call in keys(world.state.original_choicemaps)
@@ -276,13 +289,8 @@ function run_gen_update!(world, call, spec, ext_const_addrs)
         # to delete it at the end of the update. note that we must delete this so we can
         # throw an error if it is not deleted
         push!(world.state.calls_updated_to_unsupported_trace, call)
-        
-        # we need to subtract off the score for removing this trace here
-        # since we won't have access to the old trace later
-        score = get_score(old_tr)
-        world.state.weight -= score
-        world.total_score -= score
     else
+        world.state.update_weights[call] = weight
         world.state.weight += weight
         world.total_score += get_score(new_tr) - get_score(old_tr)
     end
@@ -307,6 +315,7 @@ and worldstate accordingly.
 function run_gen_generate!(world, call, constraints)
     weight = generate_value!(world, call, constraints)
     world.state.weight += weight
+    world.state.update_weights[call] = weight
 
     # since we're generating this call, there were no choices for it before this generate
     world.state.original_choicemaps[call] = EmptyChoiceMap()
@@ -498,6 +507,9 @@ function end_update!(world::World, kernel_discard::ChoiceMap, check_constrained_
 
     if !isempty(world.state.calls_updated_to_unsupported_trace)
         invalid_calls = collect(world.state.calls_updated_to_unsupported_trace)
+        for call in invalid_calls
+            @error("Choicemap for invalid $call : ", choicemap=get_choices(get_trace(world, invalid_calls[1])))
+        end
         error("""This update appears to have caused the world to have score -Inf!
         In particular, the update caused the scores for the traces for calls $invalid_calls
         to have score -Inf, and these calls were not deleted from the world.
