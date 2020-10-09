@@ -22,6 +22,9 @@ Gen.get_choices(tr::DirichletProcessEntityMentionTrace) = VectorChoiceMap(tr.men
 Gen.project(::DirichletProcessEntityMentionTrace, ::EmptyAddressTree) = 0.
 
 _get_score(counts, α) = sum(logbeta(α + count) for (_, count) in counts) - (length(counts) * logbeta(α))
+function _get_score(counts, α, constrained_counts)
+    sum(logbeta(α + count + constrained_counts[ent]) for (ent, count) in counts) - sum(logbeta(α + count) for (_, count) in constrained_counts)
+end
 function DirichletProcessEntityMentionTrace{EntityType}(args, counts, mentions, ent_to_indices) where {EntityType}
     α = args[2]
     DirichletProcessEntityMentionTrace{EntityType}(args, counts, mentions, ent_to_indices, _get_score(counts, α))
@@ -41,15 +44,16 @@ of each entity according to a dirichlet process with parameter α.
 dirichlet_process_entity_mention = DirichletProcessEntityMention()
 
 normalize(v) = v./sum(v)
-function sample_mention_and_count!(counts, unconstrained_counts, entity, α, ::EmptyAddressTree)
+function sample_mention_and_count!(counts, _, unconstrained_counts, entity, α, ::EmptyAddressTree)
     mention = categorical(normalize(counts[entity] + α))
     counts[entity][mention] += 1
     unconstrained_counts[entity][mention] += 1
     mention
 end 
-function sample_mention_and_count!(counts, _, entity, _, constraint::Value)
+function sample_mention_and_count!(counts, constrained_counts, _, entity, _, constraint::Value)
     mention = get_value(constraint)
     counts[entity][mention] += 1
+    constrained_counts[entity][mention] += 1
     mention
 end
 
@@ -71,6 +75,7 @@ function Gen.generate(
     num_mentions = length(α)
     counts = Dict{EntityType, Vector{Int}}((ent => zeros(num_mentions) for ent in unique_entities))
     unconstrained_counts = Dict{EntityType, Vector{Int}}((ent => zeros(num_mentions) for ent in unique_entities))
+    constrained_counts = Dict{EntityType, Vector{Int}}((ent => zeros(num_mentions) for ent in unique_entities))
     mentions = Vector{Int}(undef, length(entities))
     ent_to_indices = PersistentHashMap{EntityType, PersistentSet{Int}}()
     for (i, entity) in enumerate(entities)
@@ -80,10 +85,11 @@ function Gen.generate(
             ent_to_indices = assoc(ent_to_indices, entity, PersistentSet{Int}([i]))
         end
 
-        mentions[i] = sample_mention_and_count!(counts, unconstrained_counts, entity, α, get_submap(constraints, i))
+        mentions[i] = sample_mention_and_count!(counts, constrained_counts, unconstrained_counts, entity, α, get_submap(constraints, i))
     end
     tr = DirichletProcessEntityMentionTrace{EntityType}(args, to_persistent(counts), mentions, ent_to_indices)
-    weight = get_score(tr) - _get_score(unconstrained_counts, α)
+    # TODO: is this the correct weight???
+    weight = get_score(tr) - _get_score(unconstrained_counts, α, constrained_counts)
     (tr, weight)
 end
 
@@ -146,7 +152,8 @@ function Gen.update(
     end
     for entity in new_ent_set
         if !(entity in old_ent_set)
-            Δlogprob -= logbeta(α + get(old_counts, entity, zeros(num_mentions)))
+            oldcnt = if haskey(old_counts, entity); old_counts[entity]; else; zeros(num_mentions); end
+            Δlogprob -= logbeta(α + oldcnt)
             Δlogprob += logbeta(α + new_counts[entity])
         end
     end
