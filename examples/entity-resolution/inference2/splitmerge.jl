@@ -13,7 +13,13 @@
 end
 
 @gen function sample_smartsplit_relation(tr, current_num_rels)
-    cnt(rel) = get(tr[:kernel => :verbs => :counts], rel, zeros(num_verbs(tr)))
+    function cnt(rel)
+        if haskey(tr[:kernel => :verbs => :counts], rel)
+            tr[:kernel => :verbs => :counts][rel]
+        else
+            zeros(num_verbs(tr))
+        end
+    end
     logfactors = [
         -logbeta(cnt(rel) .+ dirichlet_prior_val(tr))
         for rel in map(idx -> GenWorldModels.convert_to_abstract(tr.world, Relation(idx)), 1:current_num_rels)
@@ -27,7 +33,8 @@ end
     abstract_rel = GenWorldModels.convert_to_abstract(tr.world, Relation(from_idx))
     count1 = zeros(Int, num_verbs(tr))
     count2 = zeros(Int, num_verbs(tr))
-    for idx in get(tr[:kernel => :verbs => :indices_per_entity], abstract_rel, ())
+    itr = haskey(tr[:kernel => :verbs => :indices_per_entity], abstract_rel) ? tr[:kernel => :verbs => :indices_per_entity][abstract_rel] : ()
+    for idx in itr
         mention = verbs(tr)[idx]
         if is_smart
             p1 = (dirichlet_prior_val(tr) + count1[mention]) / (num_verbs(tr) * dirichlet_prior_val(tr) + sum(count1))
@@ -57,7 +64,13 @@ end
 end
 
 @gen function smart_sample_second_relation_to_merge(tr, from_idx1, current_num_rels)
-    cnt(rel) = get(tr[:kernel => :verbs => :counts], rel, zeros(num_verbs(tr)))
+    function cnt(rel)
+        if haskey(tr[:kernel => :verbs => :counts], rel)
+            tr[:kernel => :verbs => :counts][rel]
+        else
+            zeros(num_verbs(tr))
+        end
+    end
     first_rel = GenWorldModels.convert_to_abstract(tr.world, Relation(from_idx1))
     other_indices = [x for x=1:current_num_rels if x !== from_idx1]
     if length(other_indices) == 0
@@ -110,7 +123,9 @@ end
     old_rel = @convert_to_abstract(Relation(from_idx))
     true1 = Set()
     true2 = Set()
-    for idx in get(@read(old[:kernel => :verbs => :indices_per_entity], :disc), old_rel, ())
+    indices_per_entity = @read(old[:kernel => :verbs => :indices_per_entity], :disc)
+    old_rel_inds = haskey(indices_per_entity, old_rel) ? indices_per_entity[old_rel] : ()
+    for idx in old_rel_inds
         fact = @read(old[:kernel => :sampled_facts => :sampled_facts => idx], :disc)
         entpair = (fact.ent1, fact.ent2)
         to_first = @read(fwd[:to_first => idx], :disc)
@@ -122,8 +137,14 @@ end
             @write(new[:kernel => :sampled_facts => :sampled_facts => idx], Fact(Relation(new_idx2), entpair...), :disc)
         end
     end
-    @write(new[:kernel => :sampled_facts => :all_facts => :rels_to_facts => Relation(new_idx1) => :true_entpairs], true1, :disc)
-    @write(new[:kernel => :sampled_facts => :all_facts => :rels_to_facts => Relation(new_idx2) => :true_entpairs], true2, :disc)
+    for ep in true1
+        @write(new[:kernel => :sampled_facts => :all_facts => :rels_to_facts => Relation(new_idx1) => :true_entpairs => ep], true, :disc)
+    end
+    for ep in true2
+        @write(new[:kernel => :sampled_facts => :all_facts => :rels_to_facts => Relation(new_idx2) => :true_entpairs => ep], true, :disc)
+    end
+    bwd_unconstrained = invert(select(Iterators.flatten((true1, true2))...))
+    @save_for_reverse_regenerate(:kernel => :sampled_facts => :all_facts => :rels_to_facts => Relation(from_idx) => :true_entpairs, bwd_unconstrained)
 end
 
 @oupm_involution merge_transformation (old, fwd) to (new, bwd) begin
@@ -144,21 +165,36 @@ end
     rel1 = @convert_to_abstract(Relation(idx1))
     rel2 = @convert_to_abstract(Relation(idx2))
     ent_to_idx =  @read(old[:kernel => :verbs => :indices_per_entity], :disc)
-    sentence_indices = Iterators.flatten((get(ent_to_idx, rel1, ()), get(ent_to_idx, rel2, ())))
+    inds1 = haskey(ent_to_idx, rel1) ? ent_to_idx[rel1] : ()
+    inds2 = haskey(ent_to_idx, rel2) ? ent_to_idx[rel2] : ()
+    sentence_indices = Iterators.flatten((inds1, inds2))
     trues = Set()
+    true1 = Set()
+    true2 = Set()
     for idx in sentence_indices
         fact = @read(old[:kernel => :sampled_facts => :sampled_facts => idx], :disc)
         entpair = (fact.ent1, fact.ent2)
         push!(trues, entpair)
         @write(new[:kernel => :sampled_facts => :sampled_facts => idx], Fact(Relation(to_idx), entpair...), :disc)
+
+        if idx in inds1
+            @write(bwd[:to_first => idx], true, :disc)
+            push!(true1, entpair)
+        end
+        if idx in inds2
+            @write(bwd[:to_first => idx], false, :disc)
+            push!(true2, entpair)
+        end
     end
-    for idx in get(ent_to_idx, rel1, ())
-        @write(bwd[:to_first => idx], true, :disc)
+
+    for entpair in trues
+        @write(new[:kernel => :sampled_facts => :all_facts => :rels_to_facts => Relation(to_idx) => :true_entpairs => entpair], true, :disc)
     end
-    for idx in get(ent_to_idx, rel2, ())
-        @write(bwd[:to_first => idx], false, :disc)
-    end
-    @write(new[:kernel => :sampled_facts => :all_facts => :rels_to_facts => Relation(to_idx) => :true_entpairs], trues, :disc)
+
+    bwd_unconstrained1 = invert(select(true1...))
+    bwd_unconstrained2 = invert(select(true2...))
+    @save_for_reverse_regenerate(:kernel => :sampled_facts => :all_facts => :rels_to_facts => Relation(idx1) => :true_entpairs, bwd_unconstrained1)
+    @save_for_reverse_regenerate(:kernel => :sampled_facts => :all_facts => :rels_to_facts => Relation(idx2) => :true_entpairs, bwd_unconstrained2)
 end
 
 #######################

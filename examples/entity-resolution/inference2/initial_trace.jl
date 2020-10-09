@@ -1,4 +1,5 @@
 true_entpairs_addr(rel) = :kernel => :sampled_facts => :all_facts => :rels_to_facts => rel => :true_entpairs
+true_entpairs_addr(rel, suff) = :kernel => :sampled_facts => :all_facts => :rels_to_facts => rel => :true_entpairs => suff
 
 function make_constraints(sentences::Vector{SentenceNumeric}, params::ModelParams)
     constraints = choicemap()
@@ -13,6 +14,9 @@ function make_constraints(sentences::Vector{SentenceNumeric}, params::ModelParam
     end
 
     for (r, certainly_true) in enumerate(true_for_rel)
+        # for ep in certainly_true
+        #     constraints[true_entpairs_addr(Relation(r), ep)] = true
+        # end
         constraints[true_entpairs_addr(Relation(r))] = certainly_true
     end
 
