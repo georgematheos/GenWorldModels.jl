@@ -208,6 +208,9 @@ end
 macro save_for_reverse_regenerate(address)
     quote _save_for_reverse_regenerate($(esc(bij_state)), $(esc(address))) end
 end
+macro save_for_reverse_regenerate(address, sel)
+    quote _save_for_reverse_regenerate($(esc(bij_state)), $(esc(address)), $(esc(sel))) end
+end
 macro regenerate(address)
     quote _regenerate($(esc(bij_state)), $(esc(address))) end
 end
@@ -230,7 +233,8 @@ end
 
 mutable struct FirstPassResults
     update_spec::UpdateWithOUPMMovesSpec
-    regenerated::DynamicChoiceMap
+    reverse_regenerated_subtrees::DynamicChoiceMap
+    reverse_regenerated::DynamicSelection
 
     "output proposal choice map ``u'``"
     u_back::ChoiceMap
@@ -245,7 +249,8 @@ end
 
 function FirstPassResults()
     return FirstPassResults(
-        UpdateWithOUPMMovesSpec((), DynamicAddressTree{Union{Value, SelectionLeaf}}()), choicemap(), choicemap(),
+        UpdateWithOUPMMovesSpec((), DynamicAddressTree{Union{Value, SelectionLeaf}}()),
+        choicemap(), DynamicSelection(), choicemap(),
         Dict(), Dict(), Dict(), Dict(),
         DynamicSelection(), DynamicSelection())
 end
@@ -259,6 +264,9 @@ struct FirstPassState
     aux_trace
 
     results::FirstPassResults
+
+    # "whether we are doing an involution correctness check"
+    # will_check_rev::Boolean
 end
 
 function FirstPassState(model_trace, aux_trace)
@@ -271,9 +279,10 @@ function run_first_pass(transform::OUPMInvolutionDSLProgram, model_trace, aux_tr
     return state.results
 end
 
-function _save_for_reverse_regenerate(state::FirstPassState, address)
+function _save_for_reverse_regenerate(state::FirstPassState, address, selection=AllSelection())
     values = get_subtree(get_choices(state.model_trace), address)
-    set_subtree!(state.results.regenerated, address, values)
+    set_subtree!(state.results.reverse_regenerated_subtrees, address, values)
+    set_subtree!(state.results.reverse_regenerated, address, selection)
 end
 
 function _regenerate(state::FirstPassState, address)
@@ -480,6 +489,9 @@ end
 function _save_for_reverse_regenerate(::JacobianPassState, _)
     nothing
 end
+function _save_for_reverse_regenerate(::JacobianPassState, _, _)
+    nothing
+end
 function _regenerate(::JacobianPassState, _)
     nothing
 end
@@ -667,7 +679,7 @@ function errorlog_on_differences(c1, c2)
         push!(strs, "\n  Found in 2 but not 1: $addr")
     end
     for addr in diffval
-        push!(strs, "\n  Different vals at: $addr is $(c1[addr]) in first and $(c2[addr]) in second")
+        push!(strs, "\n  Different vals at: $addr ")#is $(c1[addr]) in first and $(c2[addr]) in second")
     end
 
     if !isempty(strs)
@@ -728,7 +740,7 @@ function symmetric_trace_translator_run_transform(
         prev_model_trace::Trace, forward_proposal_trace::Trace,
         q::GenerativeFunction, q_args::Tuple; regeneration_constraints=EmptyChoiceMap())
     first_pass_results = run_first_pass(f, prev_model_trace, forward_proposal_trace)
-    ext_const_addrs = invert(addrs(first_pass_results.regenerated))
+    ext_const_addrs = invert(first_pass_results.reverse_regenerated)
     spec = first_pass_results.update_spec
 
     if !isempty(regeneration_constraints)
@@ -745,7 +757,9 @@ function symmetric_trace_translator_run_transform(
         f, prev_model_trace, forward_proposal_trace, first_pass_results, discard)
     backward_proposal_trace, = generate(
         q, (new_model_trace, q_args...), first_pass_results.u_back)
-    return (new_model_trace, log_model_weight, backward_proposal_trace, log_abs_determinant, first_pass_results.regenerated)
+
+    reverse_regenerated_values = get_selected(first_pass_results.reverse_regenerated_subtrees, first_pass_results.reverse_regenerated)
+    return (new_model_trace, log_model_weight, backward_proposal_trace, log_abs_determinant, reverse_regenerated_values)
 end
 
 function (translator::OUPMMHKernel)(prev_model_trace::Trace; check=false, observations=EmptyChoiceMap())
@@ -760,6 +774,19 @@ function (translator::OUPMMHKernel)(prev_model_trace::Trace; check=false, observ
     forward_proposal_score = get_score(forward_proposal_trace)
     backward_proposal_score = get_score(backward_proposal_trace)
     log_weight = log_model_weight + backward_proposal_score - forward_proposal_score + log_abs_determinant
+
+
+    # score_delta = get_score(new_model_trace) - get_score(prev_model_trace)
+    # println("  score delta / weight: $score_delta / $log_model_weight")
+    # println("  bwd         / fwd   : $backward_proposal_score / $forward_proposal_score")
+    # println("  overall weight : $log_weight")
+
+    # if prev_model_trace[:world => :num_relations => ()] == 1
+    #     forward_proposal_choices = get_choices(forward_proposal_trace)
+    #     @assert forward_proposal_choices[:do_split]
+    #     println("split proposal:")
+    #     display(forward_proposal_choices)
+    # end
 
     if check
         Gen.check_observations(get_choices(new_model_trace), observations)
