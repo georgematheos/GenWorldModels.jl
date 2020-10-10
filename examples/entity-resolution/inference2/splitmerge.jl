@@ -59,8 +59,8 @@ end
             prob_verb_given_rel2 = (dirichlet_prior_val(tr) + count2[mention]) / (num_verbs(tr) * dirichlet_prior_val(tr) + sum(count2))
 
             # TODO: should I include the num_entpairs - length(...) in the denominators here?
-            prob_sparsities_given_rel1 = entpair in entpairs1 ? 1. : (length(entpairs1) + 1 + α) / β #(num_entpairs - length(entpairs1) + β)
-            prob_sparsities_given_rel2 = entpair in entpairs2 ? 1. : (length(entpairs2) + 1 + α) / β #(num_entpairs - length(entpairs2) + β)
+            prob_sparsities_given_rel1 = entpair in entpairs1 ? 1. : (length(entpairs1) + 1 + α) / (num_entpairs - length(entpairs1) + β)
+            prob_sparsities_given_rel2 = entpair in entpairs2 ? 1. : (length(entpairs2) + 1 + α) / (num_entpairs - length(entpairs2) + β)
             
             verb_p1 = prob_verb_given_rel1/(prob_verb_given_rel1 + prob_verb_given_rel2)
             verb_p2 = prob_verb_given_rel2/(prob_verb_given_rel1 + prob_verb_given_rel2)
