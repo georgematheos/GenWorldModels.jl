@@ -10,6 +10,7 @@ Base.isapprox(f1::Fact, f2::Fact) = f1.rel == f2.rel && f1.ent1 == f2.ent1 && f2
 include("distributions.jl")
 include("dirichlet_process_entity_mention.jl")
 include("beta_bernoulli_subset.jl")
+include("multi_uniform_choice.jl")
 
 @gen (static, diffs) function num_relations(world, t)
     num_rels_prior ~ lookup_or_generate(world[:args][:num_rels_prior])
@@ -45,7 +46,8 @@ end
 
 @gen (static, diffs) function sample_facts(world, num_sentences)
     all_facts ~ get_fact_set(world)
-    sampled_facts ~ Map(uniform_fact_sample)(fill(world, num_sentences), fill(all_facts, num_sentences))
+    # sampled_facts ~ Map(uniform_fact_sample)(fill(world, num_sentences), fill(all_facts, num_sentences))
+    sampled_facts ~ map_uniform_fact(world, num_sentences, all_facts)
     return sampled_facts
 end
 
@@ -78,6 +80,7 @@ model_args(p::ModelParams) = (p.num_entities, p.num_relations_prior, p.beta_prio
 num_ents(tr) = get_args(tr)[1]
 num_verbs(tr) = get_args(tr)[6]
 dirichlet_prior_val(tr) = get_args(tr)[5]
+beta_prior(tr) = get_args(tr)[3]
 entpairs(tr) = get_retval(tr)[2]
 verbs(tr) = get_retval(tr)[1]
 

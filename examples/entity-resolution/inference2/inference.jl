@@ -90,7 +90,7 @@ a split/merge update or an update to which relation is assigned to each sentence
 `entpair_to_indices` should be a dictionary from entpair `(e1, e2)` to a collection
 of all the indices in which these entpairs appear.
 """
-function splitmerge_inference_iter(tr, acc_tracker, splitmerge_type, entpair_to_indices; splitmerge_prob=0.2)
+function splitmerge_inference_iter(tr, acc_tracker, splitmerge_type, entpair_to_indices; splitmerge_prob=0.3)
     do_splitmerge = bernoulli(splitmerge_prob)
     if do_splitmerge
         # println("running a splitmerge update...")
@@ -188,8 +188,9 @@ end
         unnormalized_probs = [rel_idx in true_rel_indices ? 2*(nrels - num_refs) : num_refs for rel_idx=1:nrels]
         probs = normalize(unnormalized_probs)
         if !isapprox(sum(probs), 1.)
-            println("unnormalized probs: ", unnormalized_probs)
-            println("num refs: ", num_refs)
+            # println("unnormalized probs: ", unnormalized_probs)
+            # println("num refs: ", num_refs)
+            probs = [1/nrels for _=1:nrels]
         end
         new_rel_idx ~ categorical(probs)
     end

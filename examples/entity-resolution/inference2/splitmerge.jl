@@ -20,33 +20,66 @@ end
             zeros(num_verbs(tr))
         end
     end
+    abstract_rels = map(idx -> GenWorldModels.convert_to_abstract(tr.world, Relation(idx)), 1:current_num_rels)
     logfactors = [
         -logbeta(cnt(rel) .+ dirichlet_prior_val(tr))
-        for rel in map(idx -> GenWorldModels.convert_to_abstract(tr.world, Relation(idx)), 1:current_num_rels)
+        for rel in abstract_rels
     ]
-    logprobs = logfactors .- logsumexp(logfactors)
-    probs = exp.(logprobs)
+
+    num_entpairs = num_ents(tr)^2
+    (α, β) = beta_prior(tr)
+    entpair(idx) = entpairs(tr)[idx]
+    num_entpairs_for_rel(rel) = haskey(tr[:kernel => :verbs => :indices_per_entity], rel) ? length(Set(entpair(idx) for idx in tr[:kernel => :verbs => :indices_per_entity][rel])) : 0
+    lf2 = [
+        -logbeta(α + num_mentioned, β) for num_mentioned in map(num_entpairs_for_rel, abstract_rels)
+    ]
+
+    overall_logfactors = lf2 .+ logfactors
+    logprobs = overall_logfactors .- logsumexp(overall_logfactors)
+    probs = normalize(logprobs)
+
+    # probs = exp.(logprobs)
     return {:from_idx} ~ categorical(probs)
 end
 
 @gen function sample_split_assignments(tr, from_idx, is_smart)
     abstract_rel = GenWorldModels.convert_to_abstract(tr.world, Relation(from_idx))
     count1 = zeros(Int, num_verbs(tr))
+    entpairs1 = Set()
     count2 = zeros(Int, num_verbs(tr))
+    entpairs2 = Set()
     itr = haskey(tr[:kernel => :verbs => :indices_per_entity], abstract_rel) ? tr[:kernel => :verbs => :indices_per_entity][abstract_rel] : ()
     for idx in itr
         mention = verbs(tr)[idx]
+        entpair = entpairs(tr)[idx]
+        (α, β) = beta_prior(tr)
         if is_smart
-            p1 = (dirichlet_prior_val(tr) + count1[mention]) / (num_verbs(tr) * dirichlet_prior_val(tr) + sum(count1))
-            p2 = (dirichlet_prior_val(tr) + count2[mention]) / (num_verbs(tr) * dirichlet_prior_val(tr) + sum(count2))
+            num_entpairs = num_ents(tr)^2
+            prob_verb_given_rel1 = (dirichlet_prior_val(tr) + count1[mention]) / (num_verbs(tr) * dirichlet_prior_val(tr) + sum(count1))
+            prob_verb_given_rel2 = (dirichlet_prior_val(tr) + count2[mention]) / (num_verbs(tr) * dirichlet_prior_val(tr) + sum(count2))
+
+            # TODO: should I include the num_entpairs - length(...) in the denominators here?
+            prob_sparsities_given_rel1 = entpair in entpairs1 ? 1. : (length(entpairs1) + 1 + α) / β #(num_entpairs - length(entpairs1) + β)
+            prob_sparsities_given_rel2 = entpair in entpairs2 ? 1. : (length(entpairs2) + 1 + α) / β #(num_entpairs - length(entpairs2) + β)
+            
+            verb_p1 = prob_verb_given_rel1/(prob_verb_given_rel1 + prob_verb_given_rel2)
+            verb_p2 = prob_verb_given_rel2/(prob_verb_given_rel1 + prob_verb_given_rel2)
+            spars_p1 = prob_sparsities_given_rel1/(prob_sparsities_given_rel1 + prob_sparsities_given_rel2)
+            spars_p2 = prob_sparsities_given_rel2/(prob_sparsities_given_rel1 + prob_sparsities_given_rel2)
+
+            p1 = verb_p1 * spars_p1
+            p2 = verb_p2 * spars_p2
+
             to_first = {:to_first => idx} ~ bernoulli(p1/(p1+p2))
         else
             to_first = {:to_first => idx} ~ bernoulli(0.5)
         end
         if to_first
             count1[mention] += 1
+            push!(entpairs1, entpair)
         else
             count2[mention] += 1
+            push!(entpairs2, entpair)
         end
     end
 end
@@ -72,22 +105,33 @@ end
         end
     end
     first_rel = GenWorldModels.convert_to_abstract(tr.world, Relation(from_idx1))
+    
     other_indices = [x for x=1:current_num_rels if x !== from_idx1]
     if length(other_indices) == 0
         println("0 other possibilities")
         println("Currently $(tr[:world => :num_relations => ()]) relations in the trace.")
         println("First rel is $from_idx1")
     end
+
     abstract_other_rels = [GenWorldModels.convert_to_abstract(tr.world, Relation(x)) for x in other_indices]
-    factors = [
+
+    verb_factors = [
         logbeta(cnt(other_rel) + cnt(first_rel) .+ dirichlet_prior_val(tr)) for other_rel in abstract_other_rels
     ]
+
+    entpair(idx) = entpairs(tr)[idx]
+    entpairs_for_rel(rel) = haskey(tr[:kernel => :verbs => :indices_per_entity], rel) ? Set(entpair(idx) for idx in tr[:kernel => :verbs => :indices_per_entity][rel]) : Set()
+    entpairs_for_first_rel = entpairs_for_rel(first_rel)
+    num_referenced_merged(rel) = length(union(entpairs_for_first_rel, entpairs_for_rel(rel)))
+    (α, β) = beta_prior(tr)
+    sparsity_factors = [
+        logbeta(num_merged + α, β) for num_merged in map(num_referenced_merged, abstract_other_rels)
+    ]
+
+    factors = verb_factors .+ sparsity_factors
     logprobs = factors .- logsumexp(factors)
     probs = exp.(logprobs)
-    if !isapprox(sum(probs), 1.)
-        println("Factors: $factors")
-        println("Prob: $probs")
-    end
+
     val = {:from_idx2} ~ categorical_from_list(other_indices, probs)
 end
 
