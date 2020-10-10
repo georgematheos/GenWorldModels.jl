@@ -99,8 +99,8 @@ examine(i, tr) = println("Score at iteration $i : $(get_score(tr)) | num rels = 
 initial_tr = get_initial_trace(get_sentences_numeric_from_tr(groundtruth_tr), params)
 println("Initial trace generated (score = $(get_score(initial_tr))).\nRunning inference...")
 
-run_inference_with_saving!(run_tracked_splitmerge_inference!, initial_tr, 1200, examine;
-dirname=gwm_dirname, save_freq=4, examine_freq=10, log=true, log_freq=10
+run_inference_with_saving!(run_tracked_splitmerge_inference!, initial_tr, 100000, examine;
+dirname=gwm_dirname, save_freq=400, examine_freq=1000, log=true, log_freq=1000
 )
 
 ###########################
@@ -114,8 +114,8 @@ examine(i, tr) = println("Score at iteration $i : $(get_score(tr)) | num rels = 
 include("../../vanilla/main.jl")
 initial_tr = VanillaIE.get_trace_for_state(get_state(initial_tr), VanillaIE.get_sentences_numeric_from_tr(groundtruth_tr), params)
 println("Initial trace generated (score = $(get_score(initial_tr))).\nRunning inference...")
-run_inference_with_saving!(VanillaIE.run_tracked_splitmerge_inference!, initial_tr, 125, examine;
-dirname=vsm_dirname, get_state=VanillaIE.get_state, save_freq=1, examine_freq=10, log=true, log_freq=10
+run_inference_with_saving!(VanillaIE.run_tracked_splitmerge_inference!, initial_tr, 15000, examine;
+dirname=vsm_dirname, get_state=VanillaIE.get_state, save_freq=60, examine_freq=1000, log=true, log_freq=1000
 )
 
 ##################################
@@ -125,8 +125,8 @@ println("Running Vanilla Gen ancestral sampling...")
 va_dirname = joinpath(dirname, "VanillaAncestral")
 mkdir(va_dirname)
 
-run_inference_with_saving!(VanillaIE.run_ancestral_sampling!, initial_tr, 1800, examine;
-dirname=va_dirname, get_state=VanillaIE.get_state, save_freq=10, examine_freq=10
+run_inference_with_saving!(VanillaIE.run_ancestral_sampling!, initial_tr, 180000, examine;
+dirname=va_dirname, get_state=VanillaIE.get_state, save_freq=720, examine_freq=1000
 )
 
 

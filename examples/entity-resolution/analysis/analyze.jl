@@ -43,19 +43,27 @@ function calculate_entropies_over_time(ground_truth_filename, datadir)
     return (runtimes, entropies_of_inferred_given_groundtruth, entropies_of_groundtruth_given_inferred)
 end
 
-function plot_inf_given_gt_entropies(groundtruth_filepath, labels_to_paths...)
-    plot_entropies(groundtruth_filepath, labels_to_paths...; inf_given_gt=true, title="Entropy of inferred relations given ground truth")
+function plot_inf_given_gt_entropies(groundtruth_filepath, labels_to_paths...; max_time=Inf)
+    plot_entropies(groundtruth_filepath, labels_to_paths...; max_time, inf_given_gt=true, title="Entropy of inferred relations given ground truth")
 end
-function plot_gt_given_inf_entropies(groundtruth_filepath, labels_to_paths...)
-    plot_entropies(groundtruth_filepath, labels_to_paths...; inf_given_gt=false, title="Entropy of ground truth relations given inferences")
+function plot_gt_given_inf_entropies(groundtruth_filepath, labels_to_paths...; max_time=Inf)
+    plot_entropies(groundtruth_filepath, labels_to_paths...; max_time, inf_given_gt=false, title="Entropy of ground truth relations given inferences")
 end
 
-function plot_entropies(groundtruth_filepath, labels_to_paths...; inf_given_gt=true, title="Entropies over time")
+function plot_entropies(groundtruth_filepath, labels_to_paths...; max_time=Inf, inf_given_gt=true, title="Entropies over time")
     labels_to_paths = collect(labels_to_paths)
     ent_data = [
         calculate_entropies_over_time(groundtruth_filepath, path)
         for (_, path) in labels_to_paths
     ]
+    function timefilter(data)
+        (times, as, bs) = data
+        indices = [i for i=1:length(times) if times[i] <= max_time]
+        return (times[indices], as[indices], bs[indices])
+    end
+
+    ent_data = map(timefilter, ent_data)
+
     times = [data[1] for data in ent_data]
 
     i = inf_given_gt ? 2 : 3
@@ -71,13 +79,13 @@ function plot_entropies(groundtruth_filepath, labels_to_paths...; inf_given_gt=t
     gui()
 end
 
-dirname = joinpath(@__DIR__, "../out/runs/20201010-14_27_00")
+dirname = joinpath(@__DIR__, "../out/runs/20201010-15_10_42")
 gt_dirname = joinpath(dirname, "groundtruth")
 labels_to_dirnames = [(l, joinpath(dirname, n)) for (l, n) in (
     "GenWorldModels" => "GenWorldModels", "Vanilla Gen Split/Merge" => "VanillaSplitMerge",
     "Vanilla Gen Generic Infernece" => "VanillaAncestral"
 )]
-plot_inf_given_gt_entropies(gt_dirname, labels_to_dirnames...)
+plot_inf_given_gt_entropies(gt_dirname, labels_to_dirnames...; max_time=1000)
 # path = realpath(joinpath(@__DIR__, "../out/runs/20201010-11_21_22"))
 # println("read $path: ", readdir(path))
 # plot_entropies(path)

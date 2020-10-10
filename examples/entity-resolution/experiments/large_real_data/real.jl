@@ -1,4 +1,4 @@
-module LargeRealData
+module RealIE
 using Gen
 using GenWorldModels
 using FunctionalCollections
@@ -20,7 +20,7 @@ function get_params(;
     mean_n_rels=100,
     num_relations_var=70,
     beta_prior=nothing,
-    dirichlet_prior_val=0.001
+    dirichlet_prior_val=0.01
 )
     data = read_data(filename, num=num)
     nents = length(data.entity_strings)

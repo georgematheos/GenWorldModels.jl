@@ -1,0 +1,8 @@
+{
+    "numRels":20,
+    "numEnts":207,
+    "numIterations":200,
+    "alpha":0.01,
+    "beta":0.01,
+    "sparsity":0.0001400266051
+}

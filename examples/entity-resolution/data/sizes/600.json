@@ -1,0 +1,3004 @@
+{
+    "sentences": [
+        {
+            "source": "Stephen Gillers",
+            "dest": "New York University Law School",
+            "depPath": "appos|->appos->seer->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Stephen Gillers",
+            "dest": "New York University Law School",
+            "depPath": "appos|->appos->expert->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Stephen Gillers",
+            "dest": "New York University Law School",
+            "depPath": "pobj|<-pobj<-from<-prep<-letter<-dobj<-make<-rcmod<-conflict<-dobj<-see->dobj->professor->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Stephen Gillers",
+            "dest": "New York University Law School",
+            "depPath": "rcmod|->rcmod->teach->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Stephen Gillers",
+            "dest": "New York University Law School",
+            "depPath": "nsubj|<-nsubj<-teach->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Stephen Gillers",
+            "dest": "New York University Law School",
+            "depPath": "appos|->appos->professor->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Stephen Gillers",
+            "dest": "New York University Law School",
+            "depPath": "appos|->appos->dean->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Stephen Gillers",
+            "dest": "New York University Law School",
+            "depPath": "appos|->appos->specialist->prep->on->pobj->ethic->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Stephen Gillers",
+            "dest": "New York University Law School",
+            "depPath": "appos|->appos->professor->nn->|nn"
+        },
+        {
+            "source": "Stephen Gillers",
+            "dest": "New York University Law School",
+            "depPath": "appos|->appos->rofessor->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Olympics",
+            "dest": "New York",
+            "depPath": "dobj|<-dobj<-lure->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Olympics",
+            "dest": "New York",
+            "depPath": "dobj|<-dobj<-hold->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Olympics",
+            "dest": "New York",
+            "depPath": "nsubj|<-nsubj<-mean->prep->for->pobj->|pobj"
+        },
+        {
+            "source": "Olympics",
+            "dest": "New York",
+            "depPath": "dobj|<-dobj<-bring->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Olympics",
+            "dest": "New York",
+            "depPath": "dobj|<-dobj<-have->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Olympics",
+            "dest": "New York",
+            "depPath": "dobj|<-dobj<-win->prep->for->pobj->|pobj"
+        },
+        {
+            "source": "Olympics",
+            "dest": "New York",
+            "depPath": "nsubj|<-nsubj<-come->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Olympics",
+            "dest": "New York",
+            "depPath": "nsubjpass|<-nsubjpass<-hold->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Olympics",
+            "dest": "New York",
+            "depPath": "dobj|<-dobj<-entice->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Olympics",
+            "dest": "New York",
+            "depPath": "partmod|->partmod->come->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Turkey",
+            "dest": "NATO",
+            "depPath": "rcmod|->rcmod->member->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Turkey",
+            "dest": "NATO",
+            "depPath": "nn|<-nn<-ally->nn->|nn"
+        },
+        {
+            "source": "Turkey",
+            "dest": "NATO",
+            "depPath": "appos|->appos->ally->nn->|nn"
+        },
+        {
+            "source": "Turkey",
+            "dest": "NATO",
+            "depPath": "appos|->appos->member->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Turkey",
+            "dest": "NATO",
+            "depPath": "nsubj|<-nsubj<-member->nn->|nn"
+        },
+        {
+            "source": "Turkey",
+            "dest": "NATO",
+            "depPath": "appos|->appos->member->nn->|nn"
+        },
+        {
+            "source": "Turkey",
+            "dest": "NATO",
+            "depPath": "nsubj|<-nsubj<-ally->nn->|nn"
+        },
+        {
+            "source": "Turkey",
+            "dest": "NATO",
+            "depPath": "rcmod|->rcmod->ally->nn->|nn"
+        },
+        {
+            "source": "Turkey",
+            "dest": "NATO",
+            "depPath": "nsubj|<-nsubj<-member->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Turkey",
+            "dest": "NATO",
+            "depPath": "poss|<-poss<-ally->nn->|nn"
+        },
+        {
+            "source": "Mr. Mandela",
+            "dest": "Winnie",
+            "depPath": "poss|<-poss<-return->appos->|appos"
+        },
+        {
+            "source": "Mr. Mandela",
+            "dest": "Winnie",
+            "depPath": "partmod|->partmod->accompany->prep->by->pobj->wife->appos->|appos"
+        },
+        {
+            "source": "Mr. Mandela",
+            "dest": "Winnie",
+            "depPath": "nsubj|<-nsubj<-tour->prep->with->pobj->wife->dep->|dep"
+        },
+        {
+            "source": "Mr. Mandela",
+            "dest": "Winnie",
+            "depPath": "nsubj|<-nsubj<-share->prep->with->pobj->wife->dep->|dep"
+        },
+        {
+            "source": "Mr. Mandela",
+            "dest": "Winnie",
+            "depPath": "poss|<-poss<-wife->appos->|appos"
+        },
+        {
+            "source": "Mr. Mandela",
+            "dest": "Winnie",
+            "depPath": "rcmod|->rcmod->divorce->prep->from->pobj->|pobj"
+        },
+        {
+            "source": "Mr. Mandela",
+            "dest": "Winnie",
+            "depPath": "pobj|<-pobj<-within<-prep<-dissent<-nsubj<-defend->dobj->concession->dep->|dep"
+        },
+        {
+            "source": "Mr. Mandela",
+            "dest": "Winnie",
+            "depPath": "nsubj|<-nsubj<-start->prep->with->pobj->wife->appos->|appos"
+        },
+        {
+            "source": "Mr. Mandela",
+            "dest": "Winnie",
+            "depPath": "poss|<-poss<-work->appos->wife->dep->activism->poss->|poss"
+        },
+        {
+            "source": "Mr. Mandela",
+            "dest": "Winnie",
+            "depPath": "rcmod|->rcmod->accompany->prep->at->pobj->conference->prep->by->pobj->wife->appos->|appos"
+        },
+        {
+            "source": "Riley",
+            "dest": "Smith",
+            "depPath": "pobj|<-pobj<-of<-prep<-calm<-dep<-uneasy<-dep<-quick->nsubj->|nsubj"
+        },
+        {
+            "source": "Riley",
+            "dest": "Smith",
+            "depPath": "poss|<-poss<-assertion->dep->use->dobj->|dobj"
+        },
+        {
+            "source": "Riley",
+            "dest": "Smith",
+            "depPath": "nsubj|<-nsubj<-say<-csubj<-be->prep->that->nsubj->position->rcmod->use->nsubjpass->|nsubjpass"
+        },
+        {
+            "source": "Riley",
+            "dest": "Smith",
+            "depPath": "nsubj|<-nsubj<-say->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Riley",
+            "dest": "Smith",
+            "depPath": "nsubjpass|<-nsubjpass<-tempt->purpcl->play->dobj->minute->nn->|nn"
+        },
+        {
+            "source": "Riley",
+            "dest": "Smith",
+            "depPath": "nsubj|<-nsubj<-yank->dobj->|dobj"
+        },
+        {
+            "source": "Riley",
+            "dest": "Smith",
+            "depPath": "nsubj|<-nsubj<-work->dobj->|dobj"
+        },
+        {
+            "source": "Riley",
+            "dest": "Smith",
+            "depPath": "nsubj|<-nsubj<-return->dobj->|dobj"
+        },
+        {
+            "source": "Riley",
+            "dest": "Smith",
+            "depPath": "nsubj|<-nsubj<-record->dobj->cd->prep->of->pobj->composition->poss->|poss"
+        },
+        {
+            "source": "Riley",
+            "dest": "Smith",
+            "depPath": "poss|<-poss<-assessment<-pobj<-of<-prep<-tell<-dep<-say->nsubj->|nsubj"
+        },
+        {
+            "source": "Croatian",
+            "dest": "Franjo Tudjman",
+            "depPath": "amod|<-amod<-counterpart->appos->|appos"
+        },
+        {
+            "source": "Croatian",
+            "dest": "Franjo Tudjman",
+            "depPath": "amod|<-amod<-president->appos->|appos"
+        },
+        {
+            "source": "Croatian",
+            "dest": "Franjo Tudjman",
+            "depPath": "nn|<-nn<-government->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Croatian",
+            "dest": "Franjo Tudjman",
+            "depPath": "nn|<-nn<-president->appos->|appos"
+        },
+        {
+            "source": "Croatian",
+            "dest": "Franjo Tudjman",
+            "depPath": "nn|<-nn<-president<-pobj<-to<-prep<-letter<-nsubj<-address->prep->to->pobj->president->appos->|appos"
+        },
+        {
+            "source": "Croatian",
+            "dest": "Franjo Tudjman",
+            "depPath": "amod|<-amod<-village<-nsubj<-renovate->dobj->birthplace->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Croatian",
+            "dest": "Franjo Tudjman",
+            "depPath": "nn|<-nn<-government->partmod->lead->prep->by->pobj->|pobj"
+        },
+        {
+            "source": "Croatian",
+            "dest": "Franjo Tudjman",
+            "depPath": "amod|<-amod<-government->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Croatian",
+            "dest": "Franjo Tudjman",
+            "depPath": "amod|<-amod<-leader->appos->|appos"
+        },
+        {
+            "source": "Croatian",
+            "dest": "Franjo Tudjman",
+            "depPath": "amod|<-amod<-republic<-poss<-president->appos->|appos"
+        },
+        {
+            "source": "Washington",
+            "dest": "State Department",
+            "depPath": "pobj|<-pobj<-in<-prep<-say->nsubj->spokesman->prep->for->pobj->|pobj"
+        },
+        {
+            "source": "Washington",
+            "dest": "State Department",
+            "depPath": "pobj|<-pobj<-in<-prep<-say->nsubj->spokesman->nn->|nn"
+        },
+        {
+            "source": "Washington",
+            "dest": "State Department",
+            "depPath": "pobj|<-pobj<-in<-prep<-condemn->nsubj->|nsubj"
+        },
+        {
+            "source": "Washington",
+            "dest": "State Department",
+            "depPath": "appos|->appos->official->nn->|nn"
+        },
+        {
+            "source": "Washington",
+            "dest": "State Department",
+            "depPath": "pobj|<-pobj<-in<-prep<-issue->nsubj->|nsubj"
+        },
+        {
+            "source": "Washington",
+            "dest": "State Department",
+            "depPath": "pobj|<-pobj<-in<-prep<-say->nsubj->|nsubj"
+        },
+        {
+            "source": "Washington",
+            "dest": "State Department",
+            "depPath": "appos|->appos->spokeswoman->nn->|nn"
+        },
+        {
+            "source": "Washington",
+            "dest": "State Department",
+            "depPath": "appos|->appos->spokesman->nn->|nn"
+        },
+        {
+            "source": "Washington",
+            "dest": "State Department",
+            "depPath": "pobj|<-pobj<-in<-prep<-say->nsubj->spokeswoman->nn->|nn"
+        },
+        {
+            "source": "Washington",
+            "dest": "State Department",
+            "depPath": "pobj|<-pobj<-in<-prep<-say->nsubj->official->nn->|nn"
+        },
+        {
+            "source": "Giants",
+            "dest": "Redskins",
+            "depPath": "nsubj|<-nsubj<-upset->dobj->|dobj"
+        },
+        {
+            "source": "Giants",
+            "dest": "Redskins",
+            "depPath": "poss|<-poss<-victory->prep->over->pobj->|pobj"
+        },
+        {
+            "source": "Giants",
+            "dest": "Redskins",
+            "depPath": "nsubj|<-nsubj<-lose->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Giants",
+            "dest": "Redskins",
+            "depPath": "nsubj|<-nsubj<-play->prep->against->pobj->|pobj"
+        },
+        {
+            "source": "Giants",
+            "dest": "Redskins",
+            "depPath": "nsubj|<-nsubj<-hold->dobj->|dobj"
+        },
+        {
+            "source": "Giants",
+            "dest": "Redskins",
+            "depPath": "nsubj|<-nsubj<-beat->dobj->|dobj"
+        },
+        {
+            "source": "Giants",
+            "dest": "Redskins",
+            "depPath": "nsubj|<-nsubj<-defeat->dobj->|dobj"
+        },
+        {
+            "source": "Giants",
+            "dest": "Redskins",
+            "depPath": "nsubj|<-nsubj<-open->prep->against->pobj->|pobj"
+        },
+        {
+            "source": "Giants",
+            "dest": "Redskins",
+            "depPath": "nsubj|<-nsubj<-play->dobj->|dobj"
+        },
+        {
+            "source": "Giants",
+            "dest": "Redskins",
+            "depPath": "nsubj|<-nsubj<-play->dobj->game->prep->against->pobj->|pobj"
+        },
+        {
+            "source": "Joseph L. Bruno",
+            "dest": "State Senate",
+            "depPath": "rcmod|->rcmod->re-elected->prep->as->pobj->leader->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Joseph L. Bruno",
+            "dest": "State Senate",
+            "depPath": "appos|->appos->leader->poss->|poss"
+        },
+        {
+            "source": "Joseph L. Bruno",
+            "dest": "State Senate",
+            "depPath": "pobj|<-pobj<-in<-prep<-hear->dep->leader->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Joseph L. Bruno",
+            "dest": "State Senate",
+            "depPath": "appos|->appos->leader->prep->of->pobj->majority->poss->|poss"
+        },
+        {
+            "source": "Joseph L. Bruno",
+            "dest": "State Senate",
+            "depPath": "appos|->appos->leader->nn->|nn"
+        },
+        {
+            "source": "Joseph L. Bruno",
+            "dest": "State Senate",
+            "depPath": "appos|->appos->leader->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Joseph L. Bruno",
+            "dest": "State Senate",
+            "depPath": "appos|->appos->leader->prep->of->pobj->majority->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Joseph L. Bruno",
+            "dest": "State Senate",
+            "depPath": "rcmod|->rcmod->leader->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Joseph L. Bruno",
+            "dest": "State Senate",
+            "depPath": "appos|->appos->leader->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Joseph L. Bruno",
+            "dest": "State Senate",
+            "depPath": "rcmod|->rcmod->leader->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Charles J. Hynes",
+            "dest": "Brooklyn",
+            "depPath": "rcmod|->rcmod->seek->dobj->nomination->prep->for->pobj->attorney->nn->|nn"
+        },
+        {
+            "source": "Charles J. Hynes",
+            "dest": "Brooklyn",
+            "depPath": "appos|->appos->attorney->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Charles J. Hynes",
+            "dest": "Brooklyn",
+            "depPath": "rcmod|->rcmod->turn->nsubj->diocese->nn->|nn"
+        },
+        {
+            "source": "Charles J. Hynes",
+            "dest": "Brooklyn",
+            "depPath": "appos|->appos->attorney->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Charles J. Hynes",
+            "dest": "Brooklyn",
+            "depPath": "rcmod|->rcmod->run->prep->for->pobj->attorney->nn->|nn"
+        },
+        {
+            "source": "Charles J. Hynes",
+            "dest": "Brooklyn",
+            "depPath": "nsubj|<-nsubj<-stand->prep->in->pobj->middle->prep->of->pobj->crowd->prep->in->pobj->station->nn->|nn"
+        },
+        {
+            "source": "Charles J. Hynes",
+            "dest": "Brooklyn",
+            "depPath": "appos|<-appos<-candidate->appos->|appos"
+        },
+        {
+            "source": "Charles J. Hynes",
+            "dest": "Brooklyn",
+            "depPath": "nsubj|<-nsubj<-win->dobj->nomination->prep->for->pobj->attorney->nn->|nn"
+        },
+        {
+            "source": "Charles J. Hynes",
+            "dest": "Brooklyn",
+            "depPath": "appos|->appos->attorney->nn->|nn"
+        },
+        {
+            "source": "Charles J. Hynes",
+            "dest": "Brooklyn",
+            "depPath": "appos|<-appos<-opponent->appos->attorney->nn->|nn"
+        },
+        {
+            "source": "U S West",
+            "dest": "Bell",
+            "depPath": "nsubj|<-nsubj<-company->nn->|nn"
+        },
+        {
+            "source": "U S West",
+            "dest": "Bell",
+            "depPath": "rcmod|->rcmod->create->prep->in->pobj->breakup->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "U S West",
+            "dest": "Bell",
+            "depPath": "nsubjpass|<-nsubjpass<-ally->prep->with->pobj->|pobj"
+        },
+        {
+            "source": "U S West",
+            "dest": "Bell",
+            "depPath": "nsubj|<-nsubj<-different->prep->from->pobj->brethren->nn->|nn"
+        },
+        {
+            "source": "U S West",
+            "dest": "Bell",
+            "depPath": "appos|->appos->company->nn->|nn"
+        },
+        {
+            "source": "U S West",
+            "dest": "Bell",
+            "depPath": "appos|->appos->smallest->prep->of->pobj->company->nn->|nn"
+        },
+        {
+            "source": "U S West",
+            "dest": "Bell",
+            "depPath": "rcmod|->rcmod->set->nsubj->company->nn->|nn"
+        },
+        {
+            "source": "U S West",
+            "dest": "Bell",
+            "depPath": "nn|<-nn<-deal<-pobj<-in<-prep<-try->nsubj->company->nn->|nn"
+        },
+        {
+            "source": "U S West",
+            "dest": "Bell",
+            "depPath": "dep|->dep->company->nn->|nn"
+        },
+        {
+            "source": "U S West",
+            "dest": "Bell",
+            "depPath": "nsubj|<-nsubj<-lead->dobj->company->nn->|nn"
+        },
+        {
+            "source": "Congress",
+            "dest": "Washington",
+            "depPath": "nsubj|<-nsubj<-send->prep->from->pobj->|pobj"
+        },
+        {
+            "source": "Congress",
+            "dest": "Washington",
+            "depPath": "pobj|<-pobj<-with<-prep<-confrontation->rcmod->bring->dobj->|dobj"
+        },
+        {
+            "source": "Congress",
+            "dest": "Washington",
+            "depPath": "pobj|<-pobj<-to<-prep<-give->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Congress",
+            "dest": "Washington",
+            "depPath": "poss|<-poss<-office->nn->|nn"
+        },
+        {
+            "source": "Congress",
+            "dest": "Washington",
+            "depPath": "pobj|<-pobj<-of<-prep<-member->prep->from->pobj->|pobj"
+        },
+        {
+            "source": "Congress",
+            "dest": "Washington",
+            "depPath": "nsubj|<-nsubj<-leave->dobj->|dobj"
+        },
+        {
+            "source": "Congress",
+            "dest": "Washington",
+            "depPath": "pobj|<-pobj<-with<-prep<-change->nsubj->mood->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Congress",
+            "dest": "Washington",
+            "depPath": "pobj|<-pobj<-to<-prep<-deliver->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Congress",
+            "dest": "Washington",
+            "depPath": "pobj|<-pobj<-of<-prep<-member<-nsubj<-leave->dobj->|dobj"
+        },
+        {
+            "source": "Congress",
+            "dest": "Washington",
+            "depPath": "nsubj|<-nsubj<-return->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Louis J. Freeh",
+            "dest": "F.B.I.",
+            "depPath": "prep|->prep->of->pobj->official->nn->|nn"
+        },
+        {
+            "source": "Louis J. Freeh",
+            "dest": "F.B.I.",
+            "depPath": "appos|->appos->director->nn->|nn"
+        },
+        {
+            "source": "Louis J. Freeh",
+            "dest": "F.B.I.",
+            "depPath": "dep|->dep->director->nn->|nn"
+        },
+        {
+            "source": "Louis J. Freeh",
+            "dest": "F.B.I.",
+            "depPath": "rcmod|->rcmod->leave->prep->as->pobj->director->nn->|nn"
+        },
+        {
+            "source": "Louis J. Freeh",
+            "dest": "F.B.I.",
+            "depPath": "poss|<-poss<-announcement->prep->as->pobj->director->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Louis J. Freeh",
+            "dest": "F.B.I.",
+            "depPath": "appos|->appos->director->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Louis J. Freeh",
+            "dest": "F.B.I.",
+            "depPath": "nsubjpass|<-nsubjpass<-swear->prep->as->pobj->director->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Louis J. Freeh",
+            "dest": "F.B.I.",
+            "depPath": "pobj|<-pobj<-of<-prep<-reign->prep->as->pobj->director->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Louis J. Freeh",
+            "dest": "F.B.I.",
+            "depPath": "rcmod|->rcmod->remain->prep->as->pobj->director->prep->of->pobj->official->nn->|nn"
+        },
+        {
+            "source": "Louis J. Freeh",
+            "dest": "F.B.I.",
+            "depPath": "rcmod|->rcmod->director->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "Republicans",
+            "depPath": "nsubj|<-nsubj<-say->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "Republicans",
+            "depPath": "nsubj|<-nsubj<-urge->dobj->|dobj"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "Republicans",
+            "depPath": "nsubj|<-nsubj<-tell->dobj->|dobj"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "Republicans",
+            "depPath": "nsubj|<-nsubj<-reach->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "Republicans",
+            "depPath": "rcmod|->rcmod->go->nsubj->|nsubj"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "Republicans",
+            "depPath": "poss|<-poss<-trouble<-pobj<-about<-prep<-speak->dep->increase->dobj->likelihood->rcmod->call->nsubj->|nsubj"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "Republicans",
+            "depPath": "nsubj|<-nsubj<-assail->dobj->|dobj"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "Republicans",
+            "depPath": "nsubj|<-nsubj<-accuse->dobj->|dobj"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "Republicans",
+            "depPath": "poss|<-poss<-offer->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "Republicans",
+            "depPath": "poss|<-poss<-election->appos->|appos"
+        },
+        {
+            "source": "Mets",
+            "dest": "Dodgers",
+            "depPath": "nsubj|<-nsubj<-win->prep->with->pobj->triumph->prep->over->pobj->|pobj"
+        },
+        {
+            "source": "Mets",
+            "dest": "Dodgers",
+            "depPath": "nsubj|<-nsubj<-beat->dobj->|dobj"
+        },
+        {
+            "source": "Mets",
+            "dest": "Dodgers",
+            "depPath": "nsubj|<-nsubj<-play->dobj->|dobj"
+        },
+        {
+            "source": "Mets",
+            "dest": "Dodgers",
+            "depPath": "pobj|<-pobj<-like<-prep<-bit->partmod->call->dobj->|dobj"
+        },
+        {
+            "source": "Mets",
+            "dest": "Dodgers",
+            "depPath": "nsubj|<-nsubj<-defeat->dobj->|dobj"
+        },
+        {
+            "source": "Mets",
+            "dest": "Dodgers",
+            "depPath": "nsubj|<-nsubj<-lose->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Mets",
+            "dest": "Dodgers",
+            "depPath": "pobj|<-pobj<-from<-prep<-trade->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Mets",
+            "dest": "Dodgers",
+            "depPath": "poss|<-poss<-game->prep->against->pobj->|pobj"
+        },
+        {
+            "source": "Mets",
+            "dest": "Dodgers",
+            "depPath": "poss|<-poss<-victory->prep->over->pobj->|pobj"
+        },
+        {
+            "source": "Mets",
+            "dest": "Dodgers",
+            "depPath": "pobj|<-pobj<-by<-prep<-trade->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Andrew J. Stein",
+            "dest": "City Council",
+            "depPath": "appos|<-appos<-challenger->appos->president->nn->|nn"
+        },
+        {
+            "source": "Andrew J. Stein",
+            "dest": "City Council",
+            "depPath": "rcmod|->rcmod->win->dobj->primary->prep->for->pobj->president->nn->|nn"
+        },
+        {
+            "source": "Andrew J. Stein",
+            "dest": "City Council",
+            "depPath": "appos|->appos->president->nn->|nn"
+        },
+        {
+            "source": "Andrew J. Stein",
+            "dest": "City Council",
+            "depPath": "pobj|<-pobj<-to<-prep<-assistant->dep->president->nn->|nn"
+        },
+        {
+            "source": "Andrew J. Stein",
+            "dest": "City Council",
+            "depPath": "pobj|<-pobj<-of<-prep<-behalf<-pobj<-on<-prep<-attend->advmod->now->dep->as->pobj->president->nn->|nn"
+        },
+        {
+            "source": "Andrew J. Stein",
+            "dest": "City Council",
+            "depPath": "nsubj|<-nsubj<-urge->dobj->|dobj"
+        },
+        {
+            "source": "Andrew J. Stein",
+            "dest": "City Council",
+            "depPath": "pobj|<-pobj<-to<-prep<-lose->dobj->president->nn->|nn"
+        },
+        {
+            "source": "Andrew J. Stein",
+            "dest": "City Council",
+            "depPath": "nsubj|<-nsubj<-triple->dep->president->nn->|nn"
+        },
+        {
+            "source": "Andrew J. Stein",
+            "dest": "City Council",
+            "depPath": "rcmod|->rcmod->be->prep->as->pobj->president->nn->|nn"
+        },
+        {
+            "source": "Andrew J. Stein",
+            "dest": "City Council",
+            "depPath": "appos|->appos->president->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "George Stephanopoulos",
+            "dest": "White House",
+            "depPath": "appos|<-appos<-adviser->rcmod->aide->nn->|nn"
+        },
+        {
+            "source": "George Stephanopoulos",
+            "dest": "White House",
+            "depPath": "appos|->appos->spokesman->nn->|nn"
+        },
+        {
+            "source": "George Stephanopoulos",
+            "dest": "White House",
+            "depPath": "appos|->appos->director->nn->|nn"
+        },
+        {
+            "source": "George Stephanopoulos",
+            "dest": "White House",
+            "depPath": "pobj|<-pobj<-to->dep->make->prep->at->pobj->briefing->nn->|nn"
+        },
+        {
+            "source": "George Stephanopoulos",
+            "dest": "White House",
+            "depPath": "prep|->prep->of->pobj->staff->nn->|nn"
+        },
+        {
+            "source": "George Stephanopoulos",
+            "dest": "White House",
+            "depPath": "appos|->appos->aide->nn->|nn"
+        },
+        {
+            "source": "George Stephanopoulos",
+            "dest": "White House",
+            "depPath": "poss|<-poss<-book->prep->about->pobj->|pobj"
+        },
+        {
+            "source": "George Stephanopoulos",
+            "dest": "White House",
+            "depPath": "poss|<-poss<-memoir->nn->|nn"
+        },
+        {
+            "source": "George Stephanopoulos",
+            "dest": "White House",
+            "depPath": "appos|->appos->adviser->nn->|nn"
+        },
+        {
+            "source": "George Stephanopoulos",
+            "dest": "White House",
+            "depPath": "poss|<-poss<-book->prep->as->pobj->account->prep->from->pobj->insider->nn->|nn"
+        },
+        {
+            "source": "Israel",
+            "dest": "Yitzhak Rabin",
+            "depPath": "poss|<-poss<-minister->appos->|appos"
+        },
+        {
+            "source": "Israel",
+            "dest": "Yitzhak Rabin",
+            "depPath": "rcmod|->rcmod->bitter->prep->since->pobj->assassination->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Israel",
+            "dest": "Yitzhak Rabin",
+            "depPath": "poss|<-poss<-response<-pobj<-of<-prep<-charge<-pobj<-in<-prep<-message->appos->|appos"
+        },
+        {
+            "source": "Israel",
+            "dest": "Yitzhak Rabin",
+            "depPath": "poss|<-poss<-service<-nsubj<-tighten->dobj->issue->appos->|appos"
+        },
+        {
+            "source": "Israel",
+            "dest": "Yitzhak Rabin",
+            "depPath": "poss|<-poss<-party<-pobj<-of<-prep<-leadership<-pobj<-for<-prep<-vote<-pobj<-in<-prep<-victorious->appos->|appos"
+        },
+        {
+            "source": "Israel",
+            "dest": "Yitzhak Rabin",
+            "depPath": "poss|<-poss<-opposition<-nsubj<-accuse->dobj->|dobj"
+        },
+        {
+            "source": "Israel",
+            "dest": "Yitzhak Rabin",
+            "depPath": "poss|<-poss<-minister->rcmod->savor->nsubj->|nsubj"
+        },
+        {
+            "source": "Israel",
+            "dest": "Yitzhak Rabin",
+            "depPath": "rcmod|->rcmod->charm->nsubjpass->|nsubjpass"
+        },
+        {
+            "source": "Israel",
+            "dest": "Yitzhak Rabin",
+            "depPath": "pobj|<-pobj<-in<-prep<-gain->nsubj->|nsubj"
+        },
+        {
+            "source": "Israel",
+            "dest": "Yitzhak Rabin",
+            "depPath": "rcmod|->rcmod->see->prep->as->pobj->move->prep->by->pobj->|pobj"
+        },
+        {
+            "source": "Tabasco Cat",
+            "dest": "Preakness",
+            "depPath": "dobj|<-dobj<-saddle->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Tabasco Cat",
+            "dest": "Preakness",
+            "depPath": "appos|<-appos<-star->rcmod->win->dobj->|dobj"
+        },
+        {
+            "source": "Tabasco Cat",
+            "dest": "Preakness",
+            "depPath": "nsubj|<-nsubj<-win->dobj->|dobj"
+        },
+        {
+            "source": "Tabasco Cat",
+            "dest": "Preakness",
+            "depPath": "pobj|<-pobj<-in<-prep<-track->appos->|appos"
+        },
+        {
+            "source": "Tabasco Cat",
+            "dest": "Preakness",
+            "depPath": "rcmod|->rcmod->win->dobj->|dobj"
+        },
+        {
+            "source": "Tabasco Cat",
+            "dest": "Preakness",
+            "depPath": "appos|->appos->warrior->rcmod->win->dobj->|dobj"
+        },
+        {
+            "source": "Tabasco Cat",
+            "dest": "Preakness",
+            "depPath": "nsubj|<-nsubj<-follow->dobj->victory->nn->|nn"
+        },
+        {
+            "source": "Tabasco Cat",
+            "dest": "Preakness",
+            "depPath": "appos|->appos->winner->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Tabasco Cat",
+            "dest": "Preakness",
+            "depPath": "pobj|<-pobj<-with<-prep<-begin->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Tabasco Cat",
+            "dest": "Preakness",
+            "depPath": "pobj|<-pobj<-to->dep->winner->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Stu Jackson",
+            "dest": "Knicks",
+            "depPath": "pobj|<-pobj<-to<-dep<-from<-prep<-change<-pobj<-with<-prep<-appear<-dep<-weapon->appos->|appos"
+        },
+        {
+            "source": "Stu Jackson",
+            "dest": "Knicks",
+            "depPath": "nsubj|<-nsubj<-remind->dobj->|dobj"
+        },
+        {
+            "source": "Stu Jackson",
+            "dest": "Knicks",
+            "depPath": "nsubj|<-nsubj<-put->dobj->|dobj"
+        },
+        {
+            "source": "Stu Jackson",
+            "dest": "Knicks",
+            "depPath": "rcmod|->rcmod->dismiss->prep->as->pobj->coach->poss->|poss"
+        },
+        {
+            "source": "Stu Jackson",
+            "dest": "Knicks",
+            "depPath": "poss|<-poss<-role->prep->in->pobj->victory->poss->|poss"
+        },
+        {
+            "source": "Stu Jackson",
+            "dest": "Knicks",
+            "depPath": "appos|->appos->coach->nn->|nn"
+        },
+        {
+            "source": "Stu Jackson",
+            "dest": "Knicks",
+            "depPath": "appos|->appos->coach->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Stu Jackson",
+            "dest": "Knicks",
+            "depPath": "nsubj|<-nsubj<-coach->poss->|poss"
+        },
+        {
+            "source": "Stu Jackson",
+            "dest": "Knicks",
+            "depPath": "appos|->appos->coach->poss->|poss"
+        },
+        {
+            "source": "Stu Jackson",
+            "dest": "Knicks",
+            "depPath": "nsubjpass|<-nsubjpass<-dismiss->prep->as->pobj->coach->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Kenneth L. Lay",
+            "dest": "Enron",
+            "depPath": "appos|->appos->executive->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Kenneth L. Lay",
+            "dest": "Enron",
+            "depPath": "appos|->appos->chairman->poss->|poss"
+        },
+        {
+            "source": "Kenneth L. Lay",
+            "dest": "Enron",
+            "depPath": "appos|->appos->executive->nn->|nn"
+        },
+        {
+            "source": "Kenneth L. Lay",
+            "dest": "Enron",
+            "depPath": "appos|->appos->executive->poss->|poss"
+        },
+        {
+            "source": "Kenneth L. Lay",
+            "dest": "Enron",
+            "depPath": "appos|->appos->founder->poss->|poss"
+        },
+        {
+            "source": "Kenneth L. Lay",
+            "dest": "Enron",
+            "depPath": "appos|->appos->leader->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Kenneth L. Lay",
+            "dest": "Enron",
+            "depPath": "appos|->appos->chairman->nn->|nn"
+        },
+        {
+            "source": "Kenneth L. Lay",
+            "dest": "Enron",
+            "depPath": "dep|->dep->chairman->poss->|poss"
+        },
+        {
+            "source": "Kenneth L. Lay",
+            "dest": "Enron",
+            "depPath": "appos|->appos->chairman->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Kenneth L. Lay",
+            "dest": "Enron",
+            "depPath": "rcmod|->rcmod->rise->prep->as->pobj->founder->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Mr. Bush",
+            "dest": "Al Gore",
+            "depPath": "poss|<-poss<-victory->prep->over->pobj->|pobj"
+        },
+        {
+            "source": "Mr. Bush",
+            "dest": "Al Gore",
+            "depPath": "poss|<-poss<-advantage->prep->over->pobj->|pobj"
+        },
+        {
+            "source": "Mr. Bush",
+            "dest": "Al Gore",
+            "depPath": "nsubj|<-nsubj<-deride->dobj->|dobj"
+        },
+        {
+            "source": "Mr. Bush",
+            "dest": "Al Gore",
+            "depPath": "nsubj|<-nsubj<-lose->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Mr. Bush",
+            "dest": "Al Gore",
+            "depPath": "poss|<-poss<-opponent->appos->|appos"
+        },
+        {
+            "source": "Mr. Bush",
+            "dest": "Al Gore",
+            "depPath": "nsubj|<-nsubj<-beat->dobj->|dobj"
+        },
+        {
+            "source": "Mr. Bush",
+            "dest": "Al Gore",
+            "depPath": "nsubj|<-nsubj<-receive->dobj->vote->prep->than->pobj->|pobj"
+        },
+        {
+            "source": "Mr. Bush",
+            "dest": "Al Gore",
+            "depPath": "nsubj|<-nsubj<-trounce->dobj->|dobj"
+        },
+        {
+            "source": "Mr. Bush",
+            "dest": "Al Gore",
+            "depPath": "nsubj|<-nsubj<-defeat->dobj->|dobj"
+        },
+        {
+            "source": "Mr. Bush",
+            "dest": "Al Gore",
+            "depPath": "rcmod|->rcmod->lose->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Mike Milbury",
+            "dest": "Islanders",
+            "depPath": "appos|->appos->coach->nn->|nn"
+        },
+        {
+            "source": "Mike Milbury",
+            "dest": "Islanders",
+            "depPath": "rcmod|->rcmod->see->prep->in->pobj->stint->prep->behind->pobj->bench->poss->|poss"
+        },
+        {
+            "source": "Mike Milbury",
+            "dest": "Islanders",
+            "depPath": "appos|->appos->manager->poss->|poss"
+        },
+        {
+            "source": "Mike Milbury",
+            "dest": "Islanders",
+            "depPath": "appos|->appos->coach->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Mike Milbury",
+            "dest": "Islanders",
+            "depPath": "nsubj|<-nsubj<-run->dobj->|dobj"
+        },
+        {
+            "source": "Mike Milbury",
+            "dest": "Islanders",
+            "depPath": "appos|->appos->coach->poss->|poss"
+        },
+        {
+            "source": "Mike Milbury",
+            "dest": "Islanders",
+            "depPath": "appos|->appos->manager->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Mike Milbury",
+            "dest": "Islanders",
+            "depPath": "rcmod|->rcmod->run->dobj->|dobj"
+        },
+        {
+            "source": "Mike Milbury",
+            "dest": "Islanders",
+            "depPath": "poss|<-poss<-attention<-dobj<-coach->prep->after->pobj->loss->poss->|poss"
+        },
+        {
+            "source": "Mike Milbury",
+            "dest": "Islanders",
+            "depPath": "nsubj|<-nsubj<-enjoy->dobj->coaching->dobj->|dobj"
+        },
+        {
+            "source": "Russian",
+            "dest": "Boris N. Yeltsin",
+            "depPath": "amod|<-amod<-republic<-poss<-president->appos->|appos"
+        },
+        {
+            "source": "Russian",
+            "dest": "Boris N. Yeltsin",
+            "depPath": "amod|<-amod<-republic<-pobj<-in<-prep<-election<-nsubj<-bring->dobj->|dobj"
+        },
+        {
+            "source": "Russian",
+            "dest": "Boris N. Yeltsin",
+            "depPath": "amod|<-amod<-president->appos->|appos"
+        },
+        {
+            "source": "Russian",
+            "dest": "Boris N. Yeltsin",
+            "depPath": "amod|<-amod<-republic<-pobj<-of<-prep<-president->appos->|appos"
+        },
+        {
+            "source": "Russian",
+            "dest": "Boris N. Yeltsin",
+            "depPath": "nn|<-nn<-president->appos->|appos"
+        },
+        {
+            "source": "Russian",
+            "dest": "Boris N. Yeltsin",
+            "depPath": "amod|<-amod<-government->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Russian",
+            "dest": "Boris N. Yeltsin",
+            "depPath": "amod|<-amod<-republic<-pobj<-of<-prep<-leader->appos->|appos"
+        },
+        {
+            "source": "Russian",
+            "dest": "Boris N. Yeltsin",
+            "depPath": "amod|<-amod<-republic<-poss<-parliament->partmod->lead->prep->by->pobj->president->appos->|appos"
+        },
+        {
+            "source": "Russian",
+            "dest": "Boris N. Yeltsin",
+            "depPath": "amod|<-amod<-republic->partmod->lead->prep->by->pobj->|pobj"
+        },
+        {
+            "source": "Russian",
+            "dest": "Boris N. Yeltsin",
+            "depPath": "amod|<-amod<-military<-nsubj<-heed->dobj->order->poss->|poss"
+        },
+        {
+            "source": "Britain",
+            "dest": "European Monetary System",
+            "depPath": "poss|<-poss<-entry->prep->into->pobj->|pobj"
+        },
+        {
+            "source": "Britain",
+            "dest": "European Monetary System",
+            "depPath": "nsubj|<-nsubj<-join->dobj->|dobj"
+        },
+        {
+            "source": "Britain",
+            "dest": "European Monetary System",
+            "depPath": "poss|<-poss<-rejoin->dobj->|dobj"
+        },
+        {
+            "source": "Britain",
+            "dest": "European Monetary System",
+            "depPath": "pobj|<-pobj<-out<-prep<-drop<-nsubj<-drop->prep->out->pobj->costly->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Britain",
+            "dest": "European Monetary System",
+            "depPath": "pobj|<-pobj<-in<-prep<-turmoil<-nsubj<-focus->prep->on->pobj->|pobj"
+        },
+        {
+            "source": "Britain",
+            "dest": "European Monetary System",
+            "depPath": "poss|<-poss<-linkup<-dobj<-regret->prep->with->pobj->mechanism->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Britain",
+            "dest": "European Monetary System",
+            "depPath": "nsubj|<-nsubj<-join->dobj->mechanism->poss->|poss"
+        },
+        {
+            "source": "Britain",
+            "dest": "European Monetary System",
+            "depPath": "dep|->dep->member->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Britain",
+            "dest": "European Monetary System",
+            "depPath": "poss|<-poss<-expulsion->prep->from->pobj->|pobj"
+        },
+        {
+            "source": "Britain",
+            "dest": "European Monetary System",
+            "depPath": "nsubj|<-nsubj<-member->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Baltimore Orioles",
+            "dest": "New York Yankees",
+            "depPath": "nsubj|<-nsubj<-come->prep->for->pobj->meeting->prep->with->pobj->|pobj"
+        },
+        {
+            "source": "Baltimore Orioles",
+            "dest": "New York Yankees",
+            "depPath": "pobj|<-pobj<-on<-prep<-article->partmod->prepare->prep->for->pobj->series->prep->with->pobj->|pobj"
+        },
+        {
+            "source": "Baltimore Orioles",
+            "dest": "New York Yankees",
+            "depPath": "nsubj|<-nsubj<-beat->dobj->|dobj"
+        },
+        {
+            "source": "Baltimore Orioles",
+            "dest": "New York Yankees",
+            "depPath": "pobj|<-pobj<-for<-prep<-knuckleballer->prep->against->pobj->|pobj"
+        },
+        {
+            "source": "Baltimore Orioles",
+            "dest": "New York Yankees",
+            "depPath": "nsubj|<-nsubj<-protest->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Baltimore Orioles",
+            "dest": "New York Yankees",
+            "depPath": "nsubj|<-nsubj<-discuss->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Baltimore Orioles",
+            "dest": "New York Yankees",
+            "depPath": "poss|<-poss<-loss<-dobj<-assess->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Baltimore Orioles",
+            "dest": "New York Yankees",
+            "depPath": "nn|<-nn<-victory->prep->over->pobj->|pobj"
+        },
+        {
+            "source": "Baltimore Orioles",
+            "dest": "New York Yankees",
+            "depPath": "pobj|<-pobj<-on<-prep<-article->partmod->prepare->prep->for->pobj->series->prep->against->pobj->|pobj"
+        },
+        {
+            "source": "Baltimore Orioles",
+            "dest": "New York Yankees",
+            "depPath": "nsubj|<-nsubj<-defeat->dobj->|dobj"
+        },
+        {
+            "source": "Ruth W. Messinger",
+            "dest": "Manhattan",
+            "depPath": "rcmod|->rcmod->president->nn->|nn"
+        },
+        {
+            "source": "Ruth W. Messinger",
+            "dest": "Manhattan",
+            "depPath": "appos|->appos->member->prep->from->pobj->|pobj"
+        },
+        {
+            "source": "Ruth W. Messinger",
+            "dest": "Manhattan",
+            "depPath": "appos|->appos->member->rcmod->run->prep->for->pobj->president->nn->|nn"
+        },
+        {
+            "source": "Ruth W. Messinger",
+            "dest": "Manhattan",
+            "depPath": "appos|->appos->president->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Ruth W. Messinger",
+            "dest": "Manhattan",
+            "depPath": "poss|<-poss<-record->prep->as->pobj->president->nn->|nn"
+        },
+        {
+            "source": "Ruth W. Messinger",
+            "dest": "Manhattan",
+            "depPath": "rcmod|->rcmod->run->prep->for->pobj->president->nn->|nn"
+        },
+        {
+            "source": "Ruth W. Messinger",
+            "dest": "Manhattan",
+            "depPath": "nsubj|<-nsubj<-run<-nsubj<-decide->dobj->presidency->nn->|nn"
+        },
+        {
+            "source": "Ruth W. Messinger",
+            "dest": "Manhattan",
+            "depPath": "appos|->appos->president->nn->|nn"
+        },
+        {
+            "source": "Ruth W. Messinger",
+            "dest": "Manhattan",
+            "depPath": "nsubj|<-nsubj<-appoint->dobj->team->prep->for->pobj->post->prep->as->pobj->president->nn->|nn"
+        },
+        {
+            "source": "Ruth W. Messinger",
+            "dest": "Manhattan",
+            "depPath": "appos|->appos->candidate->prep->for->pobj->president->nn->|nn"
+        },
+        {
+            "source": "Joe Paterno",
+            "dest": "Penn State",
+            "depPath": "rcmod|->rcmod->begin->prep->as->pobj->coach->nn->|nn"
+        },
+        {
+            "source": "Joe Paterno",
+            "dest": "Penn State",
+            "depPath": "poss|<-poss<-team->nn->|nn"
+        },
+        {
+            "source": "Joe Paterno",
+            "dest": "Penn State",
+            "depPath": "appos|->appos->coach->nn->|nn"
+        },
+        {
+            "source": "Joe Paterno",
+            "dest": "Penn State",
+            "depPath": "rcmod|->rcmod->win->nsubj->team->nn->|nn"
+        },
+        {
+            "source": "Joe Paterno",
+            "dest": "Penn State",
+            "depPath": "nsubj|<-nsubj<-get->prep->as->pobj->|pobj"
+        },
+        {
+            "source": "Joe Paterno",
+            "dest": "Penn State",
+            "depPath": "prep|->prep->of->pobj->share->nn->|nn"
+        },
+        {
+            "source": "Joe Paterno",
+            "dest": "Penn State",
+            "depPath": "nsubj|<-nsubj<-take->prep->for->pobj->perception->prep->of->pobj->football->nn->|nn"
+        },
+        {
+            "source": "Joe Paterno",
+            "dest": "Penn State",
+            "depPath": "appos|->appos->coach->poss->|poss"
+        },
+        {
+            "source": "Joe Paterno",
+            "dest": "Penn State",
+            "depPath": "appos|->appos->coach->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Joe Paterno",
+            "dest": "Penn State",
+            "depPath": "rcmod|->rcmod->lead->dobj->football->nn->|nn"
+        },
+        {
+            "source": "DDB Worldwide",
+            "dest": "Omnicom Group",
+            "depPath": "pobj|<-pobj<-of<-prep<-office<-dobj<-join->dobj->part->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "DDB Worldwide",
+            "dest": "Omnicom Group",
+            "depPath": "appos|->appos->unit->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "DDB Worldwide",
+            "dest": "Omnicom Group",
+            "depPath": "pobj|<-pobj<-of<-prep<-office<-pobj<-at<-prep<-director->appos->part->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "DDB Worldwide",
+            "dest": "Omnicom Group",
+            "depPath": "pobj|<-pobj<-of<-prep<-office->appos->part->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "DDB Worldwide",
+            "dest": "Omnicom Group",
+            "depPath": "pobj|<-pobj<-of<-prep<-office<-pobj<-at<-prep<-president->appos->part->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "DDB Worldwide",
+            "dest": "Omnicom Group",
+            "depPath": "appos|->appos->part->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "DDB Worldwide",
+            "dest": "Omnicom Group",
+            "depPath": "pobj|<-pobj<-of<-prep<-unit->appos->part->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "DDB Worldwide",
+            "dest": "Omnicom Group",
+            "depPath": "pobj|<-pobj<-at<-prep<-president->appos->part->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "DDB Worldwide",
+            "dest": "Omnicom Group",
+            "depPath": "pobj|<-pobj<-of<-prep<-office<-pobj<-to<-prep<-award->dobj->part->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "DDB Worldwide",
+            "dest": "Omnicom Group",
+            "depPath": "nn|<-nn<-unit->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Reggie Miller",
+            "dest": "Indiana",
+            "depPath": "rcmod|->rcmod->spend->prep->with->pobj->|pobj"
+        },
+        {
+            "source": "Reggie Miller",
+            "dest": "Indiana",
+            "depPath": "poss|<-poss<-return->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Reggie Miller",
+            "dest": "Indiana",
+            "depPath": "appos|->appos->guard->nn->|nn"
+        },
+        {
+            "source": "Reggie Miller",
+            "dest": "Indiana",
+            "depPath": "pobj|<-pobj<-to<-prep<-pass->prep->in->pobj->game->prep->of->pobj->series->nn->|nn"
+        },
+        {
+            "source": "Reggie Miller",
+            "dest": "Indiana",
+            "depPath": "rcmod|->rcmod->retire->prep->after->pobj->season->prep->with->pobj->|pobj"
+        },
+        {
+            "source": "Reggie Miller",
+            "dest": "Indiana",
+            "depPath": "nsubj|<-nsubj<-lead->dobj->|dobj"
+        },
+        {
+            "source": "Reggie Miller",
+            "dest": "Indiana",
+            "depPath": "poss|<-poss<-play<-nsubj<-begin->dobj->burst->poss->|poss"
+        },
+        {
+            "source": "Reggie Miller",
+            "dest": "Indiana",
+            "depPath": "nsubj|<-nsubj<-score->prep->for->pobj->|pobj"
+        },
+        {
+            "source": "Reggie Miller",
+            "dest": "Indiana",
+            "depPath": "appos|->appos->guard->poss->|poss"
+        },
+        {
+            "source": "Reggie Miller",
+            "dest": "Indiana",
+            "depPath": "rcmod|->rcmod->stay->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Kovalev",
+            "dest": "Rangers",
+            "depPath": "appos|->appos->wing->poss->|poss"
+        },
+        {
+            "source": "Kovalev",
+            "dest": "Rangers",
+            "depPath": "nsubj|<-nsubj<-have->dobj->goal->prep->through->pobj->game->poss->|poss"
+        },
+        {
+            "source": "Kovalev",
+            "dest": "Rangers",
+            "depPath": "rcmod|->rcmod->trade->prep->from->pobj->|pobj"
+        },
+        {
+            "source": "Kovalev",
+            "dest": "Rangers",
+            "depPath": "appos|->appos->pick->poss->|poss"
+        },
+        {
+            "source": "Kovalev",
+            "dest": "Rangers",
+            "depPath": "nsubj|<-nsubj<-give->iobj->|iobj"
+        },
+        {
+            "source": "Kovalev",
+            "dest": "Rangers",
+            "depPath": "nsubj|<-nsubj<-put->dobj->|dobj"
+        },
+        {
+            "source": "Kovalev",
+            "dest": "Rangers",
+            "depPath": "nsubj|<-nsubj<-set->dobj->goal->poss->|poss"
+        },
+        {
+            "source": "Kovalev",
+            "dest": "Rangers",
+            "depPath": "nsubj|<-nsubj<-score->prep->for->pobj->|pobj"
+        },
+        {
+            "source": "Kovalev",
+            "dest": "Rangers",
+            "depPath": "rcmod|->rcmod->visit->dobj->camp->poss->|poss"
+        },
+        {
+            "source": "Kovalev",
+            "dest": "Rangers",
+            "depPath": "nsubj|<-nsubj<-lead->dobj->|dobj"
+        },
+        {
+            "source": "Jack Valenti",
+            "dest": "Motion Picture Association of America",
+            "depPath": "poss|<-poss<-legacy<-pobj<-of<-prep<-part->prep->as->pobj->head->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Jack Valenti",
+            "dest": "Motion Picture Association of America",
+            "depPath": "appos|->appos->head->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Jack Valenti",
+            "dest": "Motion Picture Association of America",
+            "depPath": "appos|->appos->chairman->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Jack Valenti",
+            "dest": "Motion Picture Association of America",
+            "depPath": "appos|->appos->executive->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Jack Valenti",
+            "dest": "Motion Picture Association of America",
+            "depPath": "rcmod|->rcmod->president->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Jack Valenti",
+            "dest": "Motion Picture Association of America",
+            "depPath": "rcmod|->rcmod->prod->prep->as->pobj->president->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Jack Valenti",
+            "dest": "Motion Picture Association of America",
+            "depPath": "appos|->appos->president->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Jack Valenti",
+            "dest": "Motion Picture Association of America",
+            "depPath": "pobj|<-pobj<-by<-prep<-talk<-pobj<-at<-prep<-insistence->appos->president->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Jack Valenti",
+            "dest": "Motion Picture Association of America",
+            "depPath": "pobj|<-pobj<-by<-prep<-announce<-partmod<-change->appos->president->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Jack Valenti",
+            "dest": "Motion Picture Association of America",
+            "depPath": "rcmod|->rcmod->make->nsubj->position->prep->as->pobj->president->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Poland",
+            "dest": "NATO",
+            "depPath": "dobj|<-dobj<-admit->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Poland",
+            "dest": "NATO",
+            "depPath": "dobj|<-dobj<-add->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Poland",
+            "dest": "NATO",
+            "depPath": "poss|<-poss<-membership->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Poland",
+            "dest": "NATO",
+            "depPath": "poss|<-poss<-tie->prep->to->pobj->alliance->nn->|nn"
+        },
+        {
+            "source": "Poland",
+            "dest": "NATO",
+            "depPath": "nsubjpass|<-nsubjpass<-admit->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Poland",
+            "dest": "NATO",
+            "depPath": "nsubj|<-nsubj<-join->dobj->|dobj"
+        },
+        {
+            "source": "Poland",
+            "dest": "NATO",
+            "depPath": "poss|<-poss<-entry->prep->into->pobj->|pobj"
+        },
+        {
+            "source": "Poland",
+            "dest": "NATO",
+            "depPath": "nsubj|<-nsubj<-member->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Poland",
+            "dest": "NATO",
+            "depPath": "partmod|->partmod->join->dobj->|dobj"
+        },
+        {
+            "source": "Poland",
+            "dest": "NATO",
+            "depPath": "poss|<-poss<-accession->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Jets",
+            "dest": "Giants Stadium",
+            "depPath": "rcmod|->rcmod->play->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Jets",
+            "dest": "Giants Stadium",
+            "depPath": "nsubj|<-nsubj<-play->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Jets",
+            "dest": "Giants Stadium",
+            "depPath": "nsubj|<-nsubj<-move->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Jets",
+            "dest": "Giants Stadium",
+            "depPath": "poss|<-poss<-victory->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Jets",
+            "dest": "Giants Stadium",
+            "depPath": "nsubj|<-nsubj<-face->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Jets",
+            "dest": "Giants Stadium",
+            "depPath": "poss|<-poss<-loss->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Jets",
+            "dest": "Giants Stadium",
+            "depPath": "dobj|<-dobj<-play->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Jets",
+            "dest": "Giants Stadium",
+            "depPath": "poss|<-poss<-lease->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Jets",
+            "dest": "Giants Stadium",
+            "depPath": "dobj|<-dobj<-beat->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Jets",
+            "dest": "Giants Stadium",
+            "depPath": "dobj|<-dobj<-face->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Phil Jackson",
+            "dest": "Bulls",
+            "depPath": "appos|->appos->coach->nn->|nn"
+        },
+        {
+            "source": "Phil Jackson",
+            "dest": "Bulls",
+            "depPath": "dep|->dep->coach->poss->|poss"
+        },
+        {
+            "source": "Phil Jackson",
+            "dest": "Bulls",
+            "depPath": "rcmod|->rcmod->coach->dobj->|dobj"
+        },
+        {
+            "source": "Phil Jackson",
+            "dest": "Bulls",
+            "depPath": "appos|->appos->coach->poss->|poss"
+        },
+        {
+            "source": "Phil Jackson",
+            "dest": "Bulls",
+            "depPath": "rcmod|->rcmod->inspired->nsubj->|nsubj"
+        },
+        {
+            "source": "Phil Jackson",
+            "dest": "Bulls",
+            "depPath": "rcmod|->rcmod->feud->nsubj->|nsubj"
+        },
+        {
+            "source": "Phil Jackson",
+            "dest": "Bulls",
+            "depPath": "appos|->appos->coach->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Phil Jackson",
+            "dest": "Bulls",
+            "depPath": "rcmod|->rcmod->join->dobj->management->poss->|poss"
+        },
+        {
+            "source": "Phil Jackson",
+            "dest": "Bulls",
+            "depPath": "poss|<-poss<-silence->prep->over->pobj->victory->prep->over->pobj->|pobj"
+        },
+        {
+            "source": "Phil Jackson",
+            "dest": "Bulls",
+            "depPath": "poss|<-poss<-relationship->prep->with->pobj->management->nn->|nn"
+        },
+        {
+            "source": "Aristide",
+            "dest": "Haiti",
+            "depPath": "nsubj|<-nsubj<-win->dobj->election->poss->|poss"
+        },
+        {
+            "source": "Aristide",
+            "dest": "Haiti",
+            "depPath": "appos|->appos->leader->poss->|poss"
+        },
+        {
+            "source": "Aristide",
+            "dest": "Haiti",
+            "depPath": "rcmod|->rcmod->president->poss->|poss"
+        },
+        {
+            "source": "Aristide",
+            "dest": "Haiti",
+            "depPath": "appos|->appos->president->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Aristide",
+            "dest": "Haiti",
+            "depPath": "appos|->appos->president->nn->|nn"
+        },
+        {
+            "source": "Aristide",
+            "dest": "Haiti",
+            "depPath": "appos|->appos->president->poss->|poss"
+        },
+        {
+            "source": "Aristide",
+            "dest": "Haiti",
+            "depPath": "poss|<-poss<-return->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Aristide",
+            "dest": "Haiti",
+            "depPath": "nsubj|<-nsubj<-return->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Aristide",
+            "dest": "Haiti",
+            "depPath": "dobj|<-dobj<-return->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Aristide",
+            "dest": "Haiti",
+            "depPath": "dobj|<-dobj<-restore->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Yasushi Akashi",
+            "dest": "United Nations",
+            "depPath": "pobj|<-pobj<-to<-prep<-letter<-pobj<-in<-prep<-say->appos->head->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Yasushi Akashi",
+            "dest": "United Nations",
+            "depPath": "appos|->appos->head->prep->of->pobj->authority->nn->|nn"
+        },
+        {
+            "source": "Yasushi Akashi",
+            "dest": "United Nations",
+            "depPath": "appos|->appos->head->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Yasushi Akashi",
+            "dest": "United Nations",
+            "depPath": "appos|->appos->official->nn->|nn"
+        },
+        {
+            "source": "Yasushi Akashi",
+            "dest": "United Nations",
+            "depPath": "rcmod|->rcmod->head->dobj->force->nn->|nn"
+        },
+        {
+            "source": "Yasushi Akashi",
+            "dest": "United Nations",
+            "depPath": "appos|->appos->envoy->nn->|nn"
+        },
+        {
+            "source": "Yasushi Akashi",
+            "dest": "United Nations",
+            "depPath": "appos|->appos->head->prep->of->pobj->operation->nn->|nn"
+        },
+        {
+            "source": "Yasushi Akashi",
+            "dest": "United Nations",
+            "depPath": "appos|->appos->envoy->poss->|poss"
+        },
+        {
+            "source": "Yasushi Akashi",
+            "dest": "United Nations",
+            "depPath": "appos|->appos->diplomat->nn->|nn"
+        },
+        {
+            "source": "Yasushi Akashi",
+            "dest": "United Nations",
+            "depPath": "appos|->appos->representative->nn->|nn"
+        },
+        {
+            "source": "John S. Reed",
+            "dest": "Citicorp",
+            "depPath": "appos|->appos->executive->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "John S. Reed",
+            "dest": "Citicorp",
+            "depPath": "rcmod|->rcmod->run->dobj->|dobj"
+        },
+        {
+            "source": "John S. Reed",
+            "dest": "Citicorp",
+            "depPath": "pobj|<-pobj<-in<-prep<-jump->appos->chairman->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "John S. Reed",
+            "dest": "Citicorp",
+            "depPath": "appos|->appos->chairman->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "John S. Reed",
+            "dest": "Citicorp",
+            "depPath": "poss|<-poss<-trouble->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "John S. Reed",
+            "dest": "Citicorp",
+            "depPath": "poss|<-poss<-action->appos->|appos"
+        },
+        {
+            "source": "John S. Reed",
+            "dest": "Citicorp",
+            "depPath": "appos|->appos->chairman->nn->|nn"
+        },
+        {
+            "source": "John S. Reed",
+            "dest": "Citicorp",
+            "depPath": "appos|->appos->chairman->poss->|poss"
+        },
+        {
+            "source": "John S. Reed",
+            "dest": "Citicorp",
+            "depPath": "nsubj|<-nsubj<-chairman->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "John S. Reed",
+            "dest": "Citicorp",
+            "depPath": "tmod|<-tmod<-chairman->appos->|appos"
+        },
+        {
+            "source": "Saatchi & Saatchi",
+            "dest": "Publicis Groupe",
+            "depPath": "pobj|<-pobj<-of<-prep<-office->appos->part->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Saatchi & Saatchi",
+            "dest": "Publicis Groupe",
+            "depPath": "rcmod|->rcmod->part->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Saatchi & Saatchi",
+            "dest": "Publicis Groupe",
+            "depPath": "dep|<-dep<-part->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Saatchi & Saatchi",
+            "dest": "Publicis Groupe",
+            "depPath": "rcmod|->rcmod->own->prep->by->pobj->|pobj"
+        },
+        {
+            "source": "Saatchi & Saatchi",
+            "dest": "Publicis Groupe",
+            "depPath": "nsubj|<-nsubj<-part->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Saatchi & Saatchi",
+            "dest": "Publicis Groupe",
+            "depPath": "prep|<-prep<-work->nsubj->part->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Saatchi & Saatchi",
+            "dest": "Publicis Groupe",
+            "depPath": "poss|<-poss<-parent->appos->|appos"
+        },
+        {
+            "source": "Saatchi & Saatchi",
+            "dest": "Publicis Groupe",
+            "depPath": "rcmod|->rcmod->acquire->prep->by->pobj->|pobj"
+        },
+        {
+            "source": "Saatchi & Saatchi",
+            "dest": "Publicis Groupe",
+            "depPath": "appos|->appos->part->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Saatchi & Saatchi",
+            "dest": "Publicis Groupe",
+            "depPath": "nn|<-nn<-unit->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Ralph Reed",
+            "dest": "Christian Coalition",
+            "depPath": "rcmod|->rcmod->turn->nsubj->wunderkind->nn->|nn"
+        },
+        {
+            "source": "Ralph Reed",
+            "dest": "Christian Coalition",
+            "depPath": "appos|->appos->director->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Ralph Reed",
+            "dest": "Christian Coalition",
+            "depPath": "appos|->appos->leader->nn->|nn"
+        },
+        {
+            "source": "Ralph Reed",
+            "dest": "Christian Coalition",
+            "depPath": "appos|->appos->strategist->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Ralph Reed",
+            "dest": "Christian Coalition",
+            "depPath": "appos|->appos->leader->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Ralph Reed",
+            "dest": "Christian Coalition",
+            "depPath": "rcmod|->rcmod->transform->dobj->|dobj"
+        },
+        {
+            "source": "Ralph Reed",
+            "dest": "Christian Coalition",
+            "depPath": "appos|->appos->president->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Ralph Reed",
+            "dest": "Christian Coalition",
+            "depPath": "appos|->appos->director->nn->|nn"
+        },
+        {
+            "source": "Ralph Reed",
+            "dest": "Christian Coalition",
+            "depPath": "dobj|<-dobj<-succeed->prep->as->pobj->director->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Ralph Reed",
+            "dest": "Christian Coalition",
+            "depPath": "appos|->appos->head->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "White House",
+            "depPath": "nsubj|<-nsubj<-say->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "White House",
+            "depPath": "nsubj|<-nsubj<-meet->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "White House",
+            "depPath": "pobj|<-pobj<-with<-prep<-meet->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "White House",
+            "depPath": "nsubj|<-nsubj<-say->prep->at->pobj->ceremony->nn->|nn"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "White House",
+            "depPath": "nsubj|<-nsubj<-tell->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "White House",
+            "depPath": "dobj|<-dobj<-meet->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "White House",
+            "depPath": "poss|<-poss<-relationship->prep->with->pobj->intern->nn->|nn"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "White House",
+            "depPath": "nsubj|<-nsubj<-leave->dobj->|dobj"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "White House",
+            "depPath": "poss|<-poss<-affair->prep->with->pobj->intern->nn->|nn"
+        },
+        {
+            "source": "Mr. Clinton",
+            "dest": "White House",
+            "depPath": "nsubj|<-nsubj<-return->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "T. Rowe Price",
+            "dest": "Baltimore",
+            "depPath": "rcmod|->rcmod->base->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "T. Rowe Price",
+            "dest": "Baltimore",
+            "depPath": "appos|->appos->manager->amod->|amod"
+        },
+        {
+            "source": "T. Rowe Price",
+            "dest": "Baltimore",
+            "depPath": "appos|->appos->firm->nn->|nn"
+        },
+        {
+            "source": "T. Rowe Price",
+            "dest": "Baltimore",
+            "depPath": "partmod|->partmod->base->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "T. Rowe Price",
+            "dest": "Baltimore",
+            "depPath": "appos|->appos->fund->amod->|amod"
+        },
+        {
+            "source": "T. Rowe Price",
+            "dest": "Baltimore",
+            "depPath": "appos|->appos->company->nn->|nn"
+        },
+        {
+            "source": "T. Rowe Price",
+            "dest": "Baltimore",
+            "depPath": "appos|->appos->firm->partmod->base->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "T. Rowe Price",
+            "dest": "Baltimore",
+            "depPath": "appos|->appos->company->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "T. Rowe Price",
+            "dest": "Baltimore",
+            "depPath": "appos|->appos->company->amod->|amod"
+        },
+        {
+            "source": "T. Rowe Price",
+            "dest": "Baltimore",
+            "depPath": "pobj|<-pobj<-at<-prep<-question->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Mets",
+            "dest": "Yankees",
+            "depPath": "poss|<-poss<-game->prep->against->pobj->|pobj"
+        },
+        {
+            "source": "Mets",
+            "dest": "Yankees",
+            "depPath": "nsubj|<-nsubj<-face->dobj->|dobj"
+        },
+        {
+            "source": "Mets",
+            "dest": "Yankees",
+            "depPath": "nsubj|<-nsubj<-edge->dobj->|dobj"
+        },
+        {
+            "source": "Mets",
+            "dest": "Yankees",
+            "depPath": "nsubj|<-nsubj<-lose->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Mets",
+            "dest": "Yankees",
+            "depPath": "nsubj|<-nsubj<-sweep->dobj->|dobj"
+        },
+        {
+            "source": "Mets",
+            "dest": "Yankees",
+            "depPath": "poss|<-poss<-victory->prep->over->pobj->|pobj"
+        },
+        {
+            "source": "Mets",
+            "dest": "Yankees",
+            "depPath": "nsubj|<-nsubj<-beat->dobj->|dobj"
+        },
+        {
+            "source": "Mets",
+            "dest": "Yankees",
+            "depPath": "nsubj|<-nsubj<-play->dobj->|dobj"
+        },
+        {
+            "source": "Mets",
+            "dest": "Yankees",
+            "depPath": "poss|<-poss<-loss->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Mets",
+            "dest": "Yankees",
+            "depPath": "nsubj|<-nsubj<-trade->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Bush",
+            "dest": "Ariel Sharon",
+            "depPath": "nsubj|<-nsubj<-meet->dobj->|dobj"
+        },
+        {
+            "source": "Bush",
+            "dest": "Ariel Sharon",
+            "depPath": "poss|<-poss<-meeting->prep->with->pobj->|pobj"
+        },
+        {
+            "source": "Bush",
+            "dest": "Ariel Sharon",
+            "depPath": "poss|<-poss<-support->prep->for->pobj->|pobj"
+        },
+        {
+            "source": "Bush",
+            "dest": "Ariel Sharon",
+            "depPath": "nsubj|<-nsubj<-embrace->dobj->condition->partmod->seek->prep->by->pobj->|pobj"
+        },
+        {
+            "source": "Bush",
+            "dest": "Ariel Sharon",
+            "depPath": "nsubj|<-nsubj<-rebuke->dobj->government->poss->|poss"
+        },
+        {
+            "source": "Bush",
+            "dest": "Ariel Sharon",
+            "depPath": "nsubj|<-nsubj<-urge->dobj->|dobj"
+        },
+        {
+            "source": "Bush",
+            "dest": "Ariel Sharon",
+            "depPath": "nsubj|<-nsubj<-meet->prep->with->pobj->|pobj"
+        },
+        {
+            "source": "Bush",
+            "dest": "Ariel Sharon",
+            "depPath": "nsubj|<-nsubj<-hold->prep->with->pobj->|pobj"
+        },
+        {
+            "source": "Bush",
+            "dest": "Ariel Sharon",
+            "depPath": "nsubj|<-nsubj<-have->dobj->|dobj"
+        },
+        {
+            "source": "Bush",
+            "dest": "Ariel Sharon",
+            "depPath": "poss|<-poss<-endorsement->prep->of->pobj->plan->poss->|poss"
+        },
+        {
+            "source": "Joe Lockhart",
+            "dest": "White House",
+            "depPath": "rcmod|->rcmod->spokesman->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Joe Lockhart",
+            "dest": "White House",
+            "depPath": "rcmod|->rcmod->secretary->nn->|nn"
+        },
+        {
+            "source": "Joe Lockhart",
+            "dest": "White House",
+            "depPath": "appos|->appos->spokesman->nn->|nn"
+        },
+        {
+            "source": "Joe Lockhart",
+            "dest": "White House",
+            "depPath": "rcmod|->rcmod->spokesman->nn->|nn"
+        },
+        {
+            "source": "Joe Lockhart",
+            "dest": "White House",
+            "depPath": "nsubj|<-nsubj<-strain->dobj->bonhomie->prep->in->pobj->room->nn->|nn"
+        },
+        {
+            "source": "Joe Lockhart",
+            "dest": "White House",
+            "depPath": "rcmod|->rcmod->spin->nsubj->|nsubj"
+        },
+        {
+            "source": "Joe Lockhart",
+            "dest": "White House",
+            "depPath": "appos|->appos->secretary->nn->|nn"
+        },
+        {
+            "source": "Joe Lockhart",
+            "dest": "White House",
+            "depPath": "rcmod|->rcmod->spokesman->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Joe Lockhart",
+            "dest": "White House",
+            "depPath": "appos|->appos->spokesman->prep->for->pobj->|pobj"
+        },
+        {
+            "source": "Joe Lockhart",
+            "dest": "White House",
+            "depPath": "nsubj|<-nsubj<-stand->prep->in->pobj->driveway->nn->|nn"
+        },
+        {
+            "source": "Yankees",
+            "dest": "Class AAA Columbus",
+            "depPath": "nsubj|<-nsubj<-option->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Yankees",
+            "dest": "Class AAA Columbus",
+            "depPath": "nsubj|<-nsubj<-promote->prep->from->pobj->|pobj"
+        },
+        {
+            "source": "Yankees",
+            "dest": "Class AAA Columbus",
+            "depPath": "nsubj|<-nsubj<-send->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Yankees",
+            "dest": "Class AAA Columbus",
+            "depPath": "nsubj|<-nsubj<-call->prep->from->pobj->|pobj"
+        },
+        {
+            "source": "Yankees",
+            "dest": "Class AAA Columbus",
+            "depPath": "poss|<-poss<-team->nn->|nn"
+        },
+        {
+            "source": "Yankees",
+            "dest": "Class AAA Columbus",
+            "depPath": "nsubj|<-nsubj<-summon->prep->from->pobj->|pobj"
+        },
+        {
+            "source": "Yankees",
+            "dest": "Class AAA Columbus",
+            "depPath": "nsubj|<-nsubj<-recall->prep->from->pobj->|pobj"
+        },
+        {
+            "source": "Yankees",
+            "dest": "Class AAA Columbus",
+            "depPath": "dobj|<-dobj<-join->prep->from->pobj->|pobj"
+        },
+        {
+            "source": "Yankees",
+            "dest": "Class AAA Columbus",
+            "depPath": "poss|<-poss<-club->nn->|nn"
+        },
+        {
+            "source": "Yankees",
+            "dest": "Class AAA Columbus",
+            "depPath": "pobj|<-pobj<-inside<-prep<-recall->prep->from->pobj->|pobj"
+        },
+        {
+            "source": "Republicans",
+            "dest": "John McCain",
+            "depPath": "prep|->prep->of->pobj->history->poss->|poss"
+        },
+        {
+            "source": "Republicans",
+            "dest": "John McCain",
+            "depPath": "nsubj|<-nsubj<-say<-rcmod<-man->appos->|appos"
+        },
+        {
+            "source": "Republicans",
+            "dest": "John McCain",
+            "depPath": "rcmod|->rcmod->willing->nsubj->|nsubj"
+        },
+        {
+            "source": "Republicans",
+            "dest": "John McCain",
+            "depPath": "rcmod|->rcmod->stand->prep->with->pobj->exception->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Republicans",
+            "dest": "John McCain",
+            "depPath": "rcmod|->rcmod->aid->prep->by->pobj->|pobj"
+        },
+        {
+            "source": "Republicans",
+            "dest": "John McCain",
+            "depPath": "prep|->prep->include->pobj->|pobj"
+        },
+        {
+            "source": "Republicans",
+            "dest": "John McCain",
+            "depPath": "rcmod|->rcmod->vote->prep->like->pobj->|pobj"
+        },
+        {
+            "source": "Republicans",
+            "dest": "John McCain",
+            "depPath": "rcmod|->rcmod->favor->rcmod->support->dobj->|dobj"
+        },
+        {
+            "source": "Republicans",
+            "dest": "John McCain",
+            "depPath": "rcmod|->rcmod->seek->dobj->nomination->dep->|dep"
+        },
+        {
+            "source": "Republicans",
+            "dest": "John McCain",
+            "depPath": "rcmod|->rcmod->matter->prep->from->pobj->|pobj"
+        },
+        {
+            "source": "China",
+            "dest": "Security Council",
+            "depPath": "dobj|<-dobj<-leave->prep->as->pobj->member->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "China",
+            "dest": "Security Council",
+            "depPath": "appos|->appos->member->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "China",
+            "dest": "Security Council",
+            "depPath": "nsubj|<-nsubj<-veto->dobj->resolution->nn->|nn"
+        },
+        {
+            "source": "China",
+            "dest": "Security Council",
+            "depPath": "rcmod|->rcmod->have->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "China",
+            "dest": "Security Council",
+            "depPath": "nsubj|<-nsubj<-use->prep->as->pobj->member->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "China",
+            "dest": "Security Council",
+            "depPath": "nsubj|<-nsubj<-member->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "China",
+            "dest": "Security Council",
+            "depPath": "nsubj|<-nsubj<-use->prep->as->pobj->member->nn->|nn"
+        },
+        {
+            "source": "China",
+            "dest": "Security Council",
+            "depPath": "nsubj|<-nsubj<-tell->dobj->session->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "China",
+            "dest": "Security Council",
+            "depPath": "rcmod|->rcmod->have->dobj->veto->prep->on->pobj->decision->nn->|nn"
+        },
+        {
+            "source": "China",
+            "dest": "Security Council",
+            "depPath": "nsubj|<-nsubj<-introduce->dobj->resolution->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Dr. Anthony S. Fauci",
+            "dest": "National Institute of Allergy and Infectious Diseases",
+            "depPath": "rcmod|->rcmod->head->dobj->|dobj"
+        },
+        {
+            "source": "Dr. Anthony S. Fauci",
+            "dest": "National Institute of Allergy and Infectious Diseases",
+            "depPath": "nsubj|<-nsubj<-director->dobj->|dobj"
+        },
+        {
+            "source": "Dr. Anthony S. Fauci",
+            "dest": "National Institute of Allergy and Infectious Diseases",
+            "depPath": "dep|->dep->director->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Dr. Anthony S. Fauci",
+            "dest": "National Institute of Allergy and Infectious Diseases",
+            "depPath": "appos|->appos->director->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Dr. Anthony S. Fauci",
+            "dest": "National Institute of Allergy and Infectious Diseases",
+            "depPath": "appos|<-appos<-researcher->appos->director->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Dr. Anthony S. Fauci",
+            "dest": "National Institute of Allergy and Infectious Diseases",
+            "depPath": "appos|<-appos<-protection->rcmod->direct->dobj->|dobj"
+        },
+        {
+            "source": "Dr. Anthony S. Fauci",
+            "dest": "National Institute of Allergy and Infectious Diseases",
+            "depPath": "rcmod|->rcmod->direct->dobj->|dobj"
+        },
+        {
+            "source": "Dr. Anthony S. Fauci",
+            "dest": "National Institute of Allergy and Infectious Diseases",
+            "depPath": "appos|->appos->researcher->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Dr. Anthony S. Fauci",
+            "dest": "National Institute of Allergy and Infectious Diseases",
+            "depPath": "rcmod|->rcmod->oversee->prep->as->pobj->director->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Dr. Anthony S. Fauci",
+            "dest": "National Institute of Allergy and Infectious Diseases",
+            "depPath": "appos|->appos->head->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Dominique Wilkins",
+            "dest": "Hawks",
+            "depPath": "pobj|<-pobj<-with<-dep<-along<-prep<-give->iobj->|iobj"
+        },
+        {
+            "source": "Dominique Wilkins",
+            "dest": "Hawks",
+            "depPath": "nsubj|<-nsubj<-score->dobj->point->poss->|poss"
+        },
+        {
+            "source": "Dominique Wilkins",
+            "dest": "Hawks",
+            "depPath": "nsubj|<-nsubj<-lead->dobj->|dobj"
+        },
+        {
+            "source": "Dominique Wilkins",
+            "dest": "Hawks",
+            "depPath": "nsubj|<-nsubj<-put->dobj->|dobj"
+        },
+        {
+            "source": "Dominique Wilkins",
+            "dest": "Hawks",
+            "depPath": "poss|<-poss<-jersey->nn->|nn"
+        },
+        {
+            "source": "Dominique Wilkins",
+            "dest": "Hawks",
+            "depPath": "nsubj|<-nsubj<-score->prep->in->pobj->period->prep->for->pobj->|pobj"
+        },
+        {
+            "source": "Dominique Wilkins",
+            "dest": "Hawks",
+            "depPath": "nsubj|<-nsubj<-score->prep->after->pobj->challenge->dep->down->nsubj->|nsubj"
+        },
+        {
+            "source": "Dominique Wilkins",
+            "dest": "Hawks",
+            "depPath": "nsubj|<-nsubj<-score->prep->for->pobj->|pobj"
+        },
+        {
+            "source": "Dominique Wilkins",
+            "dest": "Hawks",
+            "depPath": "nsubj|<-nsubj<-score<-dep<-ap<-nsubj<-hit->prep->for->pobj->|pobj"
+        },
+        {
+            "source": "Dominique Wilkins",
+            "dest": "Hawks",
+            "depPath": "rcmod|->rcmod->lead->dobj->|dobj"
+        },
+        {
+            "source": "John C. Bogle",
+            "dest": "Vanguard Group",
+            "depPath": "appos|->appos->executive->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "John C. Bogle",
+            "dest": "Vanguard Group",
+            "depPath": "rcmod|->rcmod->reserve->nsubj->emeritus->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "John C. Bogle",
+            "dest": "Vanguard Group",
+            "depPath": "appos|<-appos<-page->appos->founder->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "John C. Bogle",
+            "dest": "Vanguard Group",
+            "depPath": "nsubj|<-nsubj<-founder->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "John C. Bogle",
+            "dest": "Vanguard Group",
+            "depPath": "appos|->appos->founder->prep->of->pobj->|pobjón_,_the_university_also_gave_honorary_degrees_to_Paul_A._Volcker_,_the_former_chairman_of_the_Federal_Reserve_Board_;_John_C._Bogle_,_the_founder_of_Vanguard_Group_Investment_Companies_;_and_George_Dawson_,_the_grandson_of_slaves_,_who_learned_to_read_when_he_was_98_and_last_year_published_a_memoir_,_''_Life_Is_So_Good_''_(_Random_House_)_,_written_with_Richard_Glaubman_. lex#,_the_founder_of pos#,_DT_NN_IN lc#; rc#;_and"
+        },
+        {
+            "source": "John C. Bogle",
+            "dest": "Vanguard Group",
+            "depPath": "nsubj|<-nsubj<-establish->dobj->|dobj"
+        },
+        {
+            "source": "John C. Bogle",
+            "dest": "Vanguard Group",
+            "depPath": "cc|->cc->founder->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "John C. Bogle",
+            "dest": "Vanguard Group",
+            "depPath": "appos|->appos->founder->prep->of->pobj->company->nn->|nn"
+        },
+        {
+            "source": "John C. Bogle",
+            "dest": "Vanguard Group",
+            "depPath": "appos|->appos->chairman->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "John C. Bogle",
+            "dest": "Vanguard Group",
+            "depPath": "appos|->appos->founder->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Flatbush",
+            "dest": "Brooklyn",
+            "depPath": "pobj|<-pobj<-of<-prep<-intersection<-pobj<-near<-prep<--rrb-->prep->in->pobj->section->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Flatbush",
+            "dest": "Brooklyn",
+            "depPath": "nn|<-nn<-area->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Flatbush",
+            "dest": "Brooklyn",
+            "depPath": "pobj|<-pobj<-to<-prep<-move->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Flatbush",
+            "dest": "Brooklyn",
+            "depPath": "appos|->appos->neighborhood->nn->|nn"
+        },
+        {
+            "source": "Flatbush",
+            "dest": "Brooklyn",
+            "depPath": "nn|<-nn<-section->rcmod->announce->nsubj->|nsubj"
+        },
+        {
+            "source": "Flatbush",
+            "dest": "Brooklyn",
+            "depPath": "prep|->prep->of->pobj->intersection->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Flatbush",
+            "dest": "Brooklyn",
+            "depPath": "nn|<-nn<-neighborhood->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Flatbush",
+            "dest": "Brooklyn",
+            "depPath": "pobj|<-pobj<-at<-prep<-be->prep->in->pobj->section->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Flatbush",
+            "dest": "Brooklyn",
+            "depPath": "nn|<-nn<-section->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Flatbush",
+            "dest": "Brooklyn",
+            "depPath": "appos|->appos->neighborhood->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Richard G. Darman",
+            "dest": "White House",
+            "depPath": "appos|->appos->director->nn->|nn"
+        },
+        {
+            "source": "Richard G. Darman",
+            "dest": "White House",
+            "depPath": "nsubj|<-nsubj<-be->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Richard G. Darman",
+            "dest": "White House",
+            "depPath": "rcmod|->rcmod->director->nn->|nn"
+        },
+        {
+            "source": "Richard G. Darman",
+            "dest": "White House",
+            "depPath": "nsubj|<-nsubj<-sour->dobj->relation->nn->|nn"
+        },
+        {
+            "source": "Richard G. Darman",
+            "dest": "White House",
+            "depPath": "appos|->appos->director->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Richard G. Darman",
+            "dest": "White House",
+            "depPath": "rcmod|->rcmod->pare->dobj->request->prep->for->pobj->transportation->prep->in->pobj->request->rcmod->send->nsubj->|nsubj"
+        },
+        {
+            "source": "Richard G. Darman",
+            "dest": "White House",
+            "depPath": "nsubj|<-nsubj<-be->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Richard G. Darman",
+            "dest": "White House",
+            "depPath": "pobj|<-pobj<-of<-prep<-victory->prep->in->pobj->struggle->prep->with->pobj->member->nn->|nn"
+        },
+        {
+            "source": "Richard G. Darman",
+            "dest": "White House",
+            "depPath": "appos|->appos->chief->nn->|nn"
+        },
+        {
+            "source": "Richard G. Darman",
+            "dest": "White House",
+            "depPath": "nsubj|<-nsubj<-chat->prep->in->pobj->lot->nn->|nn"
+        },
+        {
+            "source": "Koreans",
+            "dest": "Japan",
+            "depPath": "nsubjpass|<-nsubjpass<-bring->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Koreans",
+            "dest": "Japan",
+            "depPath": "pobj|<-pobj<-of<-prep<-effort->rcmod->sue->dobj->|dobj"
+        },
+        {
+            "source": "Koreans",
+            "dest": "Japan",
+            "depPath": "nsubj|<-nsubj<-live->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Koreans",
+            "dest": "Japan",
+            "depPath": "rcmod|->rcmod->bring->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Koreans",
+            "dest": "Japan",
+            "depPath": "rcmod|->rcmod->escape->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Koreans",
+            "dest": "Japan",
+            "depPath": "nn|<-nn<-living->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Koreans",
+            "dest": "Japan",
+            "depPath": "rcmod|->rcmod->live->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Koreans",
+            "dest": "Japan",
+            "depPath": "nsubj|<-nsubj<-take->dobj->citizenship->amod->|amod"
+        },
+        {
+            "source": "Koreans",
+            "dest": "Japan",
+            "depPath": "pobj|<-pobj<-to<-prep<-symbol->prep->of->pobj->brutishness->amod->|amod"
+        },
+        {
+            "source": "Koreans",
+            "dest": "Japan",
+            "depPath": "partmod|->partmod->live->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "China",
+            "dest": "World Trade Organization",
+            "depPath": "dobj|<-dobj<-get->prep->into->pobj->|pobj"
+        },
+        {
+            "source": "China",
+            "dest": "World Trade Organization",
+            "depPath": "poss|<-poss<-entry->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "China",
+            "dest": "World Trade Organization",
+            "depPath": "dobj|<-dobj<-bring->prep->into->pobj->|pobj"
+        },
+        {
+            "source": "China",
+            "dest": "World Trade Organization",
+            "depPath": "nsubj|<-nsubj<-join->dobj->|dobj"
+        },
+        {
+            "source": "China",
+            "dest": "World Trade Organization",
+            "depPath": "poss|<-poss<-membership->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "China",
+            "dest": "World Trade Organization",
+            "depPath": "poss|<-poss<-entry->prep->into->pobj->|pobj"
+        },
+        {
+            "source": "China",
+            "dest": "World Trade Organization",
+            "depPath": "poss|<-poss<-admission->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "China",
+            "dest": "World Trade Organization",
+            "depPath": "nsubj|<-nsubj<-enter->dobj->|dobj"
+        },
+        {
+            "source": "China",
+            "dest": "World Trade Organization",
+            "depPath": "dobj|<-dobj<-admit->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "China",
+            "dest": "World Trade Organization",
+            "depPath": "nsubj|<-nsubj<-member->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Bozell Worldwide",
+            "dest": "Bozell",
+            "depPath": "appos|->appos->unit->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Bozell Worldwide",
+            "dest": "Bozell",
+            "depPath": "rcmod|->rcmod->unit->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Bozell Worldwide",
+            "dest": "Bozell",
+            "depPath": "appos|->appos->part->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Bozell Worldwide",
+            "dest": "Bozell",
+            "depPath": "nn|<-nn<-parent->appos->|appos"
+        },
+        {
+            "source": "Bozell Worldwide",
+            "dest": "Bozell",
+            "depPath": "rcmod|->rcmod->own->prep->by->pobj->|pobj"
+        },
+        {
+            "source": "Bozell Worldwide",
+            "dest": "Bozell",
+            "depPath": "nsubj|<-nsubj<-unit->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Bozell Worldwide",
+            "dest": "Bozell",
+            "depPath": "nn|<-nn<-unit->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Bozell Worldwide",
+            "dest": "Bozell",
+            "depPath": "pobj|<-pobj<-include<-prep<-agency->appos->part->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Bozell Worldwide",
+            "dest": "Bozell",
+            "depPath": "rcmod|->rcmod->agency->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Bozell Worldwide",
+            "dest": "Bozell",
+            "depPath": "partmod|->partmod->own->prep->by->pobj->|pobj"
+        },
+        {
+            "source": "Joyce Theater",
+            "dest": "Eighth Avenue",
+            "depPath": "pobj|<-pobj<-at<-prep<-theater->appos->|appos"
+        },
+        {
+            "source": "Joyce Theater",
+            "dest": "Eighth Avenue",
+            "depPath": "pobj|<-pobj<-by<-prep<-present->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Joyce Theater",
+            "dest": "Eighth Avenue",
+            "depPath": "pobj|<-pobj<-of<-prep<-development<-pobj<-in<-prep<-instrumental->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Joyce Theater",
+            "dest": "Eighth Avenue",
+            "depPath": "pobj|<-pobj<-at<-prep<-sunday->appos->|apposâneo_performs_tonight_,_tomorrow_and_Sunday_at_the_Joyce_Theater_,_175_Eighth_Avenue_,_at_19th_Street_,_Chelsea_,_(212)_242-0800_,_joyce.org_. lex#, pos#, lc#at_the rc#,_at"
+        },
+        {
+            "source": "Joyce Theater",
+            "dest": "Eighth Avenue",
+            "depPath": "nsubj|<-nsubj<-be->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Joyce Theater",
+            "dest": "Eighth Avenue",
+            "depPath": "pobj|<-pobj<-at<-prep<-p.m.->appos->|appos"
+        },
+        {
+            "source": "Joyce Theater",
+            "dest": "Eighth Avenue",
+            "depPath": "appos|<-appos<-tonight->appos->|appos"
+        },
+        {
+            "source": "Joyce Theater",
+            "dest": "Eighth Avenue",
+            "depPath": "pobj|<-pobj<-at<-prep<-sunday->appos->|appos"
+        },
+        {
+            "source": "Joyce Theater",
+            "dest": "Eighth Avenue",
+            "depPath": "pobj|<-pobj<-of<-prep<-marquee<-pobj<-on<-prep<-take->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Joyce Theater",
+            "dest": "Eighth Avenue",
+            "depPath": "dep|->dep->offer->tmod->|tmod"
+        },
+        {
+            "source": "Forrester Research",
+            "dest": "Cambridge",
+            "depPath": "appos|->appos->industry->dep->firm->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Forrester Research",
+            "dest": "Cambridge",
+            "depPath": "partmod|->partmod->base->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Forrester Research",
+            "dest": "Cambridge",
+            "depPath": "appos|->appos->company->dep->|dep"
+        },
+        {
+            "source": "Forrester Research",
+            "dest": "Cambridge",
+            "depPath": "appos|->appos->company->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Forrester Research",
+            "dest": "Cambridge",
+            "depPath": "rcmod|->rcmod->have->nsubj->firm->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Forrester Research",
+            "dest": "Cambridge",
+            "depPath": "appos|->appos->firm->partmod->base->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Forrester Research",
+            "dest": "Cambridge",
+            "depPath": "appos|->appos->concern->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Forrester Research",
+            "dest": "Cambridge",
+            "depPath": "appos|->appos->firm->dep->|dep"
+        },
+        {
+            "source": "Forrester Research",
+            "dest": "Cambridge",
+            "depPath": "appos|->appos->firm->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Forrester Research",
+            "dest": "Cambridge",
+            "depPath": "appos|->appos->technology->dep->firm->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Barnes Foundation",
+            "dest": "Philadelphia",
+            "depPath": "rcmod|->rcmod->team->prep->with->pobj->|pobj"
+        },
+        {
+            "source": "Barnes Foundation",
+            "dest": "Philadelphia",
+            "depPath": "nsubj|<-nsubj<-move->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Barnes Foundation",
+            "dest": "Philadelphia",
+            "depPath": "pobj|<-pobj<-over<-prep<-battle<-nsubj<-heat->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Barnes Foundation",
+            "dest": "Philadelphia",
+            "depPath": "nsubj|<-nsubj<-move->prep->into->pobj->|pobj"
+        },
+        {
+            "source": "Barnes Foundation",
+            "dest": "Philadelphia",
+            "depPath": "pobj|<-pobj<-from<-prep<-work<-pobj<-of<-prep<-exhibition->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Barnes Foundation",
+            "dest": "Philadelphia",
+            "depPath": "pobj|<-pobj<-at<-prep<-ask->prep->to->pobj->|pobj"
+        },
+        {
+            "source": "Barnes Foundation",
+            "dest": "Philadelphia",
+            "depPath": "pobj|<-pobj<-of<-prep<-president<-nsubj<-lawyer->nn->|nn"
+        },
+        {
+            "source": "Barnes Foundation",
+            "dest": "Philadelphia",
+            "depPath": "pobj|<-pobj<-as<-prep<-art->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Barnes Foundation",
+            "dest": "Philadelphia",
+            "depPath": "nsubj|<-nsubj<-receive->prep->for->pobj->move->prep->to->pobj->museum->prep->in->pobj->|pobj"
+        },
+        {
+            "source": "Barnes Foundation",
+            "dest": "Philadelphia",
+            "depPath": "pobj|<-pobj<-of<-prep<-board<-nsubj<-move->prep->out->dep->of->pobj->location->nn->|nn"
+        },
+        {
+            "source": "Eric A. Goldstein",
+            "dest": "Natural Resources Defense Council",
+            "depPath": "appos|->appos->lawyer->prep->with->pobj->|pobj"
+        },
+        {
+            "source": "Eric A. Goldstein",
+            "dest": "Natural Resources Defense Council",
+            "depPath": "appos|->appos->attorney->prep->with->pobj->|pobj"
+        },
+        {
+            "source": "Eric A. Goldstein",
+            "dest": "Natural Resources Defense Council",
+            "depPath": "appos|->appos->attorney->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Eric A. Goldstein",
+            "dest": "Natural Resources Defense Council",
+            "depPath": "appos|->appos->attorney->prep->for->pobj->|pobj"
+        },
+        {
+            "source": "Eric A. Goldstein",
+            "dest": "Natural Resources Defense Council",
+            "depPath": "appos|->appos->lawyer->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Eric A. Goldstein",
+            "dest": "Natural Resources Defense Council",
+            "depPath": "appos|->appos->spokesman->prep->for->pobj->|pobj"
+        },
+        {
+            "source": "Eric A. Goldstein",
+            "dest": "Natural Resources Defense Council",
+            "depPath": "appos|->appos->lawyer->prep->for->pobj->|pobj"
+        },
+        {
+            "source": "Eric A. Goldstein",
+            "dest": "Natural Resources Defense Council",
+            "depPath": "appos|->appos->lawyer->rcmod->monitor->prep->at->pobj->|pobj"
+        },
+        {
+            "source": "Eric A. Goldstein",
+            "dest": "Natural Resources Defense Council",
+            "depPath": "appos|->appos->lawyer->rcmod->director->prep->of->pobj->program->prep->of->pobj->|pobj"
+        },
+        {
+            "source": "Eric A. Goldstein",
+            "dest": "Natural Resources Defense Council",
+            "depPath": "appos|->appos->specialist->prep->at->pobj->|pobj"
+        }
+    ]
+}

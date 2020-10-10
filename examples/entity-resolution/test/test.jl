@@ -57,7 +57,7 @@ params = ModelParams(
     dirichlet_prior_val=0.01,
     beta_prior=(20, 10000),
     num_relations_mean=length(data.relation_strings)*3*4,
-    num_relations_var=50
+    num_relations_var=100
 )
 
 # initial_tr = get_initial_trace(data.sentences_numeric, params)
@@ -116,10 +116,10 @@ success = false
 # for _=1:10
 #     # success && break
     # try
-            run_inference_with_saving!(run_tracked_splitmerge_inference!, initial_tr, 10000, get_examine();
-                save_freq=50, examine_freq=100, log=true, log_freq=100, groundtruth=groundtruth_tr
-            )
-            # run_tracked_splitmerge_inference!(initial_tr, 2000, get_examine(), log=true, log_freq=100, examine_freq=100)
+            # run_inference_with_saving!(run_tracked_splitmerge_inference!, initial_tr, 10000, get_examine();
+            #     save_freq=50, examine_freq=100, log=true, log_freq=100, groundtruth=groundtruth_tr
+            # )
+            run_tracked_splitmerge_inference!(initial_tr, 2000, get_examine(), log=true, log_freq=100, examine_freq=100)
         println("Just finished running...")
         success = true
 #     catch e
