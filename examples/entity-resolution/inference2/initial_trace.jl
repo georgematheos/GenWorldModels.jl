@@ -11,6 +11,7 @@ function make_constraints(sentences::Vector{SentenceNumeric}, params::ModelParam
         rel = uniform_discrete(1, num_rels)
         push!(true_for_rel[rel], (s.ent1, s.ent2))
         constraints[:kernel => :sampled_facts => :sampled_facts => i] = Fact(Relation(rel), s.ent1, s.ent2)
+        constraints[:kernel => :verbs => i] = s.verb
     end
 
     for (r, certainly_true) in enumerate(true_for_rel)

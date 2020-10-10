@@ -75,7 +75,19 @@ end
 
 model_args(p::ModelParams) = (p.num_entities, p.num_relations_prior, p.beta_prior, p.num_sentences, p.dirichlet_prior_val, p.num_verbs)
 num_ents(tr) = get_args(tr)[1]
+beta_prior(tr) = get_args(tr)[3]
 num_verbs(tr) = get_args(tr)[6]
 dirichlet_prior_val(tr) = get_args(tr)[5]
 entpairs(tr) = get_retval(tr)[2]
 verbs(tr) = get_retval(tr)[1]
+
+function get_state(tr)
+    nrels = tr[:num_rels]
+    facts = tr[:sampled_facts]
+    rels = map(fact -> fact.rel, facts)
+    facts_numeric = Set(
+        FactNumeric(rel=fact.rel, ent1=fact.ent1, ent2=fact.ent2)
+        for fact in tr[:sampled_facts => :all_facts]
+    )
+    State(nrels, facts_numeric, rels)
+end

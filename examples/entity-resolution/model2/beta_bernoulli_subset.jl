@@ -114,7 +114,7 @@ function Gen.update(
     args::Tuple{AbstractArray, Real, Real},
     ::Tuple{NoChange, NoChange, NoChange},
     constraints::ChoiceMap,
-    ::Selection
+    ::AllSelection
 )
     new_subset = tr.subset
     added = Set(); deleted = Set()
@@ -123,12 +123,11 @@ function Gen.update(
         if put_in_set && !(element in get_retval(tr))
             new_subset = push(new_subset, element)
             push!(added, element)
-            discard[element] = false
         elseif !put_in_set && (element in get_retval(tr))
             new_subset = disj(new_subset, element)
             push!(deleted, element)
-            discard[element] = true
         end
+        discard[element] = (element in tr.subset)
     end
 
     new_num_true = length(new_subset)

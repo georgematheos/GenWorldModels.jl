@@ -60,3 +60,12 @@ function ModelParams(;num_entities, num_verbs, num_sentences, dirichlet_prior_va
     μ = log(num_relations_mean) - σ2/2
     ModelParams(num_entities, num_verbs, num_sentences, dirichlet_prior_val, beta_prior, (μ, √(σ2)))
 end
+
+function write_params!(io::IO, p::ModelParams)
+    println(io, "num_entities=", p.num_entities)
+    println(io, "num_verbs=", p.num_verbs)
+    println(io, "num_sentences=", p.num_sentences)
+    println(io, "dirichlet_prior_val=", p.dirichlet_prior_val)
+    println(io, "beta_prior=", p.beta_prior)
+    println(io, "num_relations_prior=", p.num_relations_prior)
+end

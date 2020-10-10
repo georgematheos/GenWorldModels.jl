@@ -109,7 +109,7 @@ end
 include("splitmerge.jl")
 function splitmerge_update(tr, acc_tracker, splitmerge_type)
     @assert splitmerge_type === :sdds "Other splitmerge types not implemented"
-    new_tr, acc = mh(tr, sdds_splitmerge_proposal, (), sdds_splitmerge_involution; check=true)
+    new_tr, acc = mh(tr, sdds_splitmerge_proposal, (), sdds_splitmerge_involution; check=false)
     
     diff = new_tr[:num_rels] - tr[:num_rels]
     if diff > 0
@@ -141,8 +141,8 @@ end
         unnormalized_probs = [rel_idx in true_rel_indices ? 2*(nrels - num_refs) : num_refs for rel_idx=1:nrels]
         probs = normalize(unnormalized_probs)
         if !isapprox(sum(probs), 1.)
-            println("unnormalized probs: ", unnormalized_probs)
-            println("num refs: ", num_refs)
+            # println("unnormalized probs: ", unnormalized_probs)
+            # println("num refs: ", num_refs)
             probs = [1/nrels for i=1:nrels]
         end
         new_rel_idx ~ categorical(probs)
@@ -169,7 +169,7 @@ end
 
 function update_random_sentence_relation(tr, acc_tracker, entpair_to_indices)
     idx = uniform_discrete(1, length(get_retval(tr)[1]))
-    tr, acc = mh(tr, relation_update_proposal, (idx, entpair_to_indices), relation_update_inv, check=true)
+    tr, acc = mh(tr, relation_update_proposal, (idx, entpair_to_indices), relation_update_inv, check=false)
     if acc
         acc_tracker.num_rel_assoc_acc += 1
     else
@@ -177,3 +177,5 @@ function update_random_sentence_relation(tr, acc_tracker, entpair_to_indices)
     end
     return tr
 end
+
+include("ancestral.jl")
