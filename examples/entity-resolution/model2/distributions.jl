@@ -51,6 +51,7 @@ function Gen.random(::UniformChoice, set)
     lst[uniform_discrete(1, length(set))]
 end
 Gen.logpdf(::UniformChoice, val, set) = val in set ? -log(length(set)) : -Inf
+uniform_choice(set) = random(uniform_choice, set)
 
 struct UniformFactSample <: Gen.Distribution{Fact} end
 const uniform_fact_sample = UniformFactSample()

@@ -90,7 +90,7 @@ a split/merge update or an update to which relation is assigned to each sentence
 `entpair_to_indices` should be a dictionary from entpair `(e1, e2)` to a collection
 of all the indices in which these entpairs appear.
 """
-function splitmerge_inference_iter(tr, acc_tracker, splitmerge_type, entpair_to_indices; splitmerge_prob=0.2)
+function splitmerge_inference_iter(tr, acc_tracker, splitmerge_type, entpair_to_indices; splitmerge_prob=0.5)
     do_splitmerge = bernoulli(splitmerge_prob)
     if do_splitmerge
         # println("running a splitmerge update...")
