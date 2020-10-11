@@ -18,6 +18,12 @@ git-tree-sha1 = "33e450545eaf7699da1a6e755f9ea65f14077a45"
 uuid = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
 version = "0.3.3"
 
+[[Artifacts]]
+deps = ["Pkg"]
+git-tree-sha1 = "c30985d8821e0cd73870b17b0ed0ce6dc44cb744"
+uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
+version = "1.3.0"
+
 [[Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
@@ -40,10 +46,10 @@ uuid = "0b7ba130-8d10-5ba8-a3d6-c5182647fed9"
 version = "1.14.3+1"
 
 [[Bzip2_jll]]
-deps = ["Libdl", "Pkg"]
-git-tree-sha1 = "03a44490020826950c68005cafb336e5ba08b7e8"
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "c3598e525718abcc440f69cc6d5f60dda0a1b61e"
 uuid = "6e34b625-4abd-537c-b88f-471c36dfa7a0"
-version = "1.0.6+4"
+version = "1.0.6+5"
 
 [[Cairo]]
 deps = ["Cairo_jll", "Colors", "Glib_jll", "Graphics", "Libdl", "Pango_jll"]
@@ -59,9 +65,9 @@ version = "1.16.0+5"
 
 [[CodeTracking]]
 deps = ["InteractiveUtils", "UUIDs"]
-git-tree-sha1 = "ccc043a0df446cac279dca29d13e2827b40aceb5"
+git-tree-sha1 = "2884932d84a30e6873c49f97e939734329ac044b"
 uuid = "da1fd8a2-8d9e-5ec2-8556-3022fb5608a2"
-version = "0.5.12"
+version = "1.0.3"
 
 [[ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
@@ -228,16 +234,16 @@ uuid = "f6369f11-7733-5829-9624-2563aa707210"
 version = "0.10.12"
 
 [[FreeType2_jll]]
-deps = ["Bzip2_jll", "Libdl", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "720eee04e3b496c15e5e2269669c2532fb5005c0"
+deps = ["Artifacts", "Bzip2_jll", "JLLWrappers", "Libdl", "Pkg", "Zlib_jll"]
+git-tree-sha1 = "cbd58c9deb1d304f5a245a0b7eb841a2560cfec6"
 uuid = "d7e528f0-a631-5988-bf34-fe36492bcfd7"
-version = "2.10.1+4"
+version = "2.10.1+5"
 
 [[FriBidi_jll]]
-deps = ["Libdl", "Pkg"]
-git-tree-sha1 = "cfc3485a0a968263c789e314fca5d66daf75ed6c"
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "0d20aed5b14dd4c9a2453c1b601d08e1149679cc"
 uuid = "559328eb-81f9-559d-9380-de523a88c83c"
-version = "1.0.5+5"
+version = "1.0.5+6"
 
 [[FunctionWrappers]]
 git-tree-sha1 = "e4813d187be8c7b993cb7f85cbf2b7bfbaadc694"
@@ -245,7 +251,9 @@ uuid = "069b7b12-0de2-55c6-9aab-29f3d0a68a2e"
 version = "1.1.1"
 
 [[FunctionalCollections]]
-path = "../../../FunctionalCollections.jl"
+git-tree-sha1 = "8b2de4b68d05150c59163bdf0967b433cf622a6d"
+repo-rev = "master"
+repo-url = "https://github.com/georgematheos/FunctionalCollections.jl"
 uuid = "de31a74c-ac4f-5751-b3fd-e18cd04993ca"
 version = "0.5.1"
 
@@ -257,15 +265,19 @@ version = "3.24.11+3"
 
 [[Gen]]
 deps = ["DataStructures", "Distributions", "ForwardDiff", "FunctionalCollections", "JSON", "LinearAlgebra", "MacroTools", "Random", "ReverseDiff", "SpecialFunctions"]
-path = "/Users/georgematheos/Developer/research/Gen"
+git-tree-sha1 = "140cd95255ded69dec1c7bae83b014893340df68"
+repo-rev = "sets"
+repo-url = "https://github.com/georgematheos/Gen"
 uuid = "ea4f424c-a589-11e8-07c0-fd5c91b9da4a"
-version = "0.3.5"
+version = "0.4.0"
 
 [[GenWorldModels]]
 deps = ["ConjugatePriors", "DataStructures", "ForwardDiff", "FunctionalCollections", "Gen", "IJulia", "LinearAlgebra", "MacroTools", "Parameters", "PyCall", "PyPlot", "Revise", "SpecialFunctions", "UUIDs"]
-path = "/Users/georgematheos/Developer/research/GenWorldModels.jl/"
+git-tree-sha1 = "8887551fb9f8b63432d300cfcebb2f140fab012a"
+repo-rev = "master"
+repo-url = "https://github.com/georgematheos/GenWorldModels.jl"
 uuid = "3540416b-6f6e-4f4e-9ce0-d5802f4ca5a4"
-version = "0.1.0"
+version = "0.1.4"
 
 [[Gettext_jll]]
 deps = ["Libdl", "Libiconv_jll", "Pkg", "XML2_jll"]
@@ -317,15 +329,21 @@ version = "0.13.6"
 
 [[HDF5_jll]]
 deps = ["Libdl", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "85bd2e586a10ae0eab856125bf5245e0d36384a7"
+git-tree-sha1 = "3dbc683172cb53428907485a4bb98a29d3874083"
 uuid = "0234f1f7-429e-5d53-9886-15a909be8d59"
-version = "1.10.5+5"
+version = "1.10.5+6"
 
 [[HarfBuzz_jll]]
-deps = ["Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Gettext_jll", "Glib_jll", "Graphite2_jll", "Libdl", "Libffi_jll", "Pkg"]
-git-tree-sha1 = "4193649cdec3f075e30b2f2fcee8e998f9cfd0f6"
+deps = ["Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Gettext_jll", "Glib_jll", "Graphite2_jll", "ICU_jll", "Libdl", "Libffi_jll", "Pkg"]
+git-tree-sha1 = "30237d3202f1d4ad9eda0a53b4272078effc50cd"
 uuid = "2e76f6c2-a576-52d4-95c1-20adfe4de566"
-version = "2.6.1+6"
+version = "2.6.1+9"
+
+[[ICU_jll]]
+deps = ["Libdl", "Pkg"]
+git-tree-sha1 = "b8de23644ee96884110e8071deed3ff0d2de4d9d"
+uuid = "a51ab1cf-af8e-5615-a023-bc2c838bba6b"
+version = "67.1.0+1"
 
 [[IJulia]]
 deps = ["Base64", "Conda", "Dates", "InteractiveUtils", "JSON", "Markdown", "MbedTLS", "Pkg", "Printf", "REPL", "Random", "SoftGlobalScope", "Test", "UUIDs", "ZMQ"]
@@ -371,6 +389,11 @@ git-tree-sha1 = "f6cf928214ae7c0e7550b2424a57f11875d7e49a"
 uuid = "4138dd39-2aa7-5051-a626-17a0bb65d9c8"
 version = "0.10.0"
 
+[[JLLWrappers]]
+git-tree-sha1 = "dbc0967f6403829a6682493fdb4ec7c0ebfd2e68"
+uuid = "692b3bcd-3c85-4b1f-b108-f13ce0eb3210"
+version = "1.1.1"
+
 [[JSON]]
 deps = ["Dates", "Mmap", "Parsers", "Unicode"]
 git-tree-sha1 = "b34d7cef7b337321e97d22242c3c2b91f476748e"
@@ -385,9 +408,9 @@ version = "2.0.1+2"
 
 [[JuliaInterpreter]]
 deps = ["CodeTracking", "InteractiveUtils", "Random", "UUIDs"]
-git-tree-sha1 = "7b2a1b650cec61a7d8cd8ee9ee7a818b5764d502"
+git-tree-sha1 = "5b9b328eeea7bb85caca1576c15041e8faeb9041"
 uuid = "aa1ae85d-cabe-5617-a682-6adf51b2e16a"
-version = "0.7.26"
+version = "0.8.1"
 
 [[LZO_jll]]
 deps = ["Libdl", "Pkg"]
@@ -432,10 +455,10 @@ uuid = "d4300ac3-e22c-5743-9152-c294e39db1e4"
 version = "1.8.5+3"
 
 [[Libglvnd_jll]]
-deps = ["Libdl", "Pkg", "Xorg_libX11_jll", "Xorg_libXext_jll"]
-git-tree-sha1 = "30a990af9ce535bcba54d1f23f071a7e714f861e"
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "Xorg_libX11_jll", "Xorg_libXext_jll"]
+git-tree-sha1 = "5b1a5ff82d8a17e119369a004f60b2ac81a79b64"
 uuid = "7e76a0d4-f3c7-5321-8279-8d96eeed0f29"
-version = "1.3.0+1"
+version = "1.3.0+2"
 
 [[Libgpg_error_jll]]
 deps = ["Libdl", "Pkg"]
@@ -476,9 +499,9 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
 [[LoweredCodeUtils]]
 deps = ["JuliaInterpreter"]
-git-tree-sha1 = "dbd9336b43c2d6fa492efa09ba3bb10fbdbeeb64"
+git-tree-sha1 = "00c64cd799a9450e4d1efe8ad6549de72702f7fe"
 uuid = "6f1432cf-f94c-5a45-995e-cdbf5db27b0b"
-version = "0.4.9"
+version = "1.2.3"
 
 [[Lz4_jll]]
 deps = ["Libdl", "Pkg"]
@@ -653,17 +676,23 @@ git-tree-sha1 = "7b1d07f411bc8ddb7977ec7f377b97b158514fe0"
 uuid = "189a3867-3050-52da-a836-e630ba90ab69"
 version = "0.2.0"
 
+[[Requires]]
+deps = ["UUIDs"]
+git-tree-sha1 = "2fc2e1ab606a5dca7bbad9036a694553c3a57926"
+uuid = "ae029012-a4dd-5104-9daa-d747884805df"
+version = "1.0.3"
+
 [[ReverseDiff]]
 deps = ["DiffResults", "DiffRules", "ForwardDiff", "FunctionWrappers", "LinearAlgebra", "MacroTools", "NaNMath", "Random", "SpecialFunctions", "StaticArrays", "Statistics"]
-git-tree-sha1 = "a3a2fbc8af1fc993aca48ba01484444bbeb39bf7"
+git-tree-sha1 = "97c6f7dc9ef6ca1d5bd3aa0072d804281af5072d"
 uuid = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
-version = "1.4.2"
+version = "1.4.3"
 
 [[Revise]]
-deps = ["CodeTracking", "Distributed", "FileWatching", "JuliaInterpreter", "LibGit2", "LoweredCodeUtils", "OrderedCollections", "Pkg", "REPL", "UUIDs", "Unicode"]
-git-tree-sha1 = "a860e786779be1ab6407d427470e1415711dd459"
+deps = ["CodeTracking", "Distributed", "FileWatching", "JuliaInterpreter", "LibGit2", "LoweredCodeUtils", "OrderedCollections", "Pkg", "REPL", "Requires", "UUIDs", "Unicode"]
+git-tree-sha1 = "d3a6633900ac7ccbb10ee14d408d013e39aef397"
 uuid = "295af30f-e4ad-537b-8983-00126c2a3abe"
-version = "2.7.5"
+version = "3.1.4"
 
 [[Rmath]]
 deps = ["Random", "Rmath_jll"]
@@ -924,10 +953,10 @@ uuid = "8f1865be-045e-5c20-9c9f-bfbfb0764568"
 version = "4.3.2+4"
 
 [[Zlib_jll]]
-deps = ["Libdl", "Pkg"]
-git-tree-sha1 = "fdd89e5ab270ea0f2a0174bd9093e557d06d4bfa"
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "ded43825988ace7a311ee7e1d0f09571822509c4"
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
-version = "1.2.11+16"
+version = "1.2.11+17"
 
 [[Zstd_jll]]
 deps = ["Libdl", "Pkg"]

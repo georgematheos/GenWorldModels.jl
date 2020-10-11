@@ -216,22 +216,22 @@ end
 end
 splitmerge_mh_kern = OUPMMHKernel(splitmerge_prop, (), splitmerge_inv)
 
-function split_merge_inference_iter(tr)
+function split_merge_inference_iter(tr; num_sm_per_iter=4)
     tr, _ = mh(tr, birth_death_mh_kern)
     tr = generic_no_num_change_inference_iter(tr)
-    for _ = 1:4
+    for _ = 1:num_sm_per_iter
         new_tr, sm_acc = mh(tr, splitmerge_mh_kern; check=false)
-        if sm_acc && tr[:kernel => :n_tones] != new_tr[:kernel => :n_tones]
-            is_split = tr[:kernel => :n_tones] < new_tr[:kernel => :n_tones]
-            println("SUCCESSFUL SM MOVE: $(is_split ? "split" : "merge")")
-        end
+        # if sm_acc && tr[:kernel => :n_tones] != new_tr[:kernel => :n_tones]
+        #     is_split = tr[:kernel => :n_tones] < new_tr[:kernel => :n_tones]
+        #     println("SUCCESSFUL SM MOVE: $(is_split ? "split" : "merge")")
+        # end
         tr = new_tr
     end
     return tr
 end
-function do_split_merge_inference(tr, iters, record_iter!)
+function do_split_merge_inference(tr, iters, record_iter!; num_sm_per_iter=4)
     for i = 1:iters
-        tr = split_merge_inference_iter(tr)
+        tr = split_merge_inference_iter(tr; num_sm_per_iter)
         record_iter!(tr)
     end
     return tr
