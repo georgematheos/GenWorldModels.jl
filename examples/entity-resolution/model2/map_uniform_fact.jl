@@ -18,7 +18,6 @@ struct MapUniformFactTrace <: Gen.Trace
     factset::AbstractSet
     samples::PersistentVector
     counts::PersistentHashMap
-    # distinct_samples::PersistentSet
     score::Float64
 end
 Gen.get_retval(tr::MapUniformFactTrace) = tr.samples

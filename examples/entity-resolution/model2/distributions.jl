@@ -23,17 +23,8 @@ end
 
 struct UniformFromList <: Gen.Distribution{Any} end
 const uniform_from_list = UniformFromList()
-function Gen.random(::UniformFromList, list)
-    idx = uniform_discrete(1, length(list))
-    return list[idx]
-end
-function Gen.logpdf(::UniformFromList, obj, list)
-    if obj in list
-        -log(length(list))
-    else
-        -Inf
-    end
-end
+Gen.random(::UniformFromList, list) = list[uniform_discrete(1, length(list))]
+Gen.logpdf(::UniformFromList, obj, list) = obj in list ? -log(length(list)) : -Inf
 
 struct DiscreteLogNormal <: Gen.Distribution{Int} end
 const discrete_log_normal = DiscreteLogNormal()
@@ -52,29 +43,3 @@ function Gen.random(::UniformChoice, set)
 end
 Gen.logpdf(::UniformChoice, val, set) = val in set ? -log(length(set)) : -Inf
 uniform_choice(set) = random(uniform_choice, set)
-
-struct UniformFactSample <: Gen.Distribution{Fact} end
-const uniform_fact_sample = UniformFactSample()
-Gen.random(::UniformFactSample, ::World, s) = collect(s)[uniform_discrete(1, length(s))]
-Gen.logpdf(::UniformFactSample, obj, ::World, s) = obj in s ? -log(length(s)) : -Inf
-function Gen.get_choices(tr::Gen.DistributionTrace{<:Any, UniformFactSample})
-    world = get_args(tr)[1]
-    f = get_retval(tr)
-    Value(Fact(GenWorldModels.convert_to_concrete(world, f.rel), f.ent1, f.ent2))
-end
-function Gen.generate(g::UniformFactSample, (world, s)::Tuple, v::Value{<:Fact{<:ConcreteIndexOUPMObject}})
-    f = get_value(v)
-    abst = GenWorldModels.convert_to_abstract(world, f.rel)
-    return Gen.generate(g, (world, s), Value(Fact(abst, f.ent1, f.ent2)))
-end
-function Gen.update(tr::Gen.DistributionTrace{<:Any, UniformFactSample}, (world, s)::Tuple, argdiffs::Tuple, v::Value{<:Fact{<:ConcreteIndexOUPMObject}}, sel::AllSelection)
-    _converting_update(tr, (world, s), argdiffs, v, sel)
-end
-function Gen.update(tr::Gen.DistributionTrace{<:Any, UniformFactSample}, (world, s)::Tuple, argdiffs::Tuple, v::Value{<:Fact{<:ConcreteIndexOUPMObject}}, sel::EmptySelection)
-    _converting_update(tr, (world, s), argdiffs, v, sel)
-end
-function _converting_update(tr, (world, s), argdiffs, v, sel)
-    f = get_value(v)
-    abst = GenWorldModels.convert_to_abstract(world, f.rel)
-    update(tr, (world, s), argdiffs, Value(Fact(abst, f.ent1, f.ent2)), sel)
-end

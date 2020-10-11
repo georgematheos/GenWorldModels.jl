@@ -1,5 +1,3 @@
-# TODO: I should rename this to something like `dirichlet_process_entity_mention`
-
 struct VectorChoiceMap{T} <: Gen.AddressTree{Value}
     v::AbstractVector{T}
 end
@@ -88,7 +86,6 @@ function Gen.generate(
         mentions[i] = sample_mention_and_count!(counts, constrained_counts, unconstrained_counts, entity, α, get_submap(constraints, i))
     end
     tr = DirichletProcessEntityMentionTrace{EntityType}(args, to_persistent(counts), mentions, ent_to_indices)
-    # TODO: is this the correct weight???
     weight = get_score(tr) - _get_score(unconstrained_counts, α, constrained_counts)
     (tr, weight)
 end

@@ -93,13 +93,9 @@ of all the indices in which these entpairs appear.
 function splitmerge_inference_iter(tr, acc_tracker, splitmerge_type, entpair_to_indices; splitmerge_prob=0.25)
     do_splitmerge = bernoulli(splitmerge_prob)
     if do_splitmerge
-        # println("running a splitmerge update...")
        tr = splitmerge_update(tr, acc_tracker, splitmerge_type)
-    #    println("--")
     else
-        # println("running a relation update...")
         tr = update_random_sentence_relation(tr, acc_tracker, entpair_to_indices)
-        # println("--")
     end
        
     return tr
@@ -126,93 +122,6 @@ end
 macro exactly(x)
     quote uniform_from_list([$x]) end
 end
-
-# @gen function relation_update_proposal(tr, sentence_idx, entpair_to_indices)
-#     nrels = tr[:world => :num_relations => ()]
-#     entpair = entpairs(tr)[sentence_idx]
-#     # rel(rel_idx) = convert_to_abstract(tr.world, Relation(rel_idx))
-#     # is_true(rel_idx) = tr[:kernel => :sampled_facts => :all_facts => :rels_to_facts => rel(rel_idx) => :true_entpairs => entpair]
-#     # idx_to_truth = [is_true(rel_idx) for rel_idx=1:nrels]
-#     # unnormalized_probs = [val ? 3. : 1. for val in idx_to_truth]
-
-#     indices = entpair_to_indices[entpair]
-#     referenced_rels_abstract = Set(tr[:kernel => :sampled_facts][ind].rel for ind in indices if ind !== sentence_idx)
-#     referenced_rel_indices = Set(GenWorldModels.convert_to_concrete(tr.world, rel).idx for rel in referenced_rels_abstract)
-
-#     # make it more likely to sample relations which are already referenced
-#     num_references = length(referenced_rel_indices)
-#     unnormalized_probs = [rel_idx in referenced_rel_indices ? (nrels-num_references)*2.5 : num_references for rel_idx=1:nrels]
-#     probs = normalize(unnormalized_probs)
-#     if !isapprox(sum(probs), 1.)
-#         # println("probs: ", probs)
-#         # println("unnormalized: ", unnormalized_probs)
-#         # println("num references: ", num_references, "; nrels: ", nrels)
-#         probs = [1/nrels for _=1:nrels]
-#     end
-
-#     new_rel_idx ~ categorical(probs)
-#     old_rel_idx = GenWorldModels.convert_to_concrete(tr.world, tr[:kernel => :sampled_facts][sentence_idx].rel).idx
-#     return (new_rel_idx, old_rel_idx, entpair)
-# end
-
-# @involution function relation_update_inv(_, proposal_args, proposal_retval)
-#     (new_rel_idx, old_rel_idx, is_true, entpair) = proposal_retval
-
-#     (sentence_idx,_) = proposal_args
-#     new_fact = Fact(Relation(new_rel_idx), entpair...)
-#     @write_discrete_to_model(:kernel => :sampled_facts => :sampled_facts => sentence_idx, new_fact)
-
-#     if !is_true[new_rel_idx]
-#         @write_discrete_to_model(:kernel => :sampled_facts => :all_facts => :rels_to_facts => Relation(new_rel_idx) => :true_entpairs => entpair, true)
-#     end
-
-#     if !is_true[old_rel_idx] && old_rel_idx != new_rel_idx
-#         @write_discrete_to_model(:kernel => :sampled_facts => :all_facts => :rels_to_facts => Relation(old_rel_idx) => :true_entpairs => entpair, false)
-#     end
-
-#     @write_discrete_to_proposal(:new_rel_idx, old_rel_idx)
-# end
-
-# @gen function relation_update_proposal(tr, sentence_idx, entpair_to_indices)
-#     nrels = tr[:world => :num_relations => ()]
-#     entpair = entpairs(tr)[sentence_idx]
-#     indices = entpair_to_indices[entpair]
-#     verb = verbs(tr)[sentence_idx]
-#     true_rels_abstract = Set(tr[:kernel => :sampled_facts][ind].rel for ind in indices if ind !== sentence_idx)
-#     true_rel_indices = Set(GenWorldModels.convert_to_concrete(tr.world, rel).idx for rel in true_rels_abstract)
-
-#     function cnt(rel)
-#         if haskey(tr[:kernel => :verbs => :counts], rel)
-#             tr[:kernel => :verbs => :counts][rel]
-#         else
-#             PersistentVector(zeros(num_verbs(tr)))
-#         end
-#     end
-
-#     idx_incremented_count(count, i, inc) = assoc(count, i, count[i] + inc)
-#     new_counts = [
-#         idx_incremented_count(cnt(rel), verb, +1)
-#         for rel in map(idx -> GenWorldModels.convert_to_abstract(tr.world, Relation(idx)), 1:nrels)
-#     ]
-#     logfactors = [
-#         logbeta(new_count .+ dirichlet_prior_val(tr))
-#         for new_count in new_counts
-#     ]
-#     logprobs = logfactors .- logsumexp(logfactors)
-#     probs = exp.(logprobs)
-    
-#     num_refs = length(true_rel_indices)
-#     if num_refs != 0
-#         unnormalized_probs = [rel_idx in true_rel_indices ? 2*(nrels - num_refs) : num_refs for rel_idx=1:nrels]
-#         probs .* unnormalized_probs
-#         probs = normalize(probs)
-#     end
-
-#     new_rel_idx ~ categorical(probs)
-
-#     old_rel_idx = GenWorldModels.convert_to_concrete(tr.world, tr[:kernel => :sampled_facts][sentence_idx].rel).idx
-#     return (new_rel_idx, old_rel_idx, true_rel_indices, entpair)
-# end
 
 @gen function relation_update_proposal(tr, sentence_idx, entpair_to_indices)
     nrels = tr[:world => :num_relations => ()]
