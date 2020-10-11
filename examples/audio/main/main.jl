@@ -2,6 +2,7 @@ module AudioInference
 
 using Gen
 using WAV
+using Dates
 include("../tools/plotting.jl")
 include("../model/gammatonegram.jl");
 include("../model/time_helpers.jl");
@@ -53,6 +54,18 @@ function get_worldmodel_likelihood_tracker_and_recorder()
         )
     end
     return (likelihoods, record_worldmodel_iter!)
+end
+function get_worldmodel_likelihood_time_tracker_and_recorder()
+    likelihoods = Float64[]
+    times = Float64[]
+    starttime = Dates.now()
+    function record_worldmodel_iter!(tr)
+        push!(likelihoods,
+            project(tr, select(:kernel => :scene))
+        )
+        push!(times, Dates.value(Dates.now() - starttime)/1000)
+    end
+    return (likelihoods, times, record_worldmodel_iter!)
 end
 
 generate_initial_tr(tr) = generate(generate_scene, args, choicemap((:kernel => :scene, tr[:kernel => :scene])))
