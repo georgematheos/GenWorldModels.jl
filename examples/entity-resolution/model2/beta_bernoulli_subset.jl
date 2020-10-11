@@ -29,11 +29,6 @@ function Gen.project(tr::BetaBernoulliSubsetTrace, sel::Selection)
     end
 
     ar, α, β = tr.args
-    # num_true = length(tr.subset)
-    # num_false = length(ar) - num_true
-    # pt = logbeta(α + num_true, β + num_false) - logbeta(α, β)
-    # prob_gend = logbeta(α + num_true, β + num_false) - logbeta(α + num_selected_true, β + num_selected_false)
-    # println("PROJECT returning Β(α + |S|, β)/Β(α, β)")
     return logbeta(α + num_selected_true, β + num_selected_false) - logbeta(α, β) # = pt - prob_gend
 end
 Gen.get_args(tr::BetaBernoulliSubsetTrace) = tr.args
@@ -59,7 +54,6 @@ function Gen.generate(::BetaBernoulliSubset, (set, α, β)::Tuple{AbstractArray,
 
     num_known = length(certainly_false) + length(certainly_true)
     num_additional_true = rand(BetaBinomial(length(set) - num_known, α, β))
-    # println("Given $(length(certainly_true)) true, $(length(certainly_false)) false; sampled $num_additional_true more true.")
 
     # if the number new samples we need is significantly less than the number of options,
     # do rejection sampling (ie. draw a random sample & reject if we've already drawn it)
@@ -90,7 +84,6 @@ function Gen.generate(::BetaBernoulliSubset, (set, α, β)::Tuple{AbstractArray,
     base_lbeta = logbeta(α, β)
     score = logbeta(α + num_true, β + num_false) - base_lbeta
     weight = logbeta(α + length(certainly_true), β + length(certainly_false)) - base_lbeta
-    # println("GENERATE returning Β(α + |S|, β)/Β(α, β)")
 
     tr = BetaBernoulliSubsetTrace((set, α, β), trues, score)
     (tr, weight)
@@ -137,7 +130,6 @@ function Gen.update(
     weight = logbeta(α + new_num_true, β + total - new_num_true) - logbeta(α + old_num_true, β + total - old_num_true)
     new_tr = BetaBernoulliSubsetTrace(args, new_subset, get_score(tr) + weight)
 
-    # println("UPDATE!!")
     (new_tr, weight, SetDiff(added, deleted), discard)
 end
 
