@@ -5,9 +5,9 @@ using Statistics: mean, median, quantile, std
 # - generic_times
 # - bd_times
 # - sm_times
-# - generic_log_likelihoods
-# - bd_log_likelihoods
-# - sm_log_likelihoods
+# - generic_likelihoods
+# - bd_likelihoods
+# - sm_likelihoods
 include("data.jl")
 
 function medians(data)
@@ -60,11 +60,11 @@ function std_errors(data)
     return results
 end
 
-function plot_series(times, log_likelihoods, color, label)
+function plot_series(times, log_likelihoods, color, label, linestyle="-")
     plot(
         times,
         log_likelihoods,
-        label=label, color=color)
+        label=label, color=color, linestyle=linestyle)
 end
 
 function error_bars(times, upper, lower, color)
@@ -79,23 +79,23 @@ close("all")
 
 # mean log likelihoods, with standard errors
 figure(figsize=(5,3), dpi=300)
-plot_series(medians(generic_times), means(generic_log_likelihoods), "black", "Generic kernel")
-plot_series(medians(sm_times), means(sm_log_likelihoods), "green", "Split/Merge + Birth/Death Kernel")
-plot_series(medians(bd_times), means(bd_log_likelihoods), "magenta", "Birth/Death Kernel")
+plot_series(medians(generic_times), means(generic_likelihoods), "black", "Generic kernel", "--")
+plot_series(medians(sm_times), means(sm_likelihoods), "green", "Split/Merge + Birth/Death Kernel", "-")
+plot_series(medians(bd_times), means(bd_likelihoods), "magenta", "Birth/Death Kernel", "-")
 #error_bars(
     #medians(generic_times),
-    #means(generic_log_likelihoods) .- std_errors(generic_log_likelihoods),
-    #means(generic_log_likelihoods) .+ std_errors(generic_log_likelihoods), "black")
+    #means(generic_likelihoods) .- std_errors(generic_likelihoods),
+    #means(generic_likelihoods) .+ std_errors(generic_likelihoods), "black")
 #error_bars(
     #medians(sm_times),
-    #means(sm_log_likelihoods) .- std_errors(sm_log_likelihoods),
-    #means(sm_log_likelihoods) .+ std_errors(sm_log_likelihoods), "green")
+    #means(sm_likelihoods) .- std_errors(sm_likelihoods),
+    #means(sm_likelihoods) .+ std_errors(sm_likelihoods), "green")
 #error_bars(
     #medians(bd_times),
-    #means(bd_log_likelihoods) .- std_errors(bd_log_likelihoods),
-    #means(bd_log_likelihoods) .+ std_errors(bd_log_likelihoods), "blue")
+    #means(bd_likelihoods) .- std_errors(bd_likelihoods),
+    #means(bd_likelihoods) .+ std_errors(bd_likelihoods), "blue")
 gca().set_xlim(0, 25)
-gca().set_ylim(-300000, 0)
+gca().set_ylim(-200000, 0)
 tight_layout()
 xlabel("Time (seconds)")
 ylabel("Average log likelihood of data")
@@ -105,12 +105,12 @@ savefig("means.png")
 
 # median log likelihoods, with IQR
 figure(figsize=(5,3))
-plot_series(medians(generic_times), medians(generic_log_likelihoods), "black", "Generic Kernel")
-plot_series(medians(sm_times), means(sm_log_likelihoods), "green", "Split/Merge + Birth/Death Kernel")
-plot_series(medians(bd_times), means(bd_log_likelihoods), "magenta", "Birth/Death Kernel")
-error_bars(medians(generic_times), iqr_lower(generic_log_likelihoods), iqr_upper(generic_log_likelihoods), "black")
-error_bars(medians(sm_times), iqr_lower(sm_log_likelihoods), iqr_upper(sm_log_likelihoods), "green")
-error_bars(medians(bd_times), iqr_lower(bd_log_likelihoods), iqr_upper(bd_log_likelihoods), "blue")
+plot_series(medians(generic_times), medians(generic_likelihoods), "black", "Generic Kernel")
+plot_series(medians(sm_times), means(sm_likelihoods), "green", "Split/Merge + Birth/Death Kernel")
+plot_series(medians(bd_times), means(bd_likelihoods), "magenta", "Birth/Death Kernel")
+error_bars(medians(generic_times), iqr_lower(generic_likelihoods), iqr_upper(generic_likelihoods), "black")
+error_bars(medians(sm_times), iqr_lower(sm_likelihoods), iqr_upper(sm_likelihoods), "green")
+error_bars(medians(bd_times), iqr_lower(bd_likelihoods), iqr_upper(bd_likelihoods), "blue")
 gca().set_xlim(0, 25)
 gca().set_ylim(-300000, 0)
 tight_layout()
