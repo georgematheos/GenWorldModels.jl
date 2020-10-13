@@ -17,10 +17,14 @@ function plot_gtg(gtg, duration, audio_sr, vmin, vmax;colors="Blues",plot_colorb
     if plot_colorbar
         plt.colorbar()
     end
+    xlabel("Time (seconds)")
+    ylabel("Frequency")
 end
 
 function plot_gtg_unscaled(gtg, duration, max_freq;colors="Blues")
     imshow(gtg, cmap=colors, origin="lower", extent=(0, duration, 0, max_freq),aspect="auto")
+    xlabel("Time (seconds)")
+    ylabel("Frequency")
     #plt.colorbar()
 end
 
@@ -91,3 +95,4 @@ function plot_proposals(proposal_counts; save_loc="./")
     savefig(string(save_loc, "proposals.svg"))
 
 end
+
