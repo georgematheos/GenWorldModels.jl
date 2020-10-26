@@ -1,3 +1,5 @@
+import MacroTools
+
 macro oupm(signature, body)
     sig_valid = signature isa Expr && signature.head == :call
     body_valid = body isa Expr && body.head == :block
@@ -14,15 +16,30 @@ struct OriginSignature
     origin_typenames::Tuple{Vararg{Symbol}}
 end
 
-struct OUPMDSLMetaData
+mutable struct OUPMDSLMetaData
+    model_name::Symbol
+    model_args::Tuple{Vararg{Symbol}}
     type_names::Set{Symbol}
     property_names::Set{Symbol}
     number_stmts::Dict{OriginSignature, Symbol}
+    observation_model_name::Union{Nothing, Symbol}
 end
-OUPMDSLMetaData() = OUPMDSLMetaData(Set(), Set(), Dict())
+
+OUPMDSLMetaData(model_name, model_args) = OUPMDSLMetaData(model_name, model_args, Set(), Set(), Dict(), nothing)
 
 function expand_oupm(body, name, args)
-    parse_oupm_dsl_body!(Expr[], OUPMDSLMetaData(), body)
+    meta = OUPMDSLMetaData(name, args)
+    stmts = Expr[] 
+    parse_oupm_dsl_body!(stmts, meta, body)
+    return quote
+        $stmts...
+        $(esc(meta.model_name)) = UsingWorld(
+            $(meta.observation_model_name),
+            $(property_name => property_name for property_name in meta.property_names)...,
+            $(name => name for (_, name) in meta.number_stmts)...;
+            model_args=$(meta.model_args)
+        )
+    end
 end
 
 function parse_oupm_dsl_body!(stmts, meta, body::Expr)
@@ -36,31 +53,26 @@ end
 # 2. @property ...
 # 3. @number ...
 # 4. @observation_model ...
-# 5. function fn_name(...) ... end / fn_name(...) = ...
 function parse_oupm_dsl_line!(stmts, meta, line)
-    @assert (line isa Expr) "Invalid line: $line"
+    @assert (line isa Expr && line.head === :macrocall) "Invalid line: $line"
 
-    if line.head === :macrocall
-        if line.args[1] == Symbol(@type)
-            parse_type_line!(stmts, meta, line)
-        elseif line.args[1] == Symbol(@property)
-            parse_property_line!(stmts, meta, line)
-        elseif line.args[1] == Symbol(@number)
-            parse_number_line!(stmts, meta, line)
-        elseif line.args[1] == Symbol(@observation_model)
-            parse_observation_model_line!(stmts, meta, line)
-        end
+    if line.args[1] == Symbol("@type")
+        parse_type_line!(stmts, meta, line)
+    elseif line.args[1] == Symbol("@property")
+        parse_property_line!(stmts, meta, line)
+    elseif line.args[1] == Symbol("@number")
+        parse_number_line!(stmts, meta, line)
+    elseif line.args[1] == Symbol("@observation_model")
+        parse_observation_model_line!(stmts, meta, line)
     else
-        line = MacroTools.longdef(line)
-        @assert (line.head == :function) "Invalid line: $line"
-        parse_function_line!(stmst, meta, line)
+        error("Invalid line: $line")
     end
 end
 
 function parse_type_line!(stmts, meta, line)
-    @assert MacroTools.@capture(line, @type typenames__) "Invalid type line: $line"
-    for typename in typenames
-        push!(stmts, :(@type typename))
+    @assert MacroTools.@capture(line, @type typenames_) "Invalid type line: $line"
+    for typename in typenames.args
+        push!(stmts, :(@type $typename))
         push!(meta.type_names, typename)
     end
 end
@@ -73,12 +85,11 @@ Possibilities:
 end
 =#
 function parse_property_line!(stmts, meta, line)
-    # TODO: maybe I should actually parse the properties at a different
-    # name than the one the user will use, to avoid poluting a global namespace?
     if MacroTools.@capture(line, @property name_(sig__) ~ dist_(args__))
-        push!(stmts, quote
-            @dist $name($sig..., ::World) = $dist($args...)
-        end)
+        push!(stmts,
+            :( @dist $name($(sig...), ::World) = $dist($(args...)) )
+        )
+
         push!(meta.property_names, name)
     elseif MacroTools.@capture(
         line,
@@ -89,17 +100,17 @@ function parse_property_line!(stmts, meta, line)
     )
         world = gensym("world")
         # ensure calls to @origin, @get, etc., are parsed properly
-        body = transform_body(body, world)
+        body = parse_world_into_commands(body, world)
         push!(stmts,
             if modifiers !== nothing
                 quote
-                    @gen ($modifiers...) function $name($args...)
+                    @gen ($modifiers...) function $name($args..., $world::World)
                         $body
                     end
                 end
             else
                 quote
-                    @gen function $name($args...)
+                    @gen function $name($args..., $world::World)
                         $body
                     end
                 end
@@ -109,4 +120,89 @@ function parse_property_line!(stmts, meta, line)
     else
         error("Error parsing property $line")
     end
+end
+
+#=
+Supported constructs:
+1. @number Type(sig...) ~ dist()
+2. @number (annotations...) function Type(sig...)
+        ...
+    end
+=#
+function parse_number_line!(stmts, meta, line)
+    if MacroTools.@capture(line, @number name_(sig__) ~ dist_(args__))
+        fn_expr(fn_name) = quote
+            @gen (static, diffs) function $fn_name($sig..., ::World)
+                num ~ $dist($args...)
+                return num
+            end
+        end
+    elseif MacroTools.@capture(
+        line,
+        @number modifiers_ function name_(sig__) body_ end |
+        @number function name_(sig__) body_ end |
+        @number modifiers_ name_(sig__) = body_ |
+        @number name_(sig__) = body_
+    )
+        world = gensym("world")
+        body = parse_world_into_commands(body, world)
+        fn_expr(fn_name) = quote
+            @gen (modifiers...) function $fn_name(sig..., $world::World)
+                $body
+            end
+        end
+    else
+        error("Unrecognized @number construct: $line")
+    end
+    origin_sig = parse_origin_sig(name, sig)
+    fn_name = gensym(origin_sig.typename, origin_sig.origin_typenames...)
+    push!(stmts, fn_expr(fn_name))
+    meta.number_stmts[origin_sig] = fn_name
+end
+
+function parse_origin_sig(name, sig)
+    @assert all(expr.head === :(::) for expr in sig) "Invalid origin signature: $name($(sig...))"
+    types = Tuple(last(expr.args) for expr in sig)
+    OriginSignature(name, types)
+end
+
+function parse_observation_model!(stmts, meta, line)
+    if MacroTools.@capture(
+        line,
+        @observation_model modifiers_ function name_(sig__) body_ end |
+        @observation_model function name_(sig__) body_ end |
+        @observation_model modifiers_ name_(sig__) = body_ |
+        @observation_model name_(sig__) = body_
+    )
+        fn_name = gensym(name)
+        meta.observation_model_name = fn_name
+        world = gensym("world")
+        body = parse_world_into_commands(body, world)
+
+        push!(stmts, quote
+            @gen (modifiers...) function $fn_name($sig..., $world)
+                $body
+            end
+        end)
+    end
+end
+
+const _commands = [Symbol("@$name") for name in (:origin, :index, :abstract, :concrete, :get, :arg)]
+"""
+    parse_world_into_commands(body, worldname)
+
+Transform the expression `body` so that every special command which is called
+gets access to the world, and is called in a trace expression.
+We transform `context...@command(args...)...` to `name ~ @command(world, args...)); context...name...`.
+"""
+function parse_world_into_commands(body::Expr, worldname::Symbol)
+    # MacroTools.postwalk(expr) do e
+    #     for command in _commands
+    #         if MacroTools.@capture(e, $command rest__)
+    #             return :($command($worldname, $rest...))
+    #         end
+    #     end
+    #     return e
+    # end
+    body
 end
