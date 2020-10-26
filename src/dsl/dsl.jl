@@ -100,7 +100,7 @@ function parse_property_line!(stmts, meta, line)
     )
         world = gensym("world")
         # ensure calls to @origin, @get, etc., are parsed properly
-        body = parse_world_into_commands(body, world)
+        body = parse_world_into_and_trace_commands(body, world)
         push!(stmts,
             if modifiers !== nothing
                 quote
@@ -145,7 +145,7 @@ function parse_number_line!(stmts, meta, line)
         @number name_(sig__) = body_
     )
         world = gensym("world")
-        body = parse_world_into_commands(body, world)
+        body = parse_world_into_and_trace_commands(body, world)
         fn_expr(fn_name) = quote
             @gen (modifiers...) function $fn_name(sig..., $world::World)
                 $body
@@ -155,7 +155,7 @@ function parse_number_line!(stmts, meta, line)
         error("Unrecognized @number construct: $line")
     end
     origin_sig = parse_origin_sig(name, sig)
-    fn_name = gensym(origin_sig.typename, origin_sig.origin_typenames...)
+    fn_name = gensym(*(origin_sig.typename, origin_sig.origin_typenames...))
     push!(stmts, fn_expr(fn_name))
     meta.number_stmts[origin_sig] = fn_name
 end
@@ -177,7 +177,7 @@ function parse_observation_model!(stmts, meta, line)
         fn_name = gensym(name)
         meta.observation_model_name = fn_name
         world = gensym("world")
-        body = parse_world_into_commands(body, world)
+        body = parse_world_into_and_trace_commands(body, world)
 
         push!(stmts, quote
             @gen (modifiers...) function $fn_name($sig..., $world)
@@ -188,21 +188,49 @@ function parse_observation_model!(stmts, meta, line)
 end
 
 const _commands = [Symbol("@$name") for name in (:origin, :index, :abstract, :concrete, :get, :arg)]
+println("commands: $_commands")
 """
-    parse_world_into_commands(body, worldname)
+    parse_world_into_and_trace_commands(body, worldname)
 
 Transform the expression `body` so that every special command which is called
-gets access to the world, and is called in a trace expression.
-We transform `context...@command(args...)...` to `name ~ @command(world, args...)); context...name...`.
+gets access to the world, and is called in a traced expression.
+Roughly, we transform `...@command(args...)...` to `name ~ @command(world, args...)); ...name...`.
 """
-function parse_world_into_commands(body::Expr, worldname::Symbol)
-    # MacroTools.postwalk(expr) do e
-    #     for command in _commands
-    #         if MacroTools.@capture(e, $command rest__)
-    #             return :($command($worldname, $rest...))
-    #         end
-    #     end
-    #     return e
-    # end
-    body
+function parse_world_into_and_trace_commands(body::Expr, worldname::Symbol)
+    @assert body.head === :block
+    
+    # Do a depth-first traversal of each expression in the body.  Each time we encounter an special command, replace
+    # it with a gensym variable name.  Since we go depth-first, we visit these in the order in which the
+    # commands must be evaluated.  
+    # After this transformation of a line in the body,
+    # we will add lines to call the special commands and store the result in the variable names we used
+    # in the transformed body.
+    new_lines = [] # the statements in the body we should output
+    for line in body.args
+        name_to_expr = [] # generated variable name => command we should trace to popluate the variable name
+        # transform the line by replacing command calls with variable names
+        transformed_line = MacroTools.postwalk(line) do e
+            if e isa Expr && e.head === :macrocall && e.args[1] in _commands
+                name = gensym(String(e.args[1]) * "_call_result")
+                if length(e.args) > 1 && e.args[2] isa LineNumberNode
+                    new_expr = Expr(:macrocall, e.args[1:2]..., worldname, e.args[3:end]...)
+                else
+                    new_expr = Expr(:macrocall, e.args[1], worldname, e.args[2:end]...)
+                end
+
+                push!(name_to_expr, name => new_expr)
+                name
+            else
+                e
+            end
+        end
+        # first, the new body should call the commands, adding into the variable name
+        for (name, expr) in name_to_expr
+            push!(new_lines, :($name ~ $expr))
+        end
+        # then, the new body can run the transformed line
+        push!(new_lines, transformed_line)
+    end
+
+    return Expr(:block, new_lines...)
 end

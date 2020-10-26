@@ -1,5 +1,5 @@
 using MacroTools
-using GenWorldModels: OUPMDSLMetaData, parse_type_line!, parse_world_into_commands, parse_property_line!
+using GenWorldModels: OUPMDSLMetaData, parse_type_line!, parse_world_into_and_trace_commands, parse_property_line!
 
 @testset "dsl parsing" begin
     @testset "parse type line" begin
@@ -18,21 +18,29 @@ using GenWorldModels: OUPMDSLMetaData, parse_type_line!, parse_world_into_comman
         @test Set(meta.type_names) == expected_names
     end
 
-    # @testset "parse world into commands" begin
-    #     body = quote
-    #         (parent,) = @origin(object)
-    #         val ~ normal(@get value[parent])
-    #         t = @time val + 5 # should not get transformed!
-    #         (grandmother, grandfather) = @origin(@origin(object)[1])
-    #     end
+    @testset "parse world into commands" begin
+        body = quote
+            (parent,) = @origin(object)
+            val ~ normal(@get(value[parent]), 1)
+            t = @time val + 5 # should not get transformed!
+            (grandmother, grandfather) = @origin(@origin(object)[1])
+        end
 
-    #     @test MacroTools.@capture(
-    #         parse_world_into_commands(body, :world), quote
-    #         (parent,) = @origin(world, object)
-    #         val ~ normal(@get world value[parent])
-    #         t = @time val + 5
-    #     end)
-    # end
+        expected = quote
+            name1_ ~ @origin(world, object)
+            (parent,) = name1_
+            name2_ ~ @get(world, value[parent])
+            val ~ normal(name2_, 1)
+            t = @time val + 5
+            name3_ ~ @origin(world, object)
+            name4_ ~ @origin(world, name3_[1])
+            (grandmother, grandfather) = name4_
+        end
+
+        transformed = parse_world_into_and_trace_commands(body, :world)
+
+        @test MacroTools.@capture(transformed, $expected)
+    end
 
     @testset "parse property line" begin
         @testset "dist property" begin
