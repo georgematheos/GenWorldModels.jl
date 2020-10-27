@@ -107,7 +107,7 @@ function parse_property_line!(stmts, meta, line)
                 $body
             end
         )
-        linenum = line.args[2]
+        linenum = get_macrocall_line_num(line)
         lastargs = modifiers === nothing ? (fndef,) : (modifiers, fndef)
 
         # @gen (modifiers...) function $body end
@@ -115,6 +115,21 @@ function parse_property_line!(stmts, meta, line)
         push!(meta.property_names, name)
     else
         error("Error parsing property $line")
+    end
+end
+
+function get_macrocall_line_num(line)
+    if !(line isa Expr)
+        return nothing
+    end
+    if line.head === :block
+        if length(line.args) > 1
+            return nothing
+        end
+        return get_macrocall_line_num(line.args[1])
+    end
+    if line.head === :macrocall
+        return line.args[2]
     end
 end
 
@@ -127,39 +142,68 @@ Supported constructs:
 =#
 function parse_number_line!(stmts, meta, line)
     if MacroTools.@capture(line, @number name_(sig__) ~ dist_(args__))
-        fn_expr(fn_name) = quote
-            @gen (static, diffs) function $fn_name($sig..., ::World)
-                num ~ $dist($args...)
+        (names, types) = parse_sig(sig)
+        linenum = get_macrocall_line_num(line)
+        fn_expr = fn_name -> Expr(:macrocall, Symbol("@gen"), linenum, :((static, diffs)), :(
+            function $fn_name($(Expr(:tuple, names...))::Tuple{$(types...)}, ::World)
+                num ~ $dist($(args...))
                 return num
             end
-        end
+        ))
     elseif MacroTools.@capture(
         line,
-        @number modifiers_ function name_(sig__) body_ end |
-        @number function name_(sig__) body_ end |
-        @number modifiers_ name_(sig__) = body_ |
-        @number name_(sig__) = body_
+        (@number modifiers_ function name_(sig__) body_ end) |
+        (@number function name_(sig__) body_ end) |
+        (@number modifiers_ name_(sig__) = body_) |
+        (@number name_(sig__) = body_)
     )
         world = gensym("world")
+        linenum = get_macrocall_line_num(line)
         body = parse_world_into_and_trace_commands(body, world)
-        fn_expr(fn_name) = quote
-            @gen (modifiers...) function $fn_name(sig..., $world::World)
-                $body
-            end
+        (names, types) = parse_sig(sig)
+        fn_expr = let w = world, tags = (modifiers !== nothing) ? (linenum, modifiers) : (linenum,)
+            fn_name -> Expr(:macrocall, Symbol("@gen"), tags..., :(
+                function $fn_name($(Expr(:tuple, names...))::Tuple{$(types...)}, $w::World) $(body.args...) end
+            ))
         end
     else
         error("Unrecognized @number construct: $line")
     end
     origin_sig = parse_origin_sig(name, sig)
-    fn_name = gensym(*(origin_sig.typename, origin_sig.origin_typenames...))
+    fn_name = get_num_statement_name(origin_sig.typename, origin_sig.origin_typenames)
+    
     push!(stmts, fn_expr(fn_name))
     meta.number_stmts[origin_sig] = fn_name
+end
+
+function get_num_statement_name(typename, origin_typenames)
+    root = "num_" * String(typename) * "__" *((String(n)*"_" for n in origin_typenames)...)
+    gensym(root)
 end
 
 function parse_origin_sig(name, sig)
     @assert all(expr.head === :(::) for expr in sig) "Invalid origin signature: $name($(sig...))"
     types = Tuple(last(expr.args) for expr in sig)
     OriginSignature(name, types)
+end
+
+function parse_sig(sig)
+    function name_type(expr)
+        if expr isa Expr && expr.head === :(::)
+            if length(expr.args) == 2
+                Tuple(expr.args)
+            else
+                (:_, expr.args[1])
+            end
+        else
+            @assert expr isa Symbol
+            (expr, Any)
+        end
+    end
+    name_types = (name_type(expr) for expr in sig)
+    names = Tuple(name for (name, _) in name_types)
+    types = Tuple(type for (_, type) in name_types)
+    return (names, types)
 end
 
 function parse_observation_model!(stmts, meta, line)

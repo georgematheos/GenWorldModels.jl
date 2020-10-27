@@ -1,5 +1,6 @@
 using MacroTools
-using GenWorldModels: OUPMDSLMetaData, parse_type_line!, parse_world_into_and_trace_commands, parse_property_line!
+using GenWorldModels: OUPMDSLMetaData, parse_type_line!, parse_world_into_and_trace_commands
+using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature
 
 @testset "dsl parsing" begin
     @testset "parse type line" begin
@@ -149,5 +150,108 @@ using GenWorldModels: OUPMDSLMetaData, parse_type_line!, parse_world_into_and_tr
             @test meta.property_names == Set([:reading])
 
         end
+    end
+
+    @testset "parse number statement" begin
+        ### distribution number statement ###
+        stmts = []
+        meta = OUPMDSLMetaData(:name, ())
+        line = :(@number Event() ~ poisson(5))
+        expected = :(
+            @gen (static, diffs) function numevt_(()::Tuple{}, ::World)
+                num ~ poisson(5)
+                return num
+            end
+        )
+        parse_number_line!(stmts, meta, line)
+        @test length(stmts) === 1
+
+        @test MacroTools.@capture(first(stmts), $expected)
+        @test haskey(meta.number_stmts, OriginSignature(:Event, ())) && length(meta.number_stmts) == 1
+
+        stmts = []
+        meta = OUPMDSLMetaData(:name, ())
+        line = :(@number Detection(::Station) ~ poisson(5))
+        expected = :(
+            @gen (static, diffs) function numdet_((_,)::Tuple{Station}, ::World)
+                num ~ poisson(5)
+                return num
+            end
+        )
+        parse_number_line!(stmts, meta, line)
+        @test length(stmts) === 1
+        @test MacroTools.@capture(first(stmts), $expected)
+        @test haskey(meta.number_stmts, OriginSignature(:Detection, (:Station,))) && length(meta.number_stmts) == 1
+
+        ### gen function num statement ###
+        stmts = []
+        meta = OUPMDSLMetaData(:name, ())
+        line = :(@number Event() = num ~ poisson(5))
+
+        expected = :(
+            @gen function numevt_(()::Tuple{}, w_::World)
+                num ~ poisson(5)
+            end
+        )
+        parse_number_line!(stmts, meta, line)
+
+        @test length(stmts) === 1
+        @test MacroTools.@capture(first(stmts), $expected)
+        @test haskey(meta.number_stmts, OriginSignature(:Event, ())) && length(meta.number_stmts) == 1
+
+        stmts = []
+        meta = OUPMDSLMetaData(:name, ())
+        line = :(@number (static, diffs) Event() = begin; num ~ poisson(5); return num; end;)
+        expected = :(
+            @gen (static, diffs) function numevt_(()::Tuple{}, w_::World)
+                num ~ poisson(5)
+                return num
+            end
+        )
+        parse_number_line!(stmts, meta, line)
+        @test length(stmts) === 1
+
+        @test MacroTools.@capture(first(stmts), $expected)
+        @test haskey(meta.number_stmts, OriginSignature(:Event, ())) && length(meta.number_stmts) == 1
+
+        stmts = []
+        meta = OUPMDSLMetaData(:name, ())
+        line = :(
+            @number (static) function Detection(e::Event, s::Station)
+                num ~ bernoulli(@get detection_prob[e])
+                return num
+            end
+        )
+        expected = :(
+            @gen (static) function numdet_((e, s)::Tuple{Event, Station}, world_::World)
+                prob_ ~ @get(world_, detection_prob[e])
+                num ~ bernoulli(prob_)
+                return num
+            end
+        )
+        parse_number_line!(stmts, meta, line)
+        @test length(stmts) === 1
+        @test MacroTools.@capture(first(stmts), $expected)
+        @test haskey(meta.number_stmts, OriginSignature(:Detection, (:Event, :Station))) && length(meta.number_stmts) == 1
+        
+        stmts = []
+        meta = OUPMDSLMetaData(:name, ())
+        line = :(
+            @number function Detection(e::Event, s::Station)
+                num ~ bernoulli(@get detection_prob[e])
+                return num
+            end
+        )
+        expected = :(
+            @gen function numdet_((e, s)::Tuple{Event, Station}, world_::World)
+                prob_ ~ @get(world_, detection_prob[e])
+                num ~ bernoulli(prob_)
+                return num
+            end
+        )
+        parse_number_line!(stmts, meta, line)
+        @test length(stmts) === 1
+        @test MacroTools.@capture(first(stmts), $expected)
+        @test haskey(meta.number_stmts, OriginSignature(:Detection, (:Event, :Station))) && length(meta.number_stmts) == 1
     end
 end
