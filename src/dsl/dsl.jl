@@ -93,29 +93,25 @@ function parse_property_line!(stmts, meta, line)
         push!(meta.property_names, name)
     elseif MacroTools.@capture(
         line,
-        @property modifiers_ function name_(args__) body_ end |
-        @property function name_(args__) body_ end |
-        @property modifiers_ name_(args__) = body_ |
-        @property name_(args__) = body_
+        (@property modifiers_ function name_(args__) body_ end) |
+        (@property function name_(args__) body_ end) |
+        (@property modifiers_ name_(args__) = body_) |
+        (@property name_(args__) = body_)
     )
         world = gensym("world")
         # ensure calls to @origin, @get, etc., are parsed properly
         body = parse_world_into_and_trace_commands(body, world)
-        push!(stmts,
-            if modifiers !== nothing
-                quote
-                    @gen ($modifiers...) function $name($args..., $world::World)
-                        $body
-                    end
-                end
-            else
-                quote
-                    @gen function $name($args..., $world::World)
-                        $body
-                    end
-                end
+
+        fndef = :(
+            function $name($(args...), $world::World)
+                $body
             end
         )
+        linenum = line.args[2]
+        lastargs = modifiers === nothing ? (fndef,) : (modifiers, fndef)
+
+        # @gen (modifiers...) function $body end
+        push!(stmts, Expr(:macrocall, Symbol("@gen"), linenum, lastargs...))
         push!(meta.property_names, name)
     else
         error("Error parsing property $line")

@@ -73,9 +73,80 @@ using GenWorldModels: OUPMDSLMetaData, parse_type_line!, parse_world_into_and_tr
         end
 
         @testset "full function declaration" begin
+            ### inline def ###
             stmts = []
             meta = OUPMDSLMetaData(:name, ())
-            
+            line = :(@property (static) magnitude(evt::Event) = begin; mag ~ normal(0, 1); return mag; end;).args[1]
+
+            expected = :(
+                @gen (static) function magnitude(evt::Event, world_::World)
+                    mag ~ normal(0, 1)
+                    return mag
+                end
+            )
+
+            parse_property_line!(stmts, meta, line)
+            @test length(stmts) === 1
+            @test MacroTools.@capture(first(stmts), $expected)
+            @test meta.property_names == Set([:magnitude])
+
+            stmts = []
+            meta = OUPMDSLMetaData(:name, ())
+            line = :(@property magnitude(evt::Event) = mag ~ normal(0, 1))
+
+            expected = :(
+                @gen function magnitude(evt::Event, world_::World)
+                    mag ~ normal(0, 1)
+                end
+            )
+
+            parse_property_line!(stmts, meta, line)
+            @test length(stmts) === 1
+            @test MacroTools.@capture(first(stmts), $expected)
+            @test meta.property_names == Set([:magnitude])
+
+            ### full def ###
+            stmts = []
+            meta = OUPMDSLMetaData(:name, ())
+            line = :(
+                @property (static, diffs) function reading(det::Detection)
+                    reading ~ normal((@get magnitude[@origin(det)[2]]), 1)
+                    return reading
+                end
+            )
+            expected = :(
+                @gen (static, diffs) function reading(det::Detection, world_::World)
+                    og_ ~ @origin(world_, det)
+                    mag_ ~ @get(world_, magnitude[og_[2]])
+                    reading ~ normal(mag_, 1)
+                    return reading
+                end
+            )
+            parse_property_line!(stmts, meta, line)
+            @test length(stmts) === 1
+            @test MacroTools.@capture(first(stmts), $expected)
+            @test meta.property_names == Set([:reading])
+
+            stmts = []
+            meta = OUPMDSLMetaData(:name, ())
+            line = :(
+                @property function reading(det::Detection)
+                    reading ~ normal((@get magnitude[@origin(det)[2]]), 1)
+                    return reading
+                end
+            )
+            expected = :(
+                @gen function reading(det::Detection, world_::World)
+                    og_ ~ @origin(world_, det)
+                    mag_ ~ @get(world_, magnitude[og_[2]])
+                    reading ~ normal(mag_, 1)
+                    return reading
+                end
+            )
+            parse_property_line!(stmts, meta, line)
+            @test length(stmts) === 1
+            @test MacroTools.@capture(first(stmts), $expected)
+            @test meta.property_names == Set([:reading])
 
         end
     end
