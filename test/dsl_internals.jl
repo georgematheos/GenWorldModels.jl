@@ -1,6 +1,6 @@
 using MacroTools
 using GenWorldModels: OUPMDSLMetaData, parse_type_line!, parse_world_into_and_trace_commands
-using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature
+using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature, parse_observation_model!
 
 @testset "dsl parsing" begin
     @testset "parse type line" begin
@@ -253,5 +253,47 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature
         @test length(stmts) === 1
         @test MacroTools.@capture(first(stmts), $expected)
         @test haskey(meta.number_stmts, OriginSignature(:Detection, (:Event, :Station))) && length(meta.number_stmts) == 1
+    end
+
+    @testset "parse observation model" begin
+        stmts = []
+        meta = OUPMDSLMetaData(:name, ())
+        line = :(@observation_model function foo(x::Int, y::Float)
+                    z ~ normal(x, y)
+                    return z
+                end
+        )
+        expected = :(
+            @gen function foo(world_::World, x::Int, y::Float)
+                z ~ normal(x, y)
+                return z
+            end
+        )
+
+        parse_observation_model!(stmts, meta, line)
+
+        @test length(stmts) === 1
+        @test MacroTools.@capture(first(stmts), $expected)
+        @test meta.observation_model_name == :foo
+        @test_throws Exception parse_observation_model!(stmts, meta, line)
+
+        stmts = []
+        meta = OUPMDSLMetaData(:name, ())
+        line = :(@observation_model (static) function foo(x::Int, y::Float)
+                    z ~ normal(x, y)
+                    return z
+                end
+        )
+        expected = :(
+            @gen (static) function foo(world_::World, x::Int, y::Float)
+                z ~ normal(x, y)
+                return z
+            end
+        )
+
+        parse_observation_model!(stmts, meta, line)
+        @test length(stmts) === 1
+        @test MacroTools.@capture(first(stmts), $expected)
+        @test meta.observation_model_name == :foo
     end
 end

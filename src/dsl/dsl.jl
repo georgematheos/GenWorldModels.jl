@@ -106,7 +106,7 @@ function parse_property_line!(stmts, meta, line)
 
         fndef = :(
             function $name($(Expr(:tuple, names...))::Tuple{$(types...)}, $world::World)
-                $body
+                $(body.args...)
             end
         )
         linenum = get_macrocall_line_num(line)
@@ -209,23 +209,28 @@ function parse_sig(sig)
 end
 
 function parse_observation_model!(stmts, meta, line)
+    @assert meta.observation_model_name === nothing "There should only be one observatin model!"
     if MacroTools.@capture(
         line,
-        @observation_model modifiers_ function name_(sig__) body_ end |
-        @observation_model function name_(sig__) body_ end |
-        @observation_model modifiers_ name_(sig__) = body_ |
-        @observation_model name_(sig__) = body_
+        (@observation_model modifiers_ function name_(sig__) body_ end) |
+        (@observation_model function name_(sig__) body_ end) |
+        (@observation_model modifiers_ name_(sig__) = body_) |
+        (@observation_model name_(sig__) = body_)
     )
-        fn_name = gensym(name)
-        meta.observation_model_name = fn_name
+        meta.observation_model_name = name
         world = gensym("world")
         body = parse_world_into_and_trace_commands(body, world)
+        linenum = get_macrocall_line_num(line)
+        tags = modifiers === nothing ? (linenum,) : (linenum, modifiers)
 
-        push!(stmts, quote
-            @gen (modifiers...) function $fn_name($sig..., $world)
-                $body
-            end
-        end)
+        push!(stmts, Expr(:macrocall, Symbol("@gen"), tags..., :(
+                function $name($world::World, $(sig...))
+                    $(body.args...)
+                end
+            )
+        ))
+    else
+        error("Failed to parse observation model: $line")
     end
 end
 
