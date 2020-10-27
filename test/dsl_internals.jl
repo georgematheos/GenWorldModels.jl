@@ -48,7 +48,7 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature
             stmts = []
             meta = OUPMDSLMetaData(:name, ())
             line = :(@property global_property() ~ normal(10, 1))
-            expected = :(@dist global_property(::World) = normal(10, 1))
+            expected = :(@dist global_property(()::Tuple{}, ::World) = normal(10, 1))
             parse_property_line!(stmts, meta, line)
             @test meta.property_names == Set([:global_property])
             @test length(stmts) == 1
@@ -57,7 +57,7 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature
             stmts = []
             meta = OUPMDSLMetaData(:name, ())
             line = :(@property magnitude(::Event) ~ normal(10, 1))
-            expected = :(@dist magnitude(::Event, ::World) = normal(10, 1))
+            expected = :(@dist magnitude((_,)::Tuple{Event}, ::World) = normal(10, 1))
             parse_property_line!(stmts, meta, line)
             @test meta.property_names == Set([:magnitude])
             @test length(stmts) == 1
@@ -66,7 +66,7 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature
             stmts = []
             meta = OUPMDSLMetaData(:name, ())
             line = :(@property is_detected(::Station, evt::Event) ~ normal(10, 1))
-            expected = :(@dist is_detected(::Station, evt::Event, ::World) = normal(10, 1))
+            expected = :(@dist is_detected((_, evt)::Tuple{Station, Event}, ::World) = normal(10, 1))
             parse_property_line!(stmts, meta, line)
             @test meta.property_names == Set([:is_detected])
             @test length(stmts) == 1
@@ -80,7 +80,7 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature
             line = :(@property (static) magnitude(evt::Event) = begin; mag ~ normal(0, 1); return mag; end;).args[1]
 
             expected = :(
-                @gen (static) function magnitude(evt::Event, world_::World)
+                @gen (static) function magnitude((evt,)::Tuple{Event}, world_::World)
                     mag ~ normal(0, 1)
                     return mag
                 end
@@ -96,7 +96,7 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature
             line = :(@property magnitude(evt::Event) = mag ~ normal(0, 1))
 
             expected = :(
-                @gen function magnitude(evt::Event, world_::World)
+                @gen function magnitude((evt,)::Tuple{Event}, world_::World)
                     mag ~ normal(0, 1)
                 end
             )
@@ -116,7 +116,7 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature
                 end
             )
             expected = :(
-                @gen (static, diffs) function reading(det::Detection, world_::World)
+                @gen (static, diffs) function reading((det,)::Tuple{Detection}, world_::World)
                     og_ ~ @origin(world_, det)
                     mag_ ~ @get(world_, magnitude[og_[2]])
                     reading ~ normal(mag_, 1)
@@ -137,7 +137,7 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature
                 end
             )
             expected = :(
-                @gen function reading(det::Detection, world_::World)
+                @gen function reading((det,)::Tuple{Detection}, world_::World)
                     og_ ~ @origin(world_, det)
                     mag_ ~ @get(world_, magnitude[og_[2]])
                     reading ~ normal(mag_, 1)

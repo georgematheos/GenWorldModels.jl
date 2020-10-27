@@ -86,8 +86,9 @@ end
 =#
 function parse_property_line!(stmts, meta, line)
     if MacroTools.@capture(line, @property name_(sig__) ~ dist_(args__))
+        (names, types) = parse_sig(sig)
         push!(stmts,
-            :( @dist $name($(sig...), ::World) = $dist($(args...)) )
+            :( @dist $name($(Expr(:tuple, names...))::Tuple{$(types...)}, ::World) = $dist($(args...)) )
         )
 
         push!(meta.property_names, name)
@@ -101,9 +102,10 @@ function parse_property_line!(stmts, meta, line)
         world = gensym("world")
         # ensure calls to @origin, @get, etc., are parsed properly
         body = parse_world_into_and_trace_commands(body, world)
+        (names, types) = parse_sig(args)
 
         fndef = :(
-            function $name($(args...), $world::World)
+            function $name($(Expr(:tuple, names...))::Tuple{$(types...)}, $world::World)
                 $body
             end
         )
