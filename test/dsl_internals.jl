@@ -1,24 +1,8 @@
 using MacroTools
-using GenWorldModels: OUPMDSLMetaData, parse_type_line!, parse_world_into_and_trace_commands
+using GenWorldModels: OUPMDSLMetaData, parse_world_into_and_trace_commands
 using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature, parse_observation_model!
 
 @testset "dsl parsing" begin
-    @testset "parse type line" begin
-        stmts = []
-        meta = OUPMDSLMetaData(:name, ())
-        parse_type_line!(stmts, meta, :(@type Event, Station, Detection))
-        expected_names = Set((:Event, :Station, :Detection))
-
-        names = []
-        for stmt in stmts
-            is_valid_type_call = MacroTools.@capture(stmt, @type Name_)
-            push!(names, Name)
-            @test is_valid_type_call
-        end
-        @test Set(names) == expected_names
-        @test Set(meta.type_names) == expected_names
-    end
-
     @testset "parse world into commands" begin
         body = quote
             (parent,) = @origin(object)

@@ -60,17 +60,14 @@ function parse_oupm_dsl_body!(stmts, meta, body::Expr)
 end
 
 # the valid body lines are:
-# 1. @type ...
-# 2. @property ...
-# 3. @number ...
-# 4. @observation_model ...
+# 1. @property ...
+# 2. @number ...
+# 3. @observation_model ...
 parse_oupm_dsl_line!(stmts, meta, ln::LineNumberNode) = push!(stmts, ln)
 function parse_oupm_dsl_line!(stmts, meta, line)
     @assert (line isa Expr && line.head === :macrocall) "Invalid line: $line"
 
-    if line.args[1] == Symbol("@type")
-        parse_type_line!(stmts, meta, line)
-    elseif line.args[1] == Symbol("@property")
+    if line.args[1] == Symbol("@property")
         parse_property_line!(stmts, meta, line)
     elseif line.args[1] == Symbol("@number")
         parse_number_line!(stmts, meta, line)
@@ -78,19 +75,6 @@ function parse_oupm_dsl_line!(stmts, meta, line)
         parse_observation_model!(stmts, meta, line)
     else
         error("Invalid line: $line")
-    end
-end
-
-function parse_type_line!(stmts, meta, line)
-    @assert MacroTools.@capture(line, @type typenames_) "Invalid type line: $line"
-    if typenames isa Symbol
-        typenames = [typenames]
-    else
-        typenames = typenames.args
-    end
-    for typename in typenames
-        push!(stmts, :(@type $typename))
-        push!(meta.type_names, typename)
     end
 end
 

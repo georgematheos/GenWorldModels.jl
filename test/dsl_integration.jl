@@ -1,10 +1,8 @@
+@type Event
+@type Station
+@type Detection
 
-    @type Event
-    @type Station
-    @type Detection
-
-expr = :(@oupm generate_detections(num_stations) begin
-
+@oupm generate_detections(num_stations) begin
     @property magnitude(::Event) ~ exponential(1.0)
     @property is_false_positive(d::Detection) = length(@origin(d)) == 1
     @property function reading(d::Detection)
@@ -27,7 +25,8 @@ expr = :(@oupm generate_detections(num_stations) begin
         detections = [Detection((Station(1), ), 1)] # TODO: use @objects
         return @map_get reading[detections]
     end
-end)
+end
+
 # expr = macroexpand(@__MODULE__, expr, recursive=false)
 # expr = macroexpand(@__MODULE__, expr, recursive=false)
 
@@ -43,7 +42,7 @@ end)
 #     println()
 #     println()
 # end
-@eval $expr
+# @eval $expr
 @load_generated_functions()
 # println(Event)
 tr, weight = generate(generate_detections, (5,))
