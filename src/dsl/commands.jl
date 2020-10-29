@@ -48,10 +48,10 @@ end
 # the first arg will be the world's name, which we don't use, since it should be in the
 # already-parsed lookup_or_generate
 macro map(_, log_expr)
-    _map(log_expr, :Map, :mgfcall_map, :lazymap)
+    _map(log_expr, :Map, :mgfcall_map, :lazy_map)
 end
 macro setmap(_, log_expr)
-    _map(log_expr, :SetMap, :mgfcall_setmap, :lazy_setmap)
+    _map(log_expr, :SetMap, :mgfcall_setmap, :lazy_no_collision_set_map)
 end
 macro nocollision_setmap(_, log_expr)
     _map(log_expr, :NoCollisionSetMap, :mgfcall_setmap, :lazy_no_collision_set_map)
