@@ -2,7 +2,7 @@
 @type Station
 @type Detection
 
-@oupm generate_detections(num_stations) begin
+expr = :(@oupm generate_detections(num_stations) begin
     @property magnitude(::Event) ~ exponential(1.0)
     @property is_false_positive(d::Detection) = length(@origin(d)) == 1
     @property function reading(d::Detection)
@@ -23,16 +23,16 @@
     @observation_model function detections()
         # detections = @objects Detection
         detections = [Detection((Station(1), ), 1)] # TODO: use @objects
-        return @map_get reading[detections]
+        return @map [@get(reading[det]) for det in detections]
     end
-end
+end)
 
-# expr = macroexpand(@__MODULE__, expr, recursive=false)
+expr = macroexpand(@__MODULE__, expr, recursive=false)
 # expr = macroexpand(@__MODULE__, expr, recursive=false)
 
-# expr = MacroTools.striplines(expr)
+expr = MacroTools.striplines(expr)
 # Meta.show_sexpr(expr)
-# display(expr)
+display(expr)
 # println()
 # println()
 # for subexpr in expr.args
@@ -42,7 +42,8 @@ end
 #     println()
 #     println()
 # end
-# @eval $expr
+@eval $expr
+println("done.")
 @load_generated_functions()
 # println(Event)
 tr, weight = generate(generate_detections, (5,))

@@ -32,7 +32,7 @@ OUPMDSLMetaData(model_name, model_args) = OUPMDSLMetaData(model_name, model_args
 function expand_oupm(body, name, args, __module__)
     meta = OUPMDSLMetaData(name, Tuple(args))
     stmts = Union{LineNumberNode, Expr}[] 
-    parse_oupm_dsl_body!(stmts, meta, body)
+    parse_oupm_dsl_body!(stmts, meta, body, __module__)
 
     # due to https://github.com/JuliaLang/julia/issues/37691, we cannot escape names within the
     # shallow macroexpansion provided by this DSL, and then return that expression and trust
@@ -53,9 +53,9 @@ function expand_oupm(body, name, args, __module__)
     end
 end
 
-function parse_oupm_dsl_body!(stmts, meta, body::Expr)
+function parse_oupm_dsl_body!(stmts, meta, body::Expr, __module__)
     for line in body.args
-        parse_oupm_dsl_line!(stmts, meta, line)
+        parse_oupm_dsl_line!(stmts, meta, line, __module__)
     end
 end
 
@@ -63,16 +63,16 @@ end
 # 1. @property ...
 # 2. @number ...
 # 3. @observation_model ...
-parse_oupm_dsl_line!(stmts, meta, ln::LineNumberNode) = push!(stmts, ln)
-function parse_oupm_dsl_line!(stmts, meta, line)
+parse_oupm_dsl_line!(stmts, meta, ln::LineNumberNode, __module__) = push!(stmts, ln)
+function parse_oupm_dsl_line!(stmts, meta, line, __module__)
     @assert (line isa Expr && line.head === :macrocall) "Invalid line: $line"
 
     if line.args[1] == Symbol("@property")
-        parse_property_line!(stmts, meta, line)
+        parse_property_line!(stmts, meta, line, __module__)
     elseif line.args[1] == Symbol("@number")
-        parse_number_line!(stmts, meta, line)
+        parse_number_line!(stmts, meta, line, __module__)
     elseif line.args[1] == Symbol("@observation_model")
-        parse_observation_model!(stmts, meta, line)
+        parse_observation_model!(stmts, meta, line, __module__)
     else
         error("Invalid line: $line")
     end
@@ -85,7 +85,7 @@ Possibilities:
     ...
 end
 =#
-function parse_property_line!(stmts, meta, line)
+function parse_property_line!(stmts, meta, line, __module__)
     if MacroTools.@capture(line, @property name_(sig__) ~ dist_(args__))
         (names, types) = parse_sig(sig)
         push!(stmts,
@@ -102,7 +102,7 @@ function parse_property_line!(stmts, meta, line)
     )
         world = gensym("world")
         # ensure calls to @origin, @get, etc., are parsed properly
-        body = parse_world_into_and_trace_commands(body, world)
+        body = expand_and_trace_commands(body, world, __module__)
         (names, types) = parse_sig(args)
 
         fndef = :(
@@ -143,7 +143,7 @@ Supported constructs:
         ...
     end
 =#
-function parse_number_line!(stmts, meta, line)
+function parse_number_line!(stmts, meta, line, __module__)
     if MacroTools.@capture(line, @number name_(sig__) ~ dist_(args__))
         (names, types) = parse_sig(sig)
         linenum = get_macrocall_line_num(line)
@@ -162,7 +162,7 @@ function parse_number_line!(stmts, meta, line)
     )
         world = gensym("world")
         linenum = get_macrocall_line_num(line)
-        body = parse_world_into_and_trace_commands(body, world)
+        body = expand_and_trace_commands(body, world, __module__)
         (names, types) = parse_sig(sig)
         fn_expr = let w = world, tags = (modifiers !== nothing) ? (linenum, modifiers) : (linenum,)
             fn_name -> Expr(:macrocall, Symbol("@gen"), tags..., :(
@@ -209,7 +209,7 @@ function parse_sig(sig)
     return (names, types)
 end
 
-function parse_observation_model!(stmts, meta, line)
+function parse_observation_model!(stmts, meta, line, __module__)
     @assert meta.observation_model_name === nothing "There should only be one observatin model!"
     if MacroTools.@capture(
         line,
@@ -220,7 +220,7 @@ function parse_observation_model!(stmts, meta, line)
     )
         meta.observation_model_name = name
         world = gensym("world")
-        body = parse_world_into_and_trace_commands(body, world)
+        body = expand_and_trace_commands(body, world, __module__)
         linenum = get_macrocall_line_num(line)
         tags = modifiers === nothing ? (linenum,) : (linenum, modifiers)
 
@@ -236,22 +236,31 @@ function parse_observation_model!(stmts, meta, line)
 end
 
 """
-    parse_world_into_and_trace_commands(body, worldname)
+    expand_and_trace_commands(body, worldname, __module__)
 
-Transform the expression `body` so that every special command which is called
-gets access to the world, and is called in a traced expression.
-Roughly, we transform `...@command(args...)...` to `...({gensym()} ~ @command(world, args...)))...`.
+Macroexpands all the GenWorldModels commands in the body, giving the command calls
+access to the world via the symbol `worldname`.  Returns a transformed body
+where each command is replaced with a traced call to the macroexpanded command.
+
+Eg. roughly, this turns `...@origin(object)...` into `...({gensym()} ~ lookup_or_generate(world[:origin][object]))...`.
+
+Note that this expands things in depth-first order, so commands operating on other commands should expect
+to see the expanded expressions.
 """
-function parse_world_into_and_trace_commands(body::Expr, worldname::Symbol)
+function expand_and_trace_commands(body::Expr, worldname::Symbol, __module__)
     MacroTools.postwalk(body) do e
-        if e isa Expr && e.head === :macrocall && e.args[1] in DSL_COMMANDS
-            name = gensym(String(e.args[1]) * "_call_result")
+        if MacroTools.isexpr(e, :macrocall) && e.args[1] in DSL_COMMANDS
+            name = gensym(String(e.args[1]) * "_result")
+
+            command = :($(@__MODULE__).$(e.args[1]))
+
             if length(e.args) > 1 && e.args[2] isa LineNumberNode
-                new_expr = Expr(:macrocall, e.args[1:2]..., worldname, e.args[3:end]...)
+                new_expr = Expr(:macrocall, command, e.args[2], worldname, e.args[3:end]...)
             else
-                new_expr = Expr(:macrocall, e.args[1], worldname, e.args[2:end]...)
+                new_expr = Expr(:macrocall, command, worldname, e.args[2:end]...)
             end
-            :(({$(QuoteNode(name))} ~ $new_expr))
+            expanded = macroexpand(__module__, new_expr)
+            :({$(QuoteNode(name))} ~ $expanded)
         else
             e
         end
