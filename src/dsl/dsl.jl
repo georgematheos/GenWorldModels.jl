@@ -1,14 +1,16 @@
 import MacroTools
 
+include("commands.jl")
+
 macro oupm(signature, body)
     sig_valid = signature isa Expr && signature.head == :call
     body_valid = body isa Expr && body.head == :block
     @assert (sig_valid && body_valid) "Invalid usage! Proper usage: @oupm model_name(args...) begin ... end"
 
     name = signature.args[1]
-    args = signautre.args[2:end]
+    args = signature.args[2:end]
 
-    expand_oupm(body, name, args)
+    expand_oupm(body, name, args, __module__)
 end
 
 struct OriginSignature
@@ -27,23 +29,32 @@ end
 
 OUPMDSLMetaData(model_name, model_args) = OUPMDSLMetaData(model_name, model_args, Set(), Set(), Dict(), nothing)
 
-function expand_oupm(body, name, args)
-    meta = OUPMDSLMetaData(name, args)
-    stmts = Expr[] 
+function expand_oupm(body, name, args, __module__)
+    meta = OUPMDSLMetaData(name, Tuple(args))
+    stmts = Union{LineNumberNode, Expr}[] 
     parse_oupm_dsl_body!(stmts, meta, body)
+
+    # due to https://github.com/JuliaLang/julia/issues/37691, we cannot escape names within the
+    # shallow macroexpansion provided by this DSL, and then return that expression and trust
+    # the normal macroexpansion system to work.  The issue is that the `@gen` macro, etc.,
+    # do not expect escaping to occur in the expressions they parse.
+    # Instead, we do not add escaping within our macros, and expand here, then
+    # add escaping after the fact.
+    stmts = [esc(macroexpand(__module__, stmt)) for stmt in stmts]
+    
     return quote
-        $stmts...
+        $(stmts...)
         $(esc(meta.model_name)) = UsingWorld(
-            $(meta.observation_model_name),
-            $(property_name => property_name for property_name in meta.property_names)...,
-            $(name => name for (_, name) in meta.number_stmts)...;
-            model_args=$(meta.model_args)
+            $(esc(meta.observation_model_name)),
+            $((:($(QuoteNode(name)) => $(esc(name))) for name in meta.property_names)...),
+            $((:($(QuoteNode(name)) => $(esc(name))) for (_, name) in meta.number_stmts)...);
+            world_args=$(meta.model_args)
         )
     end
 end
 
 function parse_oupm_dsl_body!(stmts, meta, body::Expr)
-    for line in expr.args
+    for line in body.args
         parse_oupm_dsl_line!(stmts, meta, line)
     end
 end
@@ -53,6 +64,7 @@ end
 # 2. @property ...
 # 3. @number ...
 # 4. @observation_model ...
+parse_oupm_dsl_line!(stmts, meta, ln::LineNumberNode) = push!(stmts, ln)
 function parse_oupm_dsl_line!(stmts, meta, line)
     @assert (line isa Expr && line.head === :macrocall) "Invalid line: $line"
 
@@ -63,7 +75,7 @@ function parse_oupm_dsl_line!(stmts, meta, line)
     elseif line.args[1] == Symbol("@number")
         parse_number_line!(stmts, meta, line)
     elseif line.args[1] == Symbol("@observation_model")
-        parse_observation_model_line!(stmts, meta, line)
+        parse_observation_model!(stmts, meta, line)
     else
         error("Invalid line: $line")
     end
@@ -71,7 +83,12 @@ end
 
 function parse_type_line!(stmts, meta, line)
     @assert MacroTools.@capture(line, @type typenames_) "Invalid type line: $line"
-    for typename in typenames.args
+    if typenames isa Symbol
+        typenames = [typenames]
+    else
+        typenames = typenames.args
+    end
+    for typename in typenames
         push!(stmts, :(@type $typename))
         push!(meta.type_names, typename)
     end
@@ -88,7 +105,7 @@ function parse_property_line!(stmts, meta, line)
     if MacroTools.@capture(line, @property name_(sig__) ~ dist_(args__))
         (names, types) = parse_sig(sig)
         push!(stmts,
-            :( @dist $name($(Expr(:tuple, names...))::Tuple{$(types...)}, ::World) = $dist($(args...)) )
+            :( @dist $name(::World, $(Expr(:tuple, names...))::Tuple{$(types...)}) = $dist($(args...)) )
         )
 
         push!(meta.property_names, name)
@@ -105,7 +122,7 @@ function parse_property_line!(stmts, meta, line)
         (names, types) = parse_sig(args)
 
         fndef = :(
-            function $name($(Expr(:tuple, names...))::Tuple{$(types...)}, $world::World)
+            function $name($world::World, $(Expr(:tuple, names...))::Tuple{$(types...)})
                 $(body.args...)
             end
         )
@@ -147,7 +164,7 @@ function parse_number_line!(stmts, meta, line)
         (names, types) = parse_sig(sig)
         linenum = get_macrocall_line_num(line)
         fn_expr = fn_name -> Expr(:macrocall, Symbol("@gen"), linenum, :((static, diffs)), :(
-            function $fn_name($(Expr(:tuple, names...))::Tuple{$(types...)}, ::World)
+            function $fn_name(::World, $(Expr(:tuple, names...))::Tuple{$(types...)})
                 num ~ $dist($(args...))
                 return num
             end
@@ -165,7 +182,7 @@ function parse_number_line!(stmts, meta, line)
         (names, types) = parse_sig(sig)
         fn_expr = let w = world, tags = (modifiers !== nothing) ? (linenum, modifiers) : (linenum,)
             fn_name -> Expr(:macrocall, Symbol("@gen"), tags..., :(
-                function $fn_name($(Expr(:tuple, names...))::Tuple{$(types...)}, $w::World) $(body.args...) end
+                function $fn_name($w::World, $(Expr(:tuple, names...))::Tuple{$(types...)}) $(body.args...) end
             ))
         end
     else
@@ -234,50 +251,25 @@ function parse_observation_model!(stmts, meta, line)
     end
 end
 
-const _commands = [Symbol("@$name") for name in (:origin, :index, :abstract, :concrete, :get, :arg)]
-println("commands: $_commands")
 """
     parse_world_into_and_trace_commands(body, worldname)
 
 Transform the expression `body` so that every special command which is called
 gets access to the world, and is called in a traced expression.
-Roughly, we transform `...@command(args...)...` to `name ~ @command(world, args...)); ...name...`.
+Roughly, we transform `...@command(args...)...` to `...({gensym()} ~ @command(world, args...)))...`.
 """
 function parse_world_into_and_trace_commands(body::Expr, worldname::Symbol)
-    @assert body.head === :block
-    
-    # Do a depth-first traversal of each expression in the body.  Each time we encounter an special command, replace
-    # it with a gensym variable name.  Since we go depth-first, we visit these in the order in which the
-    # commands must be evaluated.  
-    # After this transformation of a line in the body,
-    # we will add lines to call the special commands and store the result in the variable names we used
-    # in the transformed body.
-    new_lines = [] # the statements in the body we should output
-    for line in body.args
-        name_to_expr = [] # generated variable name => command we should trace to popluate the variable name
-        # transform the line by replacing command calls with variable names
-        transformed_line = MacroTools.postwalk(line) do e
-            if e isa Expr && e.head === :macrocall && e.args[1] in _commands
-                name = gensym(String(e.args[1]) * "_call_result")
-                if length(e.args) > 1 && e.args[2] isa LineNumberNode
-                    new_expr = Expr(:macrocall, e.args[1:2]..., worldname, e.args[3:end]...)
-                else
-                    new_expr = Expr(:macrocall, e.args[1], worldname, e.args[2:end]...)
-                end
-
-                push!(name_to_expr, name => new_expr)
-                name
+    MacroTools.postwalk(body) do e
+        if e isa Expr && e.head === :macrocall && e.args[1] in DSL_COMMANDS
+            name = gensym(String(e.args[1]) * "_call_result")
+            if length(e.args) > 1 && e.args[2] isa LineNumberNode
+                new_expr = Expr(:macrocall, e.args[1:2]..., worldname, e.args[3:end]...)
             else
-                e
+                new_expr = Expr(:macrocall, e.args[1], worldname, e.args[2:end]...)
             end
+            :(({$(QuoteNode(name))} ~ $new_expr))
+        else
+            e
         end
-        # first, the new body should call the commands, adding into the variable name
-        for (name, expr) in name_to_expr
-            push!(new_lines, :($name ~ $expr))
-        end
-        # then, the new body can run the transformed line
-        push!(new_lines, transformed_line)
     end
-
-    return Expr(:block, new_lines...)
 end

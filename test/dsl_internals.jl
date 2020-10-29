@@ -28,14 +28,14 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature,
         end
 
         expected = quote
-            name1_ ~ @origin(world, object)
-            (parent,) = name1_
-            name2_ ~ @get(world, value[parent])
-            val ~ normal(name2_, 1)
+            (parent,) = ({name1_} ~ @origin(world, object))
+            val ~ normal({name2_} ~ @get(world, value[parent]), 1)
             t = @time val + 5
-            name3_ ~ @origin(world, object)
-            name4_ ~ @origin(world, name3_[1])
-            (grandmother, grandfather) = name4_
+            (grandmother, grandfather) = (
+                {name4_} ~ @origin(world,
+                    ({name3_} ~ @origin(world, object))[1]
+                )
+            )
         end
 
         transformed = parse_world_into_and_trace_commands(body, :world)
@@ -48,8 +48,9 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature,
             stmts = []
             meta = OUPMDSLMetaData(:name, ())
             line = :(@property global_property() ~ normal(10, 1))
-            expected = :(@dist global_property(()::Tuple{}, ::World) = normal(10, 1))
+            expected = :(@dist global_property(::World, ()::Tuple{}) = normal(10, 1))
             parse_property_line!(stmts, meta, line)
+
             @test meta.property_names == Set([:global_property])
             @test length(stmts) == 1
             @test MacroTools.@capture(first(stmts), $expected)
@@ -57,7 +58,7 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature,
             stmts = []
             meta = OUPMDSLMetaData(:name, ())
             line = :(@property magnitude(::Event) ~ normal(10, 1))
-            expected = :(@dist magnitude((_,)::Tuple{Event}, ::World) = normal(10, 1))
+            expected = :(@dist magnitude(::World, (_,)::Tuple{Event}) = normal(10, 1))
             parse_property_line!(stmts, meta, line)
             @test meta.property_names == Set([:magnitude])
             @test length(stmts) == 1
@@ -66,7 +67,7 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature,
             stmts = []
             meta = OUPMDSLMetaData(:name, ())
             line = :(@property is_detected(::Station, evt::Event) ~ normal(10, 1))
-            expected = :(@dist is_detected((_, evt)::Tuple{Station, Event}, ::World) = normal(10, 1))
+            expected = :(@dist is_detected(::World, (_, evt)::Tuple{Station, Event}) = normal(10, 1))
             parse_property_line!(stmts, meta, line)
             @test meta.property_names == Set([:is_detected])
             @test length(stmts) == 1
@@ -80,7 +81,7 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature,
             line = :(@property (static) magnitude(evt::Event) = begin; mag ~ normal(0, 1); return mag; end;).args[1]
 
             expected = :(
-                @gen (static) function magnitude((evt,)::Tuple{Event}, world_::World)
+                @gen (static) function magnitude(world_::World, (evt,)::Tuple{Event})
                     mag ~ normal(0, 1)
                     return mag
                 end
@@ -96,7 +97,7 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature,
             line = :(@property magnitude(evt::Event) = mag ~ normal(0, 1))
 
             expected = :(
-                @gen function magnitude((evt,)::Tuple{Event}, world_::World)
+                @gen function magnitude(world_::World, (evt,)::Tuple{Event})
                     mag ~ normal(0, 1)
                 end
             )
@@ -116,10 +117,13 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature,
                 end
             )
             expected = :(
-                @gen (static, diffs) function reading((det,)::Tuple{Detection}, world_::World)
-                    og_ ~ @origin(world_, det)
-                    mag_ ~ @get(world_, magnitude[og_[2]])
-                    reading ~ normal(mag_, 1)
+                @gen (static, diffs) function reading(world_::World, (det,)::Tuple{Detection})
+                    reading ~ normal(
+                        ({name1_} ~ @get(world_, magnitude[
+                            ({name2_} ~ @origin(world_, det))[2]
+                        ])),
+                        1
+                    )
                     return reading
                 end
             )
@@ -137,10 +141,13 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature,
                 end
             )
             expected = :(
-                @gen function reading((det,)::Tuple{Detection}, world_::World)
-                    og_ ~ @origin(world_, det)
-                    mag_ ~ @get(world_, magnitude[og_[2]])
-                    reading ~ normal(mag_, 1)
+                @gen function reading(world_::World, (det,)::Tuple{Detection})
+                    reading ~ normal(
+                        ({name1_} ~ @get(world_, magnitude[
+                            ({name2_} ~ @origin(world_, det))[2]
+                        ])),
+                        1
+                    )
                     return reading
                 end
             )
@@ -158,7 +165,7 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature,
         meta = OUPMDSLMetaData(:name, ())
         line = :(@number Event() ~ poisson(5))
         expected = :(
-            @gen (static, diffs) function numevt_(()::Tuple{}, ::World)
+            @gen (static, diffs) function numevt_(::World, ()::Tuple{})
                 num ~ poisson(5)
                 return num
             end
@@ -173,7 +180,7 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature,
         meta = OUPMDSLMetaData(:name, ())
         line = :(@number Detection(::Station) ~ poisson(5))
         expected = :(
-            @gen (static, diffs) function numdet_((_,)::Tuple{Station}, ::World)
+            @gen (static, diffs) function numdet_(::World, (_,)::Tuple{Station})
                 num ~ poisson(5)
                 return num
             end
@@ -189,7 +196,7 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature,
         line = :(@number Event() = num ~ poisson(5))
 
         expected = :(
-            @gen function numevt_(()::Tuple{}, w_::World)
+            @gen function numevt_(w_::World, ()::Tuple{})
                 num ~ poisson(5)
             end
         )
@@ -203,7 +210,7 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature,
         meta = OUPMDSLMetaData(:name, ())
         line = :(@number (static, diffs) Event() = begin; num ~ poisson(5); return num; end;)
         expected = :(
-            @gen (static, diffs) function numevt_(()::Tuple{}, w_::World)
+            @gen (static, diffs) function numevt_(w_::World, ()::Tuple{})
                 num ~ poisson(5)
                 return num
             end
@@ -223,9 +230,8 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature,
             end
         )
         expected = :(
-            @gen (static) function numdet_((e, s)::Tuple{Event, Station}, world_::World)
-                prob_ ~ @get(world_, detection_prob[e])
-                num ~ bernoulli(prob_)
+            @gen (static) function numdet_(world_::World, (e, s)::Tuple{Event, Station})
+                num ~ bernoulli({prob_} ~ @get(world_, detection_prob[e]))
                 return num
             end
         )
@@ -243,9 +249,8 @@ using GenWorldModels: parse_property_line!, parse_number_line!, OriginSignature,
             end
         )
         expected = :(
-            @gen function numdet_((e, s)::Tuple{Event, Station}, world_::World)
-                prob_ ~ @get(world_, detection_prob[e])
-                num ~ bernoulli(prob_)
+            @gen function numdet_(world_::World, (e, s)::Tuple{Event, Station})
+                num ~ bernoulli({prob_} ~ @get(world_, detection_prob[e]))
                 return num
             end
         )
