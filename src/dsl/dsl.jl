@@ -33,13 +33,12 @@ end
 mutable struct OUPMDSLMetaData
     model_name::Symbol
     model_args::Tuple{Vararg{Symbol}}
-    type_names::Set{Symbol}
-    property_names::Set{Symbol}
+    properties::Dict{Symbol, Symbol}
     number_stmts::Dict{OriginSignature, Symbol}
     observation_model_name::Union{Nothing, Symbol}
 end
 
-OUPMDSLMetaData(model_name, model_args) = OUPMDSLMetaData(model_name, model_args, Set(), Set(), Dict(), nothing)
+OUPMDSLMetaData(model_name, model_args) = OUPMDSLMetaData(model_name, model_args, Dict(), Dict(), nothing)
 
 function expand_oupm(body, name, args, __module__)
     meta = OUPMDSLMetaData(name, Tuple(args))
@@ -58,8 +57,8 @@ function expand_oupm(body, name, args, __module__)
         $(stmts...)
         $(esc(meta.model_name)) = UsingWorld(
             $(esc(meta.observation_model_name)),
-            $((:($(QuoteNode(name)) => $(esc(name))) for name in meta.property_names)...),
-            $((:($(QuoteNode(name)) => $(esc(name))) for (_, name) in meta.number_stmts)...);
+            $((:($(QuoteNode(addr)) => $(esc(name))) for (addr, name) in meta.properties)...),
+            $((:($(QuoteNode(num_statement_name(sig))) => $(esc(name))) for (sig, name) in meta.number_stmts)...);
             world_args=$(meta.model_args)
         )
     end
@@ -98,24 +97,26 @@ Possibilities:
 end
 =#
 function parse_property_line!(stmts, meta, line, __module__)
-    if MacroTools.@capture(line, @property name_(sig__) ~ dist_(args__))
+    if MacroTools.@capture(line, @property addr_(sig__) ~ dist_(args__))
         (names, types) = parse_sig(sig)
+        name = gensym(addr)
         push!(stmts,
             :( @dist $name(::World, $(Expr(:tuple, names...))::Tuple{$(types...)}) = $dist($(args...)) )
         )
 
-        push!(meta.property_names, name)
+        meta.properties[addr] = name
     elseif MacroTools.@capture(
         line,
-        (@property modifiers_ function name_(args__) body_ end) |
-        (@property function name_(args__) body_ end) |
-        (@property modifiers_ name_(args__) = body_) |
-        (@property name_(args__) = body_)
+        (@property modifiers_ function addr_(args__) body_ end) |
+        (@property function addr_(args__) body_ end) |
+        (@property modifiers_ addr_(args__) = body_) |
+        (@property addr_(args__) = body_)
     )
         world = gensym("world")
         # ensure calls to @origin, @get, etc., are parsed properly
         body = expand_and_trace_commands(body, world, __module__)
         (names, types) = parse_sig(args)
+        name = gensym(addr)
 
         fndef = :(
             function $name($world::World, $(Expr(:tuple, names...))::Tuple{$(types...)})
@@ -127,7 +128,7 @@ function parse_property_line!(stmts, meta, line, __module__)
 
         # @gen (modifiers...) function $body end
         push!(stmts, Expr(:macrocall, Symbol("@gen"), linenum, lastargs...))
-        push!(meta.property_names, name)
+        meta.properties[addr] = name
     else
         error("Error parsing property $line")
     end
@@ -185,7 +186,7 @@ function parse_number_line!(stmts, meta, line, __module__)
         error("Unrecognized @number construct: $line")
     end
     origin_sig = parse_origin_sig(name, sig)
-    fn_name = num_statement_name(origin_sig)
+    fn_name = gensym(num_statement_name(origin_sig))
     
     push!(stmts, fn_expr(fn_name))
     meta.number_stmts[origin_sig] = fn_name
@@ -225,11 +226,12 @@ function parse_observation_model!(stmts, meta, line, __module__)
         (@observation_model modifiers_ name_(sig__) = body_) |
         (@observation_model name_(sig__) = body_)
     )
-        meta.observation_model_name = name
         world = gensym("world")
         body = expand_and_trace_commands(body, world, __module__)
         linenum = get_macrocall_line_num(line)
         tags = modifiers === nothing ? (linenum,) : (linenum, modifiers)
+        name = gensym(name)
+        meta.observation_model_name = name
 
         push!(stmts, Expr(:macrocall, Symbol("@gen"), tags..., :(
                 function $name($world::World, $(sig...))
