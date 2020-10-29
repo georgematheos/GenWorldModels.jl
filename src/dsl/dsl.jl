@@ -18,6 +18,18 @@ struct OriginSignature
     origin_typenames::Tuple{Vararg{Symbol}}
 end
 
+"""
+    num_statement_name(sig::OriginSignature)::Symbol
+
+Returns the name for the number generative function for the given origin signature.
+
+(The name will look like, eg., `Symbol("#Type(OriginType1, OriginType2)")`.)
+"""
+function num_statement_name(sig::OriginSignature)::Symbol
+    name = "#" * String(sig.typename) * "(" * join([String(name) for name in sig.origin_typenames], ", ") * ")"
+    Symbol(name)
+end
+
 mutable struct OUPMDSLMetaData
     model_name::Symbol
     model_args::Tuple{Vararg{Symbol}}
@@ -173,15 +185,10 @@ function parse_number_line!(stmts, meta, line, __module__)
         error("Unrecognized @number construct: $line")
     end
     origin_sig = parse_origin_sig(name, sig)
-    fn_name = get_num_statement_name(origin_sig.typename, origin_sig.origin_typenames)
+    fn_name = num_statement_name(origin_sig)
     
     push!(stmts, fn_expr(fn_name))
     meta.number_stmts[origin_sig] = fn_name
-end
-
-function get_num_statement_name(typename, origin_typenames)
-    root = "num_" * String(typename) * "__" *((String(n)*"_" for n in origin_typenames)...)
-    gensym(root)
 end
 
 function parse_origin_sig(name, sig)
