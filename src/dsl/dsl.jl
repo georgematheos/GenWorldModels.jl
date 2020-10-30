@@ -1,5 +1,6 @@
 import MacroTools
 
+include("objectsets.jl")
 include("commands.jl")
 
 macro oupm(signature, body)
@@ -44,6 +45,7 @@ function expand_oupm(body, name, args, __module__)
     meta = OUPMDSLMetaData(name, Tuple(args))
     stmts = Union{LineNumberNode, Expr}[] 
     parse_oupm_dsl_body!(stmts, meta, body, __module__)
+    (obj_getter_addr, obj_getter_fn_name) = add_objectset_getters_to_expansion!(stmts, meta)
 
     # due to https://github.com/JuliaLang/julia/issues/37691, we cannot escape names within the
     # shallow macroexpansion provided by this DSL, and then return that expression and trust
@@ -53,12 +55,15 @@ function expand_oupm(body, name, args, __module__)
     # add escaping after the fact.
     stmts = [esc(macroexpand(__module__, stmt)) for stmt in stmts]
     
+    # TODO: check that the number statements are acyclic!
+
     return quote
         $(stmts...)
         $(esc(meta.model_name)) = UsingWorld(
             $(esc(meta.observation_model_name)),
             $((:($(QuoteNode(addr)) => $(esc(name))) for (addr, name) in meta.properties)...),
-            $((:($(QuoteNode(num_statement_name(sig))) => $(esc(name))) for (sig, name) in meta.number_stmts)...);
+            $((:($(QuoteNode(num_statement_name(sig))) => $(esc(name))) for (sig, name) in meta.number_stmts)...),
+            $(QuoteNode(obj_getter_addr)) => $(esc(obj_getter_fn_name));
             world_args=$(meta.model_args)
         )
     end
@@ -261,7 +266,7 @@ function expand_and_trace_commands(body::Expr, worldname::Symbol, __module__)
         if MacroTools.isexpr(e, :macrocall) && e.args[1] in DSL_COMMANDS
             name = gensym(String(e.args[1]) * "_result")
 
-            command = :($(@__MODULE__).$(e.args[1]))
+            command = :($(@__MODULE__()).$(e.args[1]))
 
             if length(e.args) > 1 && e.args[2] isa LineNumberNode
                 new_expr = Expr(:macrocall, command, e.args[2], worldname, e.args[3:end]...)

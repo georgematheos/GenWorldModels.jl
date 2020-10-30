@@ -76,12 +76,12 @@ macro get(world, expr::Expr)
 end
 
 macro arg(world, argname)
-    :(lookup_or_generate($(esc(world))[:arg][$(QuoteNode(argname))]))
+    :(lookup_or_generate($(esc(world))[:args][$(QuoteNode(argname))]))
 end
 
 const DSL_COMMANDS = [
     Symbol("@$name") for name in
-    (:origin, :index, :arg, :get, :map, :setmap, :nocollision_setmap)
+    (:origin, :index, :arg, :get, :map, :setmap, :nocollision_setmap, :objects)
 ]
 
 # Question: do we want to export some of these?
