@@ -1,4 +1,4 @@
-export mgfcall_map, mgfcall_setmap
+export mgfcall_map, mgfcall_setmap, mgfcall_dictmap
 
 """
     mgfcall_map(memoized_gen_function, keys::AbstractVector)
@@ -49,6 +49,7 @@ end
 ##################
 # mgfcall_setmap #
 ##################
+# TODO: try to handle diffs intelligently!
 function mgfcall_setmap(mgf::MemoizedGenerativeFunction, keys)
     Set(mgf[key] for key in keys)
 end
@@ -56,4 +57,17 @@ end
 function mgfcall_setmap(mgf::Diffed{<:MemoizedGenerativeFunction}, keys::Diffed)
     diff = get_diff(mgf) === NoChange() && get_diff(keys) === NoChange() ? NoChange() : UnknownChange()
     Diffed(mgfcall_setmap(strip_diff(mgf), strip_diff(keys)), diff)
+end
+
+###################
+# mgfcall_dictmap #
+###################
+# TODO: try to handle diffs intelligently!
+function mgfcall_dictmap(mgf::MemoizedGenerativeFunction, dict)
+    Dict(key => mgf[val] for (key, val) in dict)
+end
+
+function mgfcall_dictmap(mgf::Diffed{<:MemoizedGenerativeFunction}, keys::Diffed)
+    diff = get_diff(mgf) === NoChange() && get_diff(keys) === NoChange() ? NoChange() : UnknownChange()
+    Diffed(mgfcall_dictmap(strip_diff(mgf), strip_diff(dict)), diff)
 end
