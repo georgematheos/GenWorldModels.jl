@@ -36,18 +36,16 @@ macro objects(world, expr)
 end
 function get_spec(name::Symbol, __module__)
     if isdefined(__module__, name) && Base.eval(__module__, name) <: OUPMObject
-        expr = :(TypeObjectSetSpec($(QuoteNode(name))))
+        :(TypeObjectSetSpec($(QuoteNode(name))))
     else
-        expr = :(SingletonObjectSetSpec($(esc(name))))
+        :(SingletonObjectSetSpec($(esc(name))))
     end
-
-    expr
 end
 function get_spec(expr::Expr, __module__)
     if MacroTools.@capture(expr, name_(subspecs__))
         :(
             OriginConstrainedObjectSetSepc(
-                $name,
+                $(QuoteNode(name)),
                 $(Expr(:tuple, (get_spec(subspec, __module__) for subspec in subspecs)...))
             )
         )
@@ -81,7 +79,7 @@ function get_object_set_getter_expressions(origin_sig_table_name)
 end
 
 @gen (static, diffs) function _singleton_objects(world, spec::SingletonObjectSetSpec)
-    return Set([spec.object])
+    return Set([spec.obj])
 end
 
 function get_origin_sig_spec(sig)
@@ -102,6 +100,8 @@ function num_statement_name(spec::OriginConstrainedObjectSetSepc)
     )
     num_statement_name(OriginSignature(spec.typename, origin_names))
 end
+num_statement_name(s::Diffed{<:Any, NoChange}) = Diffed(num_statement_name(strip_diff(s)), NoChange())
+num_statement_name(s::Diffed{<:Any}) = Diffed(num_statement_name(strip_diff(s)), UnknownChange())
 @gen (static, diffs) function _constrained_objects(world, spec::OriginConstrainedObjectSetSepc)
     origin_sets ~ Map(lookup_or_generate)(mgfcall_map(world[:_objects], spec.constraints))
     

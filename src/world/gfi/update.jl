@@ -508,7 +508,8 @@ function end_update!(world::World, kernel_discard::ChoiceMap, check_constrained_
     if !isempty(world.state.calls_updated_to_unsupported_trace)
         invalid_calls = collect(world.state.calls_updated_to_unsupported_trace)
         for call in invalid_calls
-            @error("Choicemap for invalid $call : ", choicemap=get_choices(get_trace(world, invalid_calls[1])))
+            @error("Choicemap for invalid $call : ")
+            display(get_choices(get_trace(world, invalid_calls[1])))
         end
         error("""This update appears to have caused the world to have score -Inf!
         In particular, the update caused the scores for the traces for calls $invalid_calls

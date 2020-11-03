@@ -380,13 +380,18 @@ end
 # UnknownChange `update` dispatching #
 ######################################
 
+no_addr_change_error(a1, a2) = error("Changing the address of a `lookup_or_generate` in updates is not supported. (Attempt to change from $a1 to $a2.)")
 # If this `lookup_or_generate` call is made from a generative function which doesn't propagate diffs, we'll get an `UnknownChange`.
 # In this case, we should manually propagate the diff information so we can dispatch to the correct update behavior.
 function Gen.update(tr::LookupOrGenerateTrace, args::Tuple{<:MemoizedGenerativeFunctionCall}, ::Tuple{UnknownChange}, ::EmptyAddressTree, s::Selection)
     old_call = get_args(tr)[1]
+    new_call = args[1]
+
+    if addr(old_call) != addr(new_call)
+        no_addr_change_error(addr(old_call), addr(new_call))
+    end
 
     old_key = key(old_call)
-    new_call = args[1]
     new_key = key(new_call)
     keydiff = old_key == new_key ? NoChange() : UnknownChange()
     diffed_key = Diffed(new_key, keydiff)

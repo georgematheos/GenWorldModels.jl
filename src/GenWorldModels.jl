@@ -25,6 +25,9 @@ include("involution_dsl.jl")
 include("object_set/object_set.jl")
 include("dict_map.jl")
 
+include("dsl/dsl.jl")
+export @oupm
+
 @load_generated_functions()
 
 # # don't export the macros; users can import them if needed

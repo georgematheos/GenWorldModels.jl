@@ -2,7 +2,7 @@
 # diff propagation utils #
 ##########################
 
-Base.:(:)(fst::Int, lst::Diffed{Int, UnknownChange}) = Diffed(fst:strip_diff(lst), UnknownChange())
+Base.:(:)(fst::Integer, lst::Diffed{<:Integer, UnknownChange}) = Diffed(fst:strip_diff(lst), UnknownChange())
 concrete_obj_getter(typename, origin) = i -> concrete_index_oupm_object(typename, origin, i)
 function concrete_obj_getter(typename::Diffed{Symbol}, origin::Diffed) 
     Diffed(concrete_obj_getter(strip_diff(typename), strip_diff(origin)), UnknownChange())
