@@ -25,7 +25,7 @@ include("involution_dsl.jl")
 include("object_set/object_set.jl")
 include("dict_map.jl")
 
-include("dsl/dsl.jl")
+include("dsl/modeling_dsl.jl")
 export @oupm
 
 @load_generated_functions()

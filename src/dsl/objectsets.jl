@@ -43,7 +43,7 @@ Valid object set specifications have one of the following forms:
    `(s_1, ..., s_n)`, where `s_j` satisfies `spec_j` for every j.+
 
 """
-macro objects(world, expr)
+macro _objects(world, expr)
     :(lookup_or_generate($(esc(world))[:_objects][$(get_spec(expr, __module__))]))
 end
 

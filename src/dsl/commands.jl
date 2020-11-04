@@ -47,43 +47,39 @@ end
 
 # the first arg will be the world's name, which we don't use, since it should be in the
 # already-parsed lookup_or_generate
-macro map(_, log_expr)
+macro _map(_, log_expr)
     _map(log_expr, :Map, :mgfcall_map, :lazy_map)
 end
-macro setmap(_, log_expr)
+macro _setmap(_, log_expr)
     _map(log_expr, :SetMap, :mgfcall_setmap, :lazy_no_collision_set_map)
 end
-macro nocollision_setmap(_, log_expr)
+macro _nocollision_setmap(_, log_expr)
     _map(log_expr, :NoCollisionSetMap, :mgfcall_setmap, :lazy_no_collision_set_map)
 end
 # TODO: dictmap
 
-macro origin(world, obj)
+macro _origin(world, obj)
     :(lookup_or_generate($(esc(world))[:origin][$(esc(obj))]))
 end
 
-macro index(world, obj)
+macro _index(world, obj)
     :(lookup_or_generate($(esc(world))[:index][$(esc(obj))]))
 end
 
 # TODO: should we include @concrete & @abstract?
 
-macro get(world, expr::Expr)
+macro _get(world, expr::Expr)
     @assert expr.head === :ref "Invalid get statement: @get $expr"
     propname = expr.args[1]
     key = Expr(:tuple, (esc(a) for a in expr.args[2:end])...)
     :(lookup_or_generate($(esc(world))[$(QuoteNode(propname))][$key]))
 end
 
-macro arg(world, argname)
+macro _arg(world, argname)
     :(lookup_or_generate($(esc(world))[:args][$(QuoteNode(argname))]))
 end
 
-const DSL_COMMANDS = [
-    Symbol("@$name") for name in
+const DSL_COMMANDS = Dict(
+    Symbol("@$name") => Symbol("@_$name") for name in
     (:origin, :index, :arg, :get, :map, :setmap, :nocollision_setmap, :objects)
-]
-
-# Question: do we want to export some of these?
-# Do we want to provide versions of `@origin` and `@index` for concrete objects
-# which do not need world access?
+)

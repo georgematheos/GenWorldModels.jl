@@ -53,7 +53,17 @@ function expand_oupm(body, name, args, __module__)
     # do not expect escaping to occur in the expressions they parse.
     # Instead, we do not add escaping within our macros, and expand here, then
     # add escaping after the fact.
-    stmts = [esc(macroexpand(__module__, stmt)) for stmt in stmts]
+    
+    stmts = [
+        try
+            esc(macroexpand(__module__, stmt))
+        catch e
+            display(stmt)
+            throw(e)
+        end
+            
+        for stmt in stmts
+    ]
     
     # TODO: check that the number statements are acyclic!
 
@@ -263,10 +273,10 @@ to see the expanded expressions.
 """
 function expand_and_trace_commands(body::Expr, worldname::Symbol, __module__)
     MacroTools.postwalk(body) do e
-        if MacroTools.isexpr(e, :macrocall) && e.args[1] in DSL_COMMANDS
+        if MacroTools.isexpr(e, :macrocall) && e.args[1] in keys(DSL_COMMANDS)
             name = gensym(String(e.args[1]) * "_result")
 
-            command = :($(@__MODULE__()).$(e.args[1]))
+            command = :($(@__MODULE__()).$(DSL_COMMANDS[e.args[1]]))
 
             if length(e.args) > 1 && e.args[2] isa LineNumberNode
                 new_expr = Expr(:macrocall, command, e.args[2], worldname, e.args[3:end]...)
