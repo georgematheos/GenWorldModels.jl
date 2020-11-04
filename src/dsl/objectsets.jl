@@ -6,7 +6,7 @@ Examples of the `@objects` command:
 - `@objects City(california)` (all cities in California)
 - `@objects City(State)` (all cities associated with any state)
 - `@objects City(State(usa))` (all cities in a state in the USA)
-- `@objects City(State(usa), State(usa))` (all cities in 2 states, both in the USA)
+- `@objects City(State(usa), california)` (all cities in 2 states, the first of which is in the USA, and the second of which is California)
 
 The general syntax is
 - `@objects spec`
@@ -18,6 +18,7 @@ where `spec` = object | typename | typename(Vararg(spec)).
     first origin object matches spec1, second origin object matches spec2, ..., nth origin object matches specn
 =#
 
+### types of object specs ###
 abstract type ObjectSetSpec end
 struct SingletonObjectSetSpec <: ObjectSetSpec
     obj::OUPMObject
@@ -31,9 +32,22 @@ struct OriginConstrainedObjectSetSepc <: ObjectSetSpec
 end
 
 ### @objects macro ###
+"""
+    @objects object_set_spec_expr
+
+Used in the OUPM DSL, this gets the set of all objects satisfying the given `object_set_spec_expr`.
+Valid object set specifications have one of the following forms:
+- `@objects TypeName` gets all objects of the given type
+- `@objects object` gets the set of the single object bound to the variable `object`
+- `@objects Typename(spec1, ..., specn)` gets the set of all objects of the given type with an origin
+   `(s_1, ..., s_n)`, where `s_j` satisfies `spec_j` for every j.+
+
+"""
 macro objects(world, expr)
     :(lookup_or_generate($(esc(world))[:_objects][$(get_spec(expr, __module__))]))
 end
+
+# get the ObjectSetSpec corresponding to the given expression or symbol
 function get_spec(name::Symbol, __module__)
     if isdefined(__module__, name) && Base.eval(__module__, name) <: OUPMObject
         :(TypeObjectSetSpec($(QuoteNode(name))))
@@ -57,6 +71,20 @@ end
 ### getters ###
 # `_objects` should be a MGF in every world using this, with address :_objects
 
+"""
+    get_object_set_getter_expressions(origin_sig_table_name)
+
+Returns an expression defining the _objects generative function, given
+the symbol to which a type-to-originsignature table is bound for the given world model.
+(This table specifies, for each type, what types of origins objects of that type can have,
+ie. which origin tuples number statements have been provided for.)
+Returns `(expr, fn_name)` where `expr` is the function-defining expression, and `fn_name`
+is the name of the defined function.
+
+This will define 2 generative functions: _type_objects (to get object sets for `TypeObjectSetSpec`s),
+and a function with name `gensym("_objects")` which performs dispatch to specific set getters
+for each type of object set spec.
+"""
 function get_object_set_getter_expressions(origin_sig_table_name)
     fn_name = gensym("_objects")
     expr = quote
@@ -102,6 +130,7 @@ function num_statement_name(spec::OriginConstrainedObjectSetSepc)
 end
 num_statement_name(s::Diffed{<:Any, NoChange}) = Diffed(num_statement_name(strip_diff(s)), NoChange())
 num_statement_name(s::Diffed{<:Any}) = Diffed(num_statement_name(strip_diff(s)), UnknownChange())
+
 @gen (static, diffs) function _constrained_objects(world, spec::OriginConstrainedObjectSetSepc)
     origin_sets ~ Map(lookup_or_generate)(mgfcall_map(world[:_objects], spec.constraints))
     
@@ -114,6 +143,14 @@ num_statement_name(s::Diffed{<:Any}) = Diffed(num_statement_name(strip_diff(s)),
 end
 
 ### add objectset getters to an OUPM DSL expansion ###
+"""
+    add_objectset_getters_to_expansion!(stmts, meta)
+
+Adds expressions to `stmts` needed for object set getting (`@objects`)
+syntax.  Returns the tuple (addr, fnname),
+where `fnname` is the name of a generative function for object set getting,
+which should be memoized at address `addr` in the `UsingWorld` combinator.
+"""
 function add_objectset_getters_to_expansion!(stmts, meta)
     originsig_name = gensym("origin_signatures")
 
