@@ -67,6 +67,13 @@ function _get_origins_with_id_table_updates(world, typename)
     get(world.state.origins_with_id_table_updates, typename, ())
 end
 
+# returns true iff the current variable being updated came from the queue
+# (rather than being from a recursive call)
+function _current_update_came_from_queue(world)
+    currently_updated_variable = peek(world.state.call_stack)
+    return world.call_sort[currently_updated_variable] == world.state.fringe_bottom
+end
+
 #################################
 # Count and dependency tracking #
 #################################

@@ -208,7 +208,7 @@ get_concrete_objs_and_indices(obj::Diffed) = error("not implemented")
 
     # convert origin to abstract
     (concrete_objs, concrete_indices) = get_concrete_objs_and_indices(obj)
-    newly_abstract_objs ~ Map(lookup_or_generate)(mgfcall_map(wrld[:abstract], concrete_objs))
+    newly_abstract_objs ~ map_lookup_or_generate(wrld[:abstract], concrete_objs)
     abstract_origin = substitute_indices(obj.origin, concrete_indices, newly_abstract_objs)
 
     to_lookup_obj::ConcreteIndexAbstractOriginOUPMObject = concrete_index_oupm_object(oupm_type_name(obj), abstract_origin, obj.idx)
@@ -230,7 +230,7 @@ Tuple(v::Diffed) = Diffed(Tuple(strip_diff(v)), UnknownChange())
 @gen (static, diffs) function tuple_idx_to_id_lookup_or_generate(mgf_call)
     tup = key(mgf_call)
     wrld = world(mgf_call)
-    abstract_lst ~ Map(lookup_or_generate)(mgfcall_map(wrld[:abstract], tup))
+    abstract_lst ~ map_lookup_or_generate(wrld[:abstract], tup)
     abstract_tup = Tuple(abstract_lst)
     val ~ lookup_or_generate(wrld[addr(mgf_call)][abstract_tup])
     return val 

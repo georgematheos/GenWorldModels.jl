@@ -1,73 +1,249 @@
-export mgfcall_map, mgfcall_setmap, mgfcall_dictmap
+export map_lookup_or_generate, setmap_lookup_or_generate, nocollision_setmap_lookup_or_generate, dictmap_lookup_or_generate
 
-"""
-    mgfcall_map(memoized_gen_function, keys::AbstractVector)
+###############
+# mgfcall_map #
+###############
 
-Returns an abstract vector containing the MGF call of the given MGF with each key in `keys`.
-This function is useful since it automates some diff propagation; it intuitively functions equivalently to writing
-    
-    [mgf[key] for key in keys]
-"""
-function mgfcall_map(mgf::MemoizedGenerativeFunction, keys)
-    [mgf[key] for key in keys]
+struct MgfCallMapState{K, KI}
+    keys::K
+    keys_to_indices::KI
+end
+struct MgfCallMap <: Gen.CustomUpdateGF{LazyMap, MgfCallMapState} end
+function Gen.apply_with_state(::MgfCallMap, (mgf, keys))
+    (LazyMap(key -> mgf[key], keys), MgfCallMapState(keys, item_to_indices(keys)))
+end
+function Gen.update_with_state(::MgfCallMap, prev_state, (mgf, keys),
+    (mgfdiff, keysdiff)::Tuple{WorldUpdateDiff, VectorDiff}, ::Selection
+)
+    new_keys_to_indices = prev_state.keys_to_indices
+    for (i, diff) in keysdiff
+        new_keys_to_indices = dissoc(new_keys_to_indices, prev_state.keys[i], i)
+        new_keys_to_indices = assoc(new_keys_to_indices, keys[i], i)
+    end
+
+    if _current_update_came_from_queue(world(mgf)) && length(world(mgf).state.diffs) < length(keys)
+        indices_to_diffs =  get_indices_changed_vars_via_diff_scan(Diffed(mgf, mgfdiff), new_keys_to_indices, keysdiff)
+    else
+        indices_to_diffs = get_indices_changed_vars_via_keys_scan(Diffed(mgf, mgfdiff), keys, keysdiff)
+    end
+
+    out_updated = Dict(
+        indices_to_diffs..., (i => KeyChangedDiff(diff) for (i, diff) in keysdiff.updated)...
+    )
+
+    new_diff = VectorDiff(keysdiff.prev_length, keysdiff.new_length, out_updated)
+    new_state = MgfCallMapState(keys, new_keys_to_indices)
+    (new_state, LazyMap(key -> mgf[key], keys), new_diff)
 end
 
-function mgfcall_map(mgf::Diffed{<:MemoizedGenerativeFunction}, keys::Diffed{<:Any, NoChange})
-    k = strip_diff(keys)
-    l = length(k)
-    mgfcall_map(mgf, Diffed(k, VectorDiff(l, l, Dict())))
-end
-function mgfcall_map(mgf::Diffed{<:MemoizedGenerativeFunction}, keys::Diffed{<:Any, VectorDiff})
-    # TODO: for large `keys`, it may be faster to iterate over all diffed items, rather than all keys
-    diffed_vals = [mgf[key] for key in strip_diff(keys)]
-    diffs = map(get_diff, diffed_vals)
-    vals = map(strip_diff, diffed_vals)
-    vdiff = get_diff(keys)
+const mgfcall_map = MgfCallMap()
 
-    changed = Dict{Int, Diff}()
-    for (i, diff) in enumerate(diffs)
-        if diff !== NoChange()
-            changed[i] = diff
+# these functions return a mapping idx -> mgfcalldiff, for each idx which
+# may have a change (if it is valid to call this function), if that idx
+# is not in keys(keysdiff.updated)
+function get_indices_changed_vars_via_keys_scan(diffed_mgf, keys, keysdiff)
+    idx_to_diff = Dict()
+    for (i, key) in enumerate(keys)
+        if haskey(keysdiff.updated, i)
+            continue
+        end
+        mgfcalldiff = get_diff(diffed_mgf[Diffed(keys[i], NoChange())])
+        if mgfcalldiff !== NoChange()
+            idx_to_diff[i] = mgfcalldiff
         end
     end
-    for (i, diff) in vdiff.updated
-        changed[i] = KeyChangedDiff(diff)
+    idx_to_diff
+end
+function get_indices_changed_vars_via_diff_scan(diffed_mgf, keys_to_indices, keysdiff)
+    idx_to_diff = Dict()
+    mgf = strip_diff(diffed_mgf)
+    for (call, diff) in world(mgf).state.diffs
+        if addr(mgf) == addr(call) && haskey(keys_to_indices, key(call))
+            no_keychange_diff = get_diff(diffed_mgf[Diffed(key(call), NoChange())])
+            for i in keys_to_indices[key(call)]
+                if !haskey(keysdiff.updated, i)
+                    idx_to_diff[i] = no_keychange_diff
+                end
+            end
+        end
     end
-
-    Diffed(vals, VectorDiff(vdiff.new_length, vdiff.prev_length, changed))
-end
-function mgfcall_map(mgf::Diffed{<:MemoizedGenerativeFunction}, keys::Diffed{<:Any})
-    Diffed(mgfcall_map(strip_diff(mgf), strip_diff(keys)), UnknownChange())
-end
-
-mgfcall_map(mgf::MemoizedGenerativeFunction, keys::Diffed) = mgfcall_map(Diffed(mgf, NoChange()), keys)
-mgfcall_map(mgf::Diffed{<:MemoizedGenerativeFunction}, keys) = mgfcall_map(mgf, Diffed(keys, NoChange()))
-function mgfcall_map(mgf::Diffed{MemoizedGenerativeFunction, NoChange}, keys::Diffed{<:Any, NoChange})
-    Diffed(mgfcall_map(strip_diff(mgf), strip_diff(keys)), NoChange())
+    idx_to_diff
 end
 
 ##################
 # mgfcall_setmap #
 ##################
-# TODO: try to handle diffs intelligently!
-function mgfcall_setmap(mgf::MemoizedGenerativeFunction, keys)
-    Set(mgf[key] for key in keys)
+struct MgfCallSetMap <: Gen.CustomUpdateGF{LazyBijectionSetMap, Nothing} end
+function Gen.apply_with_state(::MgfCallSetMap, (mgf, keys))
+    (lazy_bijection_set_map(key -> mgf[key], mgfcall -> key(mgfcall), keys), nothing)
+end
+function Gen.update_with_state(::MgfCallSetMap, _, (mgf, keys),
+    (mgfdiff, keysdiff)::Tuple{WorldUpdateDiff, SetDiff}, ::Selection
+)
+    if _current_update_came_from_queue(world(mgf)) && length(world(mgf).state.diffs) < length(keys)
+        diffed_keys =  get_set_changed_vars_via_diff_scan(Diffed(mgf, mgfdiff), keys)
+    else
+        diffed_keys = get_set_changed_vars_via_keys_scan(mgf, keys)
+    end
+
+    added = Set(
+        (mgf[key] for key in Iterators.flatten((keysdiff.added, diffed_keys)))
+    )
+    deleted = Set(
+        (mgf[key] for key in Iterators.flatten((keysdiff.deleted, diffed_keys)))
+    )
+
+    new_diff = SetDiff(added, deleted)
+    (nothing, lazy_bijection_set_map(key -> mgf[key], mgfcall -> key(mgfcall), keys), new_diff)
 end
 
-function mgfcall_setmap(mgf::Diffed{<:MemoizedGenerativeFunction}, keys::Diffed)
-    diff = get_diff(mgf) === NoChange() && get_diff(keys) === NoChange() ? NoChange() : UnknownChange()
-    Diffed(mgfcall_setmap(strip_diff(mgf), strip_diff(keys)), diff)
+const mgfcall_setmap = MgfCallSetMap()
+
+function get_set_changed_vars_via_keys_scan(diffed_mgf, keys)
+    Set(
+        key for key in keys if get_diff(diffed_mgf[Diffed(key, NoChange())]) !== NoChange()
+    )
+end
+function get_set_changed_vars_via_diff_scan(mgf, keys)
+    Set(
+        key(call) for call in keys(world(mgf).state.diffs) if addr(mgf) == addr(call) && key(call) in keys
+    )
 end
 
 ###################
 # mgfcall_dictmap #
 ###################
-# TODO: try to handle diffs intelligently!
-function mgfcall_dictmap(mgf::MemoizedGenerativeFunction, dict)
-    Dict(key => mgf[val] for (key, val) in dict)
+
+struct MgfCallDictMapState{K, KI}
+    key_to_mgfkey::K
+    mgfkey_to_key::KI
+end
+struct MgfCallDictMap <: Gen.CustomUpdateGF{LazyValMapDict, MgfCallDictMapState} end
+function Gen.apply_with_state(::MgfCallDictMap, (mgf, key_to_mgfkey))
+    (lazy_val_map(mgfkey -> mgf[mgfkey], key_to_mgfkey), MgfCallDictMapState(key_to_mgfkey, vals_to_keys(key_to_mgfkey)))
+end
+function Gen.update_with_state(::MgfCallDictMap, prev_state, (mgf, key_to_mgfkey),
+    (mgfdiff, key_to_mgfkey_diff)::Tuple{WorldUpdateDiff, DictDiff}, ::Selection
+)
+    new_mgfkey_to_key = prev_state.mgfkey_to_key
+    for (key, diff) in keys_to_mgfkey_diff.updated
+        new_mgfkey_to_key = dissoc(new_mgfkey_to_key, prev_state.key_to_mgfkey[key], key)
+        new_mgfkey_to_key = assoc(new_mgfkey_to_key, key_to_mgfkey[key], key)
+    end
+
+    if _current_update_came_from_queue(world(mgf)) && length(world(mgf).state.diffs) < length(key_to_mgfkey)
+        keys_to_diffs =  get_keys_changed_vars_via_diff_scan(Diffed(mgf, mgfdiff), new_mgfkey_to_key, keysdiff)
+    else
+        keys_to_diffs = get_keys_changed_vars_via_keys_scan(Diffed(mgf, mgfdiff), keys, keysdiff)
+    end
+
+    out_updated = Dict(
+        keys_to_diffs..., (key => KeyChangedDiff(diff) for (key, diff) in key_to_mgfkey_diff.updated)...
+    )
+
+    new_diff = DictDiff(lazy_val_map(mgfkey -> mgf[mgfkey], key_to_mgfkey_diff.added), key_to_mgfkey_diff.deleted, out_updated)
+    new_state = MgfCallDictMapState(key_to_mgfkey, new_mgfkey_to_key)
+    (new_state, lazy_val_map(mgfkey -> mgfmgf[key], key_to_mgfkey), new_diff)
 end
 
-function mgfcall_dictmap(mgf::Diffed{<:MemoizedGenerativeFunction}, keys::Diffed)
-    diff = get_diff(mgf) === NoChange() && get_diff(keys) === NoChange() ? NoChange() : UnknownChange()
-    Diffed(mgfcall_dictmap(strip_diff(mgf), strip_diff(dict)), diff)
+const mgfcall_dictmap = MgfCallDictMap()
+
+function get_keys_changed_vars_via_keys_scan(diffed_mgf, key_to_mgfkey, keysdiff)
+    key_to_diff = Dict()
+    for (key, mgfkey) in key_to_mgfkey
+        if haskey(keysdiff.updated, key)
+            continue
+        end
+        mgfcalldiff = get_diff(diffed_mgf[Diffed(mgfkey, NoChange())])
+        if mgfcalldiff !== NoChange()
+            key_to_diff[key] = mgfcalldiff
+        end
+    end
+    key_to_diff
+end
+function get_keys_changed_vars_via_diff_scan(diffed_mgf, mgfkey_to_key, keysdiff)
+    key_to_diff = Dict()
+    mgf = strip_diff(diffed_mgf)
+    for (call, diff) in world(mgf).state.diffs
+        if addr(mgf) == addr(call) && haskey(mgfkey_to_key, key(call))
+            no_keychange_diff = get_diff(diffed_mgf[Diffed(key(call), NoChange())])
+            for key in mgfkey_to_key[key(call)]
+                if !haskey(keysdiff.updated, key) && !(key in keysdiff.deleted)
+                    key_to_diff[key] = no_keychange_diff
+                end
+            end
+        end
+    end
+    key_to_diff
+end
+
+####################################################
+# diff propagation for `NoChange`, `UnknownChange` #
+####################################################
+
+### mgfcall_map ###
+function Gen.update_with_state(m::MgfCallMap, prev_state, (mgf, keys),
+    (mgfdiff, vecdiff)::Tuple{WorldUpdateDiff, NoChange}, s::Selection
+)
+    Gen.update_with_state(m, prev_state, (mgf, keys), (mgfdiff, VectorDiff(length(keys), length(keys), Dict())), s)
+end
+function Gen.update_with_state(m::MgfCallMap, prev_state, (mgf, keys),
+    (mgfdiff, vecdiff)::Tuple{<:Diff, <:Diff}, s::Selection
+)
+    retval, state = Gen.apply_with_state(m, (mgf, keys))
+    (state, retval, UnknownChange())
+end
+
+### mgfcall_setmap ###
+function Gen.update_with_state(m::MgfCallSetMap, prev_state, (mgf, keys),
+    (mgfdiff, vecdiff)::Tuple{WorldUpdateDiff, NoChange}, s::Selection
+)
+    Gen.update_with_state(m, prev_state, (mgf, keys), (mgfdiff, SetDiff(Set(), Set())), s)
+end
+function Gen.update_with_state(m::MgfCallSetMap, prev_state, (mgf, keys),
+    (mgfdiff, vecdiff)::Tuple{<:Diff, <:Diff}, s::Selection
+)
+    retval, state = Gen.apply_with_state(m, (mgf, keys))
+    (state, retval, UnknownChange())
+end
+
+### mgfcall_dictmap ###
+function Gen.update_with_state(m::MgfCallDictMap, prev_state, (mgf, keys),
+    (mgfdiff, vecdiff)::Tuple{WorldUpdateDiff, NoChange}, s::Selection
+)
+    Gen.update_with_state(m, prev_state, (mgf, keys), (mgfdiff, DictDiff(Dict(), Set(), Dict())), s)
+end
+function Gen.update_with_state(m::MgfCallDictMap, prev_state, (mgf, keys),
+    (mgfdiff, vecdiff)::Tuple{<:Diff, <:Diff}, s::Selection
+)
+    retval, state = Gen.apply_with_state(m, (mgf, keys))
+    (state, retval, UnknownChange())
+end
+
+###########################################
+# mapped variants of `lookup_or_generate` #
+###########################################
+
+@gen (static, diffs) function map_lookup_or_generate(mgf, keys)
+    mgfcalls ~ mgfcall_map(mgf, keys)
+    vals ~ Map(lookup_or_generate)(mgfcalls)
+    return vals
+end
+
+@gen (static, diffs) function setmap_lookup_or_generate(mgf, keys)
+    mgfcalls ~ mgfcall_setmap(mgf, keys)
+    vals ~ SetMap(lookup_or_generate)(mgfcalls)
+    return vals
+end
+
+@gen (static, diffs) function nocollision_setmap_lookup_or_generate(mgf, keys)
+    mgfcalls ~ mgfcall_setmap(mgf, keys)
+    vals ~ NoCollisionSetMap(lookup_or_generate)(mgfcalls)
+    return vals
+end
+
+@gen (static, diffs) function dictmap_lookup_or_generate(mgf, keys)
+    mgfcalls ~ mgfcall_dictmap(mgf, keys)
+    vals ~ DictMap(lookup_or_generate)(mgfcalls)
+    return vals
 end

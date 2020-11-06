@@ -8,7 +8,7 @@
     sibspecs = ((GenWorldModels.GetOriginsToSiblingSetSpecs)(:Blip, :num_blips))(world, origins)
 
     collected_origins = collect(origins)
-    nums ~ Map(lookup_or_generate)(mgfcall_map(world[:num_blips], collected_origins))
+    nums ~ map_lookup_or_generate(world[:num_blips], collected_origins)
     # blips ~ Map(GetSingleOriginObjectSet(:Blip))(fill(world, length(origins)), collected_origins, nums)
 
     return sibspecs

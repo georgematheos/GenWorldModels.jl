@@ -4,6 +4,8 @@ using Gen
 using FunctionalCollections
 using DataStructures
 
+include("util/setmap.jl")
+
 include("oupm_types.jl") # OUPM objects
 include("oupm_moves.jl") # types for OUPM moves
 

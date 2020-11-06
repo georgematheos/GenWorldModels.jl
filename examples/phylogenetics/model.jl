@@ -42,7 +42,7 @@ end
     #phenotypes ~ SetMap(lookup_or_generate)(mgfcall_map(world[:phenotype], observed_viruses))
 
     observed_viruses ~ get_observed_viruses(world)
-    phenotypes ~ Map(lookup_or_generate)(mgfcall_map(world[:phenotype], observed_viruses))
+    phenotypes ~ map_lookup_or_generate(world[:phenotype], observed_viruses)
 
     # our observations are this return value, which "integrates out" the order of the observed phenotypes
     return Set(phenotypes)

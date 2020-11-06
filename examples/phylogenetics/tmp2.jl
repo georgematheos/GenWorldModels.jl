@@ -15,7 +15,7 @@ end
 end
 @gen (static, diffs) function entity_mention_model(world, num_samples)
     num_objs ~ lookup_or_generate(world[:num_objects][()])
-    abstract_objs ~ Map(lookup_or_generate)(mgfcall_map(world[:abstract], 1:num_objs))
+    abstract_objs ~ map_lookup_or_generate(world[:abstract], 1:num_objs)
     sampled_objs = Map(uniform_from_set)(fill(Set(abstract_objs), num_samples))
     sampled_mentions = Map(sample_mention)(fill(world, num_samples), sampled_objs)
     counts ~ get_emm_counts(sampled_objs, sampled_mentions)
