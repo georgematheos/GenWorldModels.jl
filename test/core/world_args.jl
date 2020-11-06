@@ -1,12 +1,5 @@
 ### diff propagation ###
 
-function Base.:(:)(first::Diffed{Int}, last::Diffed{Int})
-    is_no_change = get_diff(first) === NoChange() && get_diff(last) === NoChange()
-    Diffed(strip_diff(first):strip_diff(last), is_no_change ? NoChange() : UnknownChange())
-end
-Base.:(:)(first::Int, last::Diffed{Int}) = Diffed(first, NoChange()):last
-Base.:(:)(first::Diffed{Int}, last::Int) = first:Diffed(last, NoChange())
-
 function worldmap_args(world, addr::Symbol, itr)
     [world[addr][x] for x in itr]
 end

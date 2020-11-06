@@ -1,5 +1,3 @@
-export map_lookup_or_generate, setmap_lookup_or_generate, nocollision_setmap_lookup_or_generate, dictmap_lookup_or_generate
-
 ###############
 # mgfcall_map #
 ###############
@@ -8,9 +6,9 @@ struct MgfCallMapState{K, KI}
     keys::K
     keys_to_indices::KI
 end
-struct MgfCallMap <: Gen.CustomUpdateGF{LazyMap, MgfCallMapState} end
+struct MgfCallMap <: Gen.CustomUpdateGF{Gen.LazyMap, MgfCallMapState} end
 function Gen.apply_with_state(::MgfCallMap, (mgf, keys))
-    (LazyMap(key -> mgf[key], keys), MgfCallMapState(keys, item_to_indices(keys)))
+    (lazy_map(key -> mgf[key], keys), MgfCallMapState(keys, item_to_indices(keys)))
 end
 function Gen.update_with_state(::MgfCallMap, prev_state, (mgf, keys),
     (mgfdiff, keysdiff)::Tuple{WorldUpdateDiff, VectorDiff}, ::Selection
@@ -73,7 +71,7 @@ end
 ##################
 # mgfcall_setmap #
 ##################
-struct MgfCallSetMap <: Gen.CustomUpdateGF{LazyBijectionSetMap, Nothing} end
+struct MgfCallSetMap <: Gen.CustomUpdateGF{Gen.LazyBijectionSetMap, Nothing} end
 function Gen.apply_with_state(::MgfCallSetMap, (mgf, keys))
     (lazy_bijection_set_map(key -> mgf[key], mgfcall -> key(mgfcall), keys), nothing)
 end
@@ -118,7 +116,7 @@ struct MgfCallDictMapState{K, KI}
     key_to_mgfkey::K
     mgfkey_to_key::KI
 end
-struct MgfCallDictMap <: Gen.CustomUpdateGF{LazyValMapDict, MgfCallDictMapState} end
+struct MgfCallDictMap <: Gen.CustomUpdateGF{Gen.LazyValMapDict, MgfCallDictMapState} end
 function Gen.apply_with_state(::MgfCallDictMap, (mgf, key_to_mgfkey))
     (lazy_val_map(mgfkey -> mgf[mgfkey], key_to_mgfkey), MgfCallDictMapState(key_to_mgfkey, vals_to_keys(key_to_mgfkey)))
 end
@@ -218,32 +216,4 @@ function Gen.update_with_state(m::MgfCallDictMap, prev_state, (mgf, keys),
 )
     retval, state = Gen.apply_with_state(m, (mgf, keys))
     (state, retval, UnknownChange())
-end
-
-###########################################
-# mapped variants of `lookup_or_generate` #
-###########################################
-
-@gen (static, diffs) function map_lookup_or_generate(mgf, keys)
-    mgfcalls ~ mgfcall_map(mgf, keys)
-    vals ~ Map(lookup_or_generate)(mgfcalls)
-    return vals
-end
-
-@gen (static, diffs) function setmap_lookup_or_generate(mgf, keys)
-    mgfcalls ~ mgfcall_setmap(mgf, keys)
-    vals ~ SetMap(lookup_or_generate)(mgfcalls)
-    return vals
-end
-
-@gen (static, diffs) function nocollision_setmap_lookup_or_generate(mgf, keys)
-    mgfcalls ~ mgfcall_setmap(mgf, keys)
-    vals ~ NoCollisionSetMap(lookup_or_generate)(mgfcalls)
-    return vals
-end
-
-@gen (static, diffs) function dictmap_lookup_or_generate(mgf, keys)
-    mgfcalls ~ mgfcall_dictmap(mgf, keys)
-    vals ~ DictMap(lookup_or_generate)(mgfcalls)
-    return vals
 end

@@ -46,7 +46,7 @@ generate_random_noise_dependencies = UsingWorld(random_noise_dep_kernel, :num_in
     @test_throws Exception update(tr, (), (), choicemap(
         (:world => :vals => 3 => :idx, 1),
         (:world => :vals => 2 => :idx, 4)
-    ))
+    ), check_no_constrained_calls_deleted=true)
     new_tr, weight, retdiff, discard = update(tr, (), (), choicemap(
         (:world => :vals => 3 => :idx, 1)
     ))

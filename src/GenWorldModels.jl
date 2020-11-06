@@ -4,7 +4,7 @@ using Gen
 using FunctionalCollections
 using DataStructures
 
-include("util/setmap.jl")
+include("util/setdict.jl")
 
 include("oupm_types.jl") # OUPM objects
 include("oupm_moves.jl") # types for OUPM moves
@@ -16,7 +16,11 @@ include("lookup_or_generate.jl")
 include("address_trees.jl")
 include("using_world.jl")
 
-export lookup_or_generate, UsingWorld, World, mgfcall_map
+export UsingWorld, World
+
+export lookup_or_generate
+export map_lookup_or_generate, setmap_lookup_or_generate
+export nocollision_setmap_lookup_or_generate, dictmap_lookup_or_generate
 
 export to_abstract_repr, to_abstract_repr!, to_concrete_repr
 export convert_to_abstract, concert_to_abstract!, concert_to_concrete

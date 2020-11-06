@@ -2,7 +2,6 @@
 # diff propagation utils #
 ##########################
 
-Base.:(:)(fst::Integer, lst::Diffed{<:Integer, UnknownChange}) = Diffed(fst:strip_diff(lst), UnknownChange())
 concrete_obj_getter(typename, origin) = i -> concrete_index_oupm_object(typename, origin, i)
 function concrete_obj_getter(typename::Diffed{Symbol}, origin::Diffed) 
     Diffed(concrete_obj_getter(strip_diff(typename), strip_diff(origin)), UnknownChange())
@@ -25,7 +24,7 @@ end
 
 @gen (static, diffs) function get_sibling_set_from_num(typename::Symbol, world::World, origin::Tuple, num::Int)
     concrete_objs ~ no_collision_set_map(concrete_obj_getter(typename, origin), 1:num)
-    abstract_objs ~ NoCollisionSetMap(lookup_or_generate)(mgfcall_setmap(world[_get_abstract_addr], concrete_objs))
+    abstract_objs ~ nocollision_setmap_lookup_or_generate(world[_get_abstract_addr], concrete_objs)
     return abstract_objs
 end
 @gen (static, diffs) function _get_sibling_set(spec::SiblingSetSpec)

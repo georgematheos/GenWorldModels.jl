@@ -153,6 +153,13 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
         @test new_tr[:world => :plane_size => Aircraft(2)] == tr[:world => :plane_size => Aircraft(1)]
         @test new_tr[:world => :plane_size => Aircraft(3)] == tr[:world => :plane_size => Aircraft(2)]
 
+        # display(get_choices(tr))
+        println("old ID table: ")
+        display(tr.world.id_table)
+        println("new ID table:")
+        display(new_tr.world.id_table)
+        display(get_choices(new_tr.kernel_tr))
+
         expected_weight = logpdf(poisson, 3, 5) - logpdf(poisson, 2, 5)
         expected_score_diff = expected_weight
         nb1 = new_tr[:world => :num_blips => (Aircraft(1), Timestep(1))]

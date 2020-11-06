@@ -47,6 +47,61 @@ with name `address` in the world, or generate a value for it if none currently e
 struct LookupOrGenerate <: GenerativeFunction{Any, LookupOrGenerateTrace} end
 const lookup_or_generate = LookupOrGenerate()
 
+
+###########################################
+# mapped variants of `lookup_or_generate` #
+###########################################
+
+"""
+    map_lookup_or_generate(world[address], keys::AbstractVector)
+
+Get the (persistent) vector `[~lookup_or_generate(world[address][key]) for key in keys]`. 
+"""
+@gen (static, diffs) function map_lookup_or_generate(mgf, keys)
+    mgfcalls ~ mgfcall_map(mgf, keys)
+    vals ~ Map(lookup_or_generate)(mgfcalls)
+    return vals
+end
+
+"""
+    setmap_lookup_or_generate(world[address], keys::AbstractSet)
+
+Get the multiset `MultiSet(~lookup_or_generate(world[address][key]) for key in keys)`. 
+"""
+@gen (static, diffs) function setmap_lookup_or_generate(mgf, keys)
+    mgfcalls ~ mgfcall_setmap(mgf, keys)
+    vals ~ SetMap(lookup_or_generate)(mgfcalls)
+    return vals
+end
+
+"""
+    nocollision_setmap_lookup_or_generate(world[address], keys::AbstractSet)
+
+Get the (persistent) set `PersistentSet(~lookup_or_generate(world[address][key]) for key in keys)`,
+where it the value of looking up each key is guaranteed to be unique.
+"""
+@gen (static, diffs) function nocollision_setmap_lookup_or_generate(mgf, keys)
+    mgfcalls ~ mgfcall_setmap(mgf, keys)
+    vals ~ NoCollisionSetMap(lookup_or_generate)(mgfcalls)
+    return vals
+end
+
+"""
+    dictmap_lookup_or_generate(world[address], keys::AbstractDict)
+
+Get the (persistent) dictionary `PersistentHashMap(k => ~lookup_or_generate(world[address][v]) for (k, v) in keys)`,
+where it the value of looking up each key is guaranteed to be unique.
+"""
+@gen (static, diffs) function dictmap_lookup_or_generate(mgf, keys)
+    mgfcalls ~ mgfcall_dictmap(mgf, keys)
+    vals ~ DictMap(lookup_or_generate)(mgfcalls)
+    return vals
+end
+
+#####################################
+# lookup_or_generate implementation #
+#####################################
+
 @inline (gen_fn::LookupOrGenerate)(args...) = get_retval(simulate(gen_fn, args))
 
 # since this is a "delta dirac" to just lookup the value in the world, the simulate and generate
@@ -61,6 +116,10 @@ function Gen.generate(gen_fn::LookupOrGenerate, args::Tuple, constraints::Choice
     else
         error("generate(lookup_or_generate, ...) should only be called with empty constraints")
     end
+end
+
+function Gen.generate(gen_fn::LookupOrGenerate, args::Tuple, ::EmptyAddressTree)
+    error("Unrecognized type of argument to `generate(lookup_or_generate)`: ", typeof(args))
 end
 
 function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple, constraints::ChoiceMap, ::Selection)
