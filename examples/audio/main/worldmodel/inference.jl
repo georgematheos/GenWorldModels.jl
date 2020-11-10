@@ -56,7 +56,9 @@ end
   
 function birth_death_inference_iter(tr)
     tr = generic_no_num_change_inference_iter(tr)
+    println("bd kernel:")
     tr, _ = mh(tr, birth_death_mh_kern)
+    println("bd kernel done")
     return tr
 end
 function do_birth_death_inference(tr, iters, record_iter!)
@@ -236,3 +238,5 @@ function do_split_merge_inference(tr, iters, record_iter!)
     end
     return tr
 end
+
+include("smartprop.jl")
