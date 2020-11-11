@@ -18,7 +18,7 @@ end
 
 N_ITERS = 10
 (track, get_acc) = get_acc_tracker(initial_tr)
-inferred_tr = AudioInference.do_smart_bd_inference(initial_tr, N_ITERS, track)
+inferred_tr = AudioInference.do_smart_smbd_inference(initial_tr, N_ITERS, track)
 
 println("Fraction accepted: ", get_acc()/N_ITERS)
 

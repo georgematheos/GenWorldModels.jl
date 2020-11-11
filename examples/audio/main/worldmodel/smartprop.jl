@@ -82,17 +82,17 @@ end
 # noises/tones at different amp/erb values:
 noise_amp_for_col(col) = 1054 + 64*sum(col)
 noisesum_for_amp(amp) = (amp - 1054)/(64)
-# function tone_erb_for_val(x) # whoops, this is the inverse!
-#     if x ≤ 5
-#         9 + 2x
-#     elseif x ≤ 12
-#         19 + (31/7)*(x-5)
-#     elseif x ≤ 15
-#         50 + 3(x-12)
-#     else
-#         60.5
-#     end
-# end
+function pos_for_erb_val(x)
+    if x ≤ 5
+        9 + 2x
+    elseif x ≤ 12
+        19 + (31/7)*(x-5)
+    elseif x ≤ 15
+        50 + 3(x-12)
+    else
+        60.5
+    end
+end
 function tone_erb_for_val(x)
     if x ≤ 19
         0.5(x-9)
@@ -401,11 +401,7 @@ smart_bd_mh_kern = OUPMMHKernel(smart_bd_proposal, (), smart_bd_inv)
 
 function smart_bd_inference_iter(tr)
     tr = generic_no_num_change_inference_iter(tr)
-    println("Beginning smart kernel...")
-    # global ER_AFTER_DEL = nothing
-    # global ANALYSIS = nothing
     tr, _ = mh(tr, smart_bd_mh_kern; check=false)
-    println("smart kernel done.")
     return tr
 end
 function do_smart_bd_inference(tr, iters, record_iter!)
@@ -415,3 +411,5 @@ function do_smart_bd_inference(tr, iters, record_iter!)
     end
     return tr
 end
+
+include("smart_sm.jl")
