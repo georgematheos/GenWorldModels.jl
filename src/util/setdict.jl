@@ -16,7 +16,7 @@ SetDict{K, V}() where {K, V} = SetDict(PersistentHashMap{K, PersistentSet{V}}())
 Base.haskey(sm::SetDict, k) = haskey(sm.map, k)
 Base.iterate(sm::SetDict) = iterate(sm.map)
 Base.iterate(sm::SetDict, st) = iterate(sm.map, st)
-Base.getindex(sm::SetDict, i) = sm.map[i]
+Base.getindex(sm::SetDict{<:Any, V}, i) where V = haskey(sm.map, i) ? sm.map[i] : PersistentSet{V}()
 
 function FunctionalCollections.assoc(sm::SetDict, k, v)
     if haskey(sm.map, k)
