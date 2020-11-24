@@ -93,6 +93,9 @@ function World(addrs::NTuple{n, Symbol}, gen_fns::NTuple{n, Gen.GenerativeFuncti
     World{addrs, typeof(gen_fns), Names}(gen_fns, world_args)
 end
 
+# for testing:
+blank_world() = World((), (), NamedTuple())
+
 # TODO: Could make this more informative by showing what calls it has in it
 function Base.show(io::IO, ::Type{<:World{addrs}}) where {addrs}
     print(io, "World{")
