@@ -128,6 +128,7 @@ struct ConvertValueAddressTree{LeafType, TreeType} <: Gen.AddressTree{LeafType}
     end
 end
 ConvertValueAddressTree(::EmptyAddressTree, ::Function) = EmptyAddressTree()
+ConvertValueAddressTree(s::SelectionLeaf, ::Function) = s
 ConvertValueAddressTree(v::Value, convert::Function) = Value(convert(get_value(v)))
 Gen.get_subtree(c::ConvertValueAddressTree, a) = ConvertValueAddressTree(get_subtree(c.tree, a), c.convert)
 Gen.get_subtrees_shallow(c::ConvertValueAddressTree) = (
