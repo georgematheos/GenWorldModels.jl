@@ -6,18 +6,18 @@ function get_likely_start_end(tr, ch)
     else
         idx = Int(floor(pos_for_erb_val(ch[:erb])))
     end
-    println("onset = ", ch[:onset])
-    println("thresholded (onset + duration)*xsize = ", (min(ch[:onset] + ch[:duration], 1)) * xsize)
-    println("xsize: ", xsize)
+    # println("onset = ", ch[:onset])
+    # println("thresholded (onset + duration)*xsize = ", (min(ch[:onset] + ch[:duration], 1)) * xsize)
+    # println("xsize: ", xsize)
     st = Int(floor(ch[:onset] * xsize))
     nd = Int(floor((min(ch[:onset] + ch[:duration], 1)) * xsize))
-    println("st, end = ", (st, nd))
+    # println("st, end = ", (st, nd))
     row = error_gram(tr)[idx, st:nd]
     if isempty(row)
         return nothing
     end
     regions = get_regions(get_thresholded(row, 0.2))
-    println("regions: ", regions)
+    # println("regions: ", regions)
     if isempty(regions)
         return nothing
     end
@@ -60,10 +60,10 @@ end
             if likelies !== nothing
                 regionsize = size(error_gram(tr))[2]
                 likely_start, likely_end = (likelies[1]/regionsize, likelies[2]/regionsize)
-                println("ls, le are ", likely_start, ", ", likely_end)
+                # println("ls, le are ", likely_start, ", ", likely_end)
                 likely_dur_1 = likely_start - ch[:onset]
                 likely_dur_2 = (ch[:onset] + ch[:duration]) - likely_end
-                println("onset, duration are ", ch[:onset], "; ", ch[:duration])
+                # println("onset, duration are ", ch[:onset], "; ", ch[:duration])
 
                 dur1 ~ shifted_folded_normal(0.1, likely_dur_1, 0.05)
                 dur2 ~ shifted_folded_normal(0.1, likely_dur_2, 0.05)

@@ -1,6 +1,5 @@
 using DSP: conv
 include("../folded_normal.jl")
-
 # get audiograms from traces
 underlying_gram(tr) = AudioInference.get_retval(tr)[1]
 observed_gram(tr) = tr[:kernel => :scene]
@@ -268,7 +267,7 @@ end
     else
         death_idx ~ uniform_discrete(1, tr[:kernel => :n_tones])
 
-        abst = GenWorldModels.convert_to_abstract(tr.world, AudioSource(death_idx))
+        # abst = GenWorldModels.convert_to_abstract(tr.world, AudioSource(death_idx))
 
         is_noise = tr[:world => :waves => AudioSource(death_idx) => :is_noise]
         
@@ -351,6 +350,7 @@ end
             end
         else
             # properties will be regenerated from the prior
+            @regenerate(:world => :waves => src)
         end
 
         # reverse move:
@@ -394,6 +394,7 @@ end
             @save_for_reverse_regenerate(:world => :waves => src)
         end
         @write(bwd[:do_smart], rev_smart, :disc)
+        @write(bwd[:birth_idx], idx, :disc)
     end
 end
 
@@ -413,3 +414,31 @@ function do_smart_bd_inference(tr, iters, record_iter!)
 end
 
 include("smart_sm.jl")
+
+include("drift.jl")
+function smart_bd_drift_inference_iter(tr)
+    tr = drift_inference_iter(tr)
+    tr, _ = mh(tr, smart_bd_mh_kern; check=false)
+    return tr
+end
+function do_smart_bd_drift_inference(tr, iters, record_iter!)
+    for i = 1:iters
+        tr = smart_bd_drift_inference_iter(tr)
+        record_iter!(tr)
+    end
+    return tr
+end
+
+function smart_smbd_drift_inference_iter(tr)
+    tr = drift_inference_iter(tr)
+    tr, _ = mh(tr, smart_bd_mh_kern; check=false)
+    tr, _ = mh(tr, smart_splitmerge_mh_kern; check=false)
+    return tr
+end
+function do_smart_drift_smbd_inference(tr, iters, record_iter!)
+    for i = 1:iters
+        tr = smart_smbd_drift_inference_iter(tr)
+        record_iter!(tr)
+    end
+    return tr
+end
