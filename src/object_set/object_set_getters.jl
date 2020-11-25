@@ -22,6 +22,9 @@ end
 # generative functions for creating object sets #
 #################################################
 
+"""
+    get_sibling_set_from_num(typename::Symbol, world::World, origin::Tuple, num::Int)
+"""
 @gen (static, diffs) function get_sibling_set_from_num(typename::Symbol, world::World, origin::Tuple, num::Int)
     concrete_objs ~ no_collision_set_map(concrete_obj_getter(typename, origin), 1:num)
     abstract_objs ~ nocollision_setmap_lookup_or_generate(world[_get_abstract_addr], concrete_objs)
@@ -32,12 +35,18 @@ end
     objs ~ get_sibling_set_from_num(spec.typename, spec.world, spec.origin, num)
     return objs
 end
+"""
+    get_sibling_set(typename::Symbol, num_address::Symbol, world::World, origin::Tuple)
+"""
 @gen (static, diffs) function get_sibling_set(typename::Symbol, num_address::Symbol, world::World, origin::Tuple)
     spec = GetSiblingSetSpec(typename, num_address)(world, origin)
     objs ~ _get_sibling_set(spec)
     return objs
 end
 
+"""
+    get_origin_iterated_set(typename, num_address, world, origin_sets)
+"""
 @gen (static, diffs) function get_origin_iterated_set(typename, num_address, world, origin_sets)
     all_origins ~ tracked_product_set(origin_sets)
     origins_to_specs = GetOriginsToSiblingSetSpecs(typename, num_address)(world, all_origins)

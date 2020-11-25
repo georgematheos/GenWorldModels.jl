@@ -22,7 +22,7 @@ function FunctionalCollections.assoc(sm::SetDict, k, v)
     if haskey(sm.map, k)
         SetDict(assoc(sm.map, k, push(sm.map[k], v)))
     else
-        SetDict(assoc(sm.map, k, PersistentSet(v)))
+        SetDict(assoc(sm.map, k, PersistentSet([v])))
     end
 end
 function FunctionalCollections.dissoc(sm::SetDict, k, v)
