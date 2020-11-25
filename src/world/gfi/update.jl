@@ -70,7 +70,11 @@ end
 # returns true iff the current variable being updated came from the queue
 # (rather than being from a recursive call)
 function _current_update_came_from_queue(world)
-    currently_updated_variable = peek(world.state.call_stack)
+    if isempty(world.state.call_stack)
+        # In this case, we are updating the kernel, so it is not a recursive call
+        return true
+    end
+    currently_updated_variable = first(world.state.call_stack)
     return world.call_sort[currently_updated_variable] == world.state.fringe_bottom
 end
 

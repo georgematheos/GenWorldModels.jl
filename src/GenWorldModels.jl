@@ -5,6 +5,7 @@ using FunctionalCollections
 using DataStructures
 
 include("util/setdict.jl")
+include("util/unique_value_set.jl")
 
 include("oupm_types.jl") # OUPM objects
 include("oupm_moves.jl") # types for OUPM moves

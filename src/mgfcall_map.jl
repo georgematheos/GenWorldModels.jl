@@ -11,14 +11,15 @@ function Gen.apply_with_state(::MgfCallMap, (mgf, keys))
     (lazy_map(key -> mgf[key], keys), MgfCallMapState(keys, item_to_indices(keys)))
 end
 function Gen.update_with_state(::MgfCallMap, prev_state, (mgf, keys),
-    (mgfdiff, keysdiff)::Tuple{WorldUpdateDiff, VectorDiff}, ::Selection
+    (mgfdiff, keysdiff)::Tuple{WorldUpdateDiff, VectorDiff}
 )
     new_keys_to_indices = prev_state.keys_to_indices
-    for (i, diff) in keysdiff
+    for (i, diff) in keysdiff.updated
         new_keys_to_indices = dissoc(new_keys_to_indices, prev_state.keys[i], i)
         new_keys_to_indices = assoc(new_keys_to_indices, keys[i], i)
     end
 
+    # TODO: make sure we can't have concrete keys before doing diff scan!
     if _current_update_came_from_queue(world(mgf)) && length(world(mgf).state.diffs) < length(keys)
         indices_to_diffs =  get_indices_changed_vars_via_diff_scan(Diffed(mgf, mgfdiff), new_keys_to_indices, keysdiff)
     else
@@ -31,7 +32,7 @@ function Gen.update_with_state(::MgfCallMap, prev_state, (mgf, keys),
 
     new_diff = VectorDiff(keysdiff.prev_length, keysdiff.new_length, out_updated)
     new_state = MgfCallMapState(keys, new_keys_to_indices)
-    (new_state, LazyMap(key -> mgf[key], keys), new_diff)
+    (new_state, lazy_map(key -> mgf[key], keys), new_diff)
 end
 
 const mgfcall_map = MgfCallMap()
@@ -56,6 +57,13 @@ function get_indices_changed_vars_via_diff_scan(diffed_mgf, keys_to_indices, key
     idx_to_diff = Dict()
     mgf = strip_diff(diffed_mgf)
     for (call, diff) in world(mgf).state.diffs
+        # if addr(call) == addr(mgf) || addr(call) = _get_abstract_addr
+        #     # we need to consider all lookups for this specific key, and any lookup which
+        #     # may be converting this key to abstract, to then have its value looked up
+        #     if haskey(keys_to_indices, key(call))
+
+        #     end
+
         if addr(mgf) == addr(call) && haskey(keys_to_indices, key(call))
             no_keychange_diff = get_diff(diffed_mgf[Diffed(key(call), NoChange())])
             for i in keys_to_indices[key(call)]
@@ -68,46 +76,6 @@ function get_indices_changed_vars_via_diff_scan(diffed_mgf, keys_to_indices, key
     idx_to_diff
 end
 
-##################
-# mgfcall_setmap #
-##################
-struct MgfCallSetMap <: Gen.CustomUpdateGF{Gen.LazyBijectionSetMap, Nothing} end
-function Gen.apply_with_state(::MgfCallSetMap, (mgf, keys))
-    (lazy_bijection_set_map(key -> mgf[key], mgfcall -> key(mgfcall), keys), nothing)
-end
-function Gen.update_with_state(::MgfCallSetMap, _, (mgf, keys),
-    (mgfdiff, keysdiff)::Tuple{WorldUpdateDiff, SetDiff}, ::Selection
-)
-    if _current_update_came_from_queue(world(mgf)) && length(world(mgf).state.diffs) < length(keys)
-        diffed_keys =  get_set_changed_vars_via_diff_scan(Diffed(mgf, mgfdiff), keys)
-    else
-        diffed_keys = get_set_changed_vars_via_keys_scan(mgf, keys)
-    end
-
-    added = Set(
-        (mgf[key] for key in Iterators.flatten((keysdiff.added, diffed_keys)))
-    )
-    deleted = Set(
-        (mgf[key] for key in Iterators.flatten((keysdiff.deleted, diffed_keys)))
-    )
-
-    new_diff = SetDiff(added, deleted)
-    (nothing, lazy_bijection_set_map(key -> mgf[key], mgfcall -> key(mgfcall), keys), new_diff)
-end
-
-const mgfcall_setmap = MgfCallSetMap()
-
-function get_set_changed_vars_via_keys_scan(diffed_mgf, keys)
-    Set(
-        key for key in keys if get_diff(diffed_mgf[Diffed(key, NoChange())]) !== NoChange()
-    )
-end
-function get_set_changed_vars_via_diff_scan(mgf, keys)
-    Set(
-        key(call) for call in keys(world(mgf).state.diffs) if addr(mgf) == addr(call) && key(call) in keys
-    )
-end
-
 ###################
 # mgfcall_dictmap #
 ###################
@@ -115,36 +83,68 @@ end
 struct MgfCallDictMapState{K, KI}
     key_to_mgfkey::K
     mgfkey_to_key::KI
+    # this will be false if there are any MGFKeys which are tuples of concrete objects,
+    # or keys which are concrete objects--if the mgf address is not `:abstract`
+    mgfkeytypes_valid_for_diff_scan::Bool
 end
 struct MgfCallDictMap <: Gen.CustomUpdateGF{Gen.LazyValMapDict, MgfCallDictMapState} end
-function Gen.apply_with_state(::MgfCallDictMap, (mgf, key_to_mgfkey))
-    (lazy_val_map(mgfkey -> mgf[mgfkey], key_to_mgfkey), MgfCallDictMapState(key_to_mgfkey, vals_to_keys(key_to_mgfkey)))
+function key_allows_diff_scan(mgf_addr, key)
+    if key isa Tuple{Vararg{<:ConcreteIndexOUPMObject}} || (key isa ConcreteIndexOUPMObject && !(key isa ConcreteIndexAbstractOriginOUPMObject))
+        @warn "A lookup_or_generate_dictmap is being applied to a dictionary with value type $(MGFKeyType) ($key_to_mgfkey), which allows it to include tuples of concrete-index OUPM objects.  As a result, some performance optimizations cannot be applied."
+        return false
+    elseif key isa ConcreteIndexAbstractOriginOUPMObject && mgf_addr != _get_abstract_addr
+        @warn "A lookup_or_generate_dictmap is being applied to a dictionary with value type $(MGFKeyType), which allows it to include concrete-index OUPM object.  As a result, some performance optimizations cannot be applied."
+        return false
+    else
+        return true
+    end
 end
-function Gen.update_with_state(::MgfCallDictMap, prev_state, (mgf, key_to_mgfkey),
-    (mgfdiff, key_to_mgfkey_diff)::Tuple{WorldUpdateDiff, DictDiff}, ::Selection
-)
+function Gen.apply_with_state(::MgfCallDictMap, (mgf, key_to_mgfkey))
+    mgfkeytypes_valid_for_diff_scan = all(
+        key_allows_diff_scan(addr(mgf), mgfkey) for (_, mgfkey) in key_to_mgfkey
+    )
+    (lazy_val_map(mgfkey -> mgf[mgfkey], key_to_mgfkey), MgfCallDictMapState(key_to_mgfkey, vals_to_keys(key_to_mgfkey), mgfkeytypes_valid_for_diff_scan))
+end
+function Gen.update_with_state(::MgfCallDictMap, prev_state, (mgf, key_to_mgfkey)::Tuple{Any, AbstractDict{<:Any, MGFKeyType}},
+    (mgfdiff, key_to_mgfkey_diff)::Tuple{WorldUpdateDiff, DictDiff}
+) where {MGFKeyType}
     new_mgfkey_to_key = prev_state.mgfkey_to_key
-    for (key, diff) in keys_to_mgfkey_diff.updated
+    for (key, diff) in key_to_mgfkey_diff.updated
         new_mgfkey_to_key = dissoc(new_mgfkey_to_key, prev_state.key_to_mgfkey[key], key)
         new_mgfkey_to_key = assoc(new_mgfkey_to_key, key_to_mgfkey[key], key)
     end
 
-    if _current_update_came_from_queue(world(mgf)) && length(world(mgf).state.diffs) < length(key_to_mgfkey)
-        keys_to_diffs =  get_keys_changed_vars_via_diff_scan(Diffed(mgf, mgfdiff), new_mgfkey_to_key, keysdiff)
-    else
-        keys_to_diffs = get_keys_changed_vars_via_keys_scan(Diffed(mgf, mgfdiff), keys, keysdiff)
-    end
+    keys_to_diffs = get_keys_to_diff_dict(mgf, mgfdiff, key_to_mgfkey_diff, prev_state)
 
-    out_updated = Dict(
+    out_updated = Dict{Any, Diff}(
         keys_to_diffs..., (key => KeyChangedDiff(diff) for (key, diff) in key_to_mgfkey_diff.updated)...
     )
 
+    mgfkeytypes_valid_for_diff_scan = prev_state.mgfkeytypes_valid_for_diff_scan && all(
+        key_allows_diff_scan(addr(mgf), mgfkey)
+        for mgfkey in Iterators.flatten((
+            (mgfkey for (_, mgfkey) in key_to_mgfkey_diff.added),
+            (key_to_mgfkey[k] for (k, _) in key_to_mgfkey_diff.updated),
+        ))
+    )
+
     new_diff = DictDiff(lazy_val_map(mgfkey -> mgf[mgfkey], key_to_mgfkey_diff.added), key_to_mgfkey_diff.deleted, out_updated)
-    new_state = MgfCallDictMapState(key_to_mgfkey, new_mgfkey_to_key)
-    (new_state, lazy_val_map(mgfkey -> mgfmgf[key], key_to_mgfkey), new_diff)
+    new_state = MgfCallDictMapState(key_to_mgfkey, new_mgfkey_to_key, mgfkeytypes_valid_for_diff_scan)
+    (new_state, lazy_val_map(mgfkey -> mgf[mgfkey], key_to_mgfkey), new_diff)
 end
 
 const mgfcall_dictmap = MgfCallDictMap()
+
+function get_keys_to_diff_dict(mgf, mgfdiff, key_to_mgfkey_diff, prev_state)
+    key_to_mgfkey = prev_state.key_to_mgfkey; mgfkey_to_key = prev_state.mgfkey_to_key
+    can_do_diff_scan = prev_state.mgfkeytypes_valid_for_diff_scan && _current_update_came_from_queue(world(mgf))
+
+    if can_do_diff_scan && length(world(mgf).state.diffs) < length(key_to_mgfkey)
+        keys_to_diffs =  get_keys_changed_vars_via_diff_scan(Diffed(mgf, mgfdiff), mgfkey_to_key, key_to_mgfkey_diff)
+    else
+        keys_to_diffs = get_keys_changed_vars_via_keys_scan(Diffed(mgf, mgfdiff), key_to_mgfkey, key_to_mgfkey_diff)
+    end
+end
 
 function get_keys_changed_vars_via_keys_scan(diffed_mgf, key_to_mgfkey, keysdiff)
     key_to_diff = Dict()
@@ -159,9 +159,13 @@ function get_keys_changed_vars_via_keys_scan(diffed_mgf, key_to_mgfkey, keysdiff
     end
     key_to_diff
 end
+
+# invariant: if we call this, MGF keys cannot be tuples of concrete index objects
+# and if they are concrete, this must be an `abstract` lookup
 function get_keys_changed_vars_via_diff_scan(diffed_mgf, mgfkey_to_key, keysdiff)
     key_to_diff = Dict()
     mgf = strip_diff(diffed_mgf)
+
     for (call, diff) in world(mgf).state.diffs
         if addr(mgf) == addr(call) && haskey(mgfkey_to_key, key(call))
             no_keychange_diff = get_diff(diffed_mgf[Diffed(key(call), NoChange())])
@@ -181,25 +185,12 @@ end
 
 ### mgfcall_map ###
 function Gen.update_with_state(m::MgfCallMap, prev_state, (mgf, keys),
-    (mgfdiff, vecdiff)::Tuple{WorldUpdateDiff, NoChange}, s::Selection
+    (mgfdiff, vecdiff)::Tuple{WorldUpdateDiff, NoChange}
 )
-    Gen.update_with_state(m, prev_state, (mgf, keys), (mgfdiff, VectorDiff(length(keys), length(keys), Dict())), s)
+    Gen.update_with_state(m, prev_state, (mgf, keys), (mgfdiff, VectorDiff(length(keys), length(keys), Dict())))
 end
 function Gen.update_with_state(m::MgfCallMap, prev_state, (mgf, keys),
-    (mgfdiff, vecdiff)::Tuple{<:Diff, <:Diff}, s::Selection
-)
-    retval, state = Gen.apply_with_state(m, (mgf, keys))
-    (state, retval, UnknownChange())
-end
-
-### mgfcall_setmap ###
-function Gen.update_with_state(m::MgfCallSetMap, prev_state, (mgf, keys),
-    (mgfdiff, vecdiff)::Tuple{WorldUpdateDiff, NoChange}, s::Selection
-)
-    Gen.update_with_state(m, prev_state, (mgf, keys), (mgfdiff, SetDiff(Set(), Set())), s)
-end
-function Gen.update_with_state(m::MgfCallSetMap, prev_state, (mgf, keys),
-    (mgfdiff, vecdiff)::Tuple{<:Diff, <:Diff}, s::Selection
+    (mgfdiff, vecdiff)::Tuple{<:Diff, <:Diff}
 )
     retval, state = Gen.apply_with_state(m, (mgf, keys))
     (state, retval, UnknownChange())
@@ -207,12 +198,12 @@ end
 
 ### mgfcall_dictmap ###
 function Gen.update_with_state(m::MgfCallDictMap, prev_state, (mgf, keys),
-    (mgfdiff, vecdiff)::Tuple{WorldUpdateDiff, NoChange}, s::Selection
+    (mgfdiff, vecdiff)::Tuple{WorldUpdateDiff, NoChange}
 )
-    Gen.update_with_state(m, prev_state, (mgf, keys), (mgfdiff, DictDiff(Dict(), Set(), Dict())), s)
+    Gen.update_with_state(m, prev_state, (mgf, keys), (mgfdiff, DictDiff(Dict(), Set(), Dict{Any, Diff}())))
 end
 function Gen.update_with_state(m::MgfCallDictMap, prev_state, (mgf, keys),
-    (mgfdiff, vecdiff)::Tuple{<:Diff, <:Diff}, s::Selection
+    (mgfdiff, vecdiff)::Tuple{<:Diff, <:Diff}
 )
     retval, state = Gen.apply_with_state(m, (mgf, keys))
     (state, retval, UnknownChange())

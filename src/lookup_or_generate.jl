@@ -23,6 +23,7 @@ for the `UsingWorld` trace to remain valid.
 Gen.get_score(tr::LookupOrGenerateTrace) = 0.
 Gen.get_gen_fn(tr::LookupOrGenerateTrace) = lookup_or_generate
 Gen.project(::LookupOrGenerateTrace, ::EmptySelection) = 0.
+Gen.project(::LookupOrGenerateTrace, ::AllSelection) = 0.
 Gen.project(::LookupOrGenerateTrace, ::Selection) = 0.
 
 """
@@ -64,27 +65,15 @@ Get the (persistent) vector `[~lookup_or_generate(world[address][key]) for key i
 end
 
 """
-    setmap_lookup_or_generate(world[address], keys::AbstractSet)
+#     setmap_lookup_or_generate(world[address], keys::AbstractSet)
 
-Get the multiset `MultiSet(~lookup_or_generate(world[address][key]) for key in keys)`. 
-"""
-@gen (static, diffs) function setmap_lookup_or_generate(mgf, keys)
-    mgfcalls ~ mgfcall_setmap(mgf, keys)
-    vals ~ SetMap(lookup_or_generate)(mgfcalls)
-    return vals
-end
-
-"""
-    nocollision_setmap_lookup_or_generate(world[address], keys::AbstractSet)
-
-Get the (persistent) set `PersistentSet(~lookup_or_generate(world[address][key]) for key in keys)`,
-where it the value of looking up each key is guaranteed to be unique.
-"""
-@gen (static, diffs) function nocollision_setmap_lookup_or_generate(mgf, keys)
-    mgfcalls ~ mgfcall_setmap(mgf, keys)
-    vals ~ NoCollisionSetMap(lookup_or_generate)(mgfcalls)
-    return vals
-end
+# Get the multiset `MultiSet(~lookup_or_generate(world[address][key]) for key in keys)`. 
+# """
+# @gen (static, diffs) function setmap_lookup_or_generate(mgf, keys)
+#     mgfcalls ~ mgfcall_setmap(mgf, keys)
+#     vals ~ SetMap(lookup_or_generate)(mgfcalls)
+#     return vals
+# end
 
 """
     dictmap_lookup_or_generate(world[address], keys::AbstractDict)
@@ -95,6 +84,19 @@ where it the value of looking up each key is guaranteed to be unique.
 @gen (static, diffs) function dictmap_lookup_or_generate(mgf, keys)
     mgfcalls ~ mgfcall_dictmap(mgf, keys)
     vals ~ DictMap(lookup_or_generate)(mgfcalls)
+    return vals
+end
+
+"""
+    nocollision_setmap_lookup_or_generate(world[address], keys::AbstractSet)
+
+Get the (persistent) set `PersistentSet(~lookup_or_generate(world[address][key]) for key in keys)`,
+where it the value of looking up each key is guaranteed to be unique.
+"""
+@gen (static, diffs) function nocollision_setmap_lookup_or_generate(mgf, keys)
+    keydict = lazy_set_to_dict_map(identity, keys)
+    key_to_val ~ dictmap_lookup_or_generate(mgf, keydict)
+    vals ~ unique_value_set(key_to_val)
     return vals
 end
 
@@ -208,6 +210,9 @@ end
 function _simple_valchange_update(tr, args, argdiffs)
     valdiff = argdiffs[1].diff
     new_call = args[1]
+    if !has_val(new_call.world, call(new_call))
+        println("ERROR!  World does not have call ", call(new_call))
+    end
     new_val = get_val(new_call.world, call(new_call))
     new_tr = SimpleLookupOrGenerateTrace(new_call, new_val)
     (new_tr, 0., valdiff, EmptyChoiceMap())

@@ -60,6 +60,8 @@ Base.getindex(mgf::MemoizedGenerativeFunction, key) = MemoizedGenerativeFunction
 # Argdiff propagation for MGF and MGFCall #
 ###########################################
 
+world(mgf::Diffed{<:MemoizedGenerativeFunction, <:Union{NoChange, UnknownChange, WorldUpdateDiff}}) = Diffed(world(strip_diff(mgf)), get_diff(mgf))
+
 struct KeyChangedDiff <: Gen.Diff
     diff::Gen.Diff
 end
