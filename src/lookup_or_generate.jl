@@ -64,11 +64,11 @@ Get the (persistent) vector `[~lookup_or_generate(world[address][key]) for key i
     return vals
 end
 
-"""
-#     setmap_lookup_or_generate(world[address], keys::AbstractSet)
-
-# Get the multiset `MultiSet(~lookup_or_generate(world[address][key]) for key in keys)`. 
 # """
+# #     setmap_lookup_or_generate(world[address], keys::AbstractSet)
+
+# # Get the multiset `MultiSet(~lookup_or_generate(world[address][key]) for key in keys)`. 
+# # """
 # @gen (static, diffs) function setmap_lookup_or_generate(mgf, keys)
 #     mgfcalls ~ mgfcall_setmap(mgf, keys)
 #     vals ~ SetMap(lookup_or_generate)(mgfcalls)
