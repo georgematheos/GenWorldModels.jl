@@ -6,7 +6,7 @@ end
 @gen (static) function observe_samples_sum_kernel(world::World)
     num_samples ~ poisson(5)
     samples ~ Map(lookup_or_generate)([world[:val][Sample(i)] for i=1:num_samples])
-    total = sum(samples)
+    total = reduce(+, samples, init=0.)
     observation ~ normal(total, 1)
     return observation
 end

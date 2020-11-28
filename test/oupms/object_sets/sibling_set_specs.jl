@@ -4,7 +4,9 @@
 @dist num_blips(_, _) = poisson(2)
 @gen (static, diffs) function _get_blip_sib_specs(world)
     aircrafts ~ get_sibling_set(:Aircraft, :num_aircrafts, world, ())
+    a = println("aircrafts: ", aircrafts)
     origins ~ no_collision_set_map(tuple, aircrafts)
+    b = println("origins: ", origins)
     sibspecs = ((GenWorldModels.GetOriginsToSiblingSetSpecs)(:Blip, :num_blips))(world, origins)
 
     collected_origins = collect(origins)
@@ -56,7 +58,7 @@ get_blip_sib_specs = UsingWorld(_get_blip_sib_specs,
     new1 = GenWorldModels.convert_to_abstract(new_tr.world, Aircraft(1))
     new2 = GenWorldModels.convert_to_abstract(new_tr.world, Aircraft(2))
 
-    @test length(retdiff.deleted) == 1 && (olds[3],) === collect(retdiff.deleted)[1]
+    @test length(retdiff.deleted) == 1 && (olds[3],) == collect(retdiff.deleted)[1]
     added_origins = map(x -> x[1], collect(retdiff.added))
     @test length(retdiff.added) == 2 && (new1,) in added_origins && (new2,) in added_origins
     @test length(retdiff.updated) == 0

@@ -281,8 +281,7 @@ function perform_moves_after_splitmerge!(world, moves, abstract_from_objects, ab
         note_origin_change_for_object!(changed_origins, _from)
 
         if _to === nothing
-            # println("removing $_from")
-            world.id_table = dissoc(world.id_table, _from)
+             world.id_table = dissoc(world.id_table, _from)
             push!(abstract_changed, _from)
             continue
         end

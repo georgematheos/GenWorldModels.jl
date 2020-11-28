@@ -26,16 +26,21 @@ function Gen.update_with_state(::UniqueValueSet, st, (dict,), (diff,)::Tuple{Dic
         push!(deleted, st.dict[key])
     end
     for (key, diff) in diff.updated
-        diff === NoChange() && continue
+        (diff === NoChange() || st.dict[key] == dict[key]) && continue
         set = disj(set, st.dict[key])
         push!(deleted, st.dict[key])
         set = push(set, dict[key])
         push!(added, dict[key])
     end
-    for (_, newval) in diff.added
+    for (k, newval) in diff.added
         set = push(set, newval)
-        push!(added, dict[key])
+        push!(added, newval)
     end
+
+    added_and_deleted = intersect(added, deleted)
+    setdiff!(added, added_and_deleted)
+    setdiff!(deleted, added_and_deleted)
+
     (UniqueValueSetState(set, dict), set, SetDiff(added, deleted))
 end
 

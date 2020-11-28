@@ -74,6 +74,7 @@ function Base.getindex(tr::UsingWorldTrace, addr::Pair)
             if e isa KeyError
                 error("No lookup for $(mgf_addr => key) found in the world.")
             else
+                @error "Error occurred while attempting to look up $(mgf_addr => key) in the world:"
                 stacktrace(catch_backtrace())
                 throw(e)
             end

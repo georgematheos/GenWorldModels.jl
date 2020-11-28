@@ -288,14 +288,25 @@ end
     return val 
 end
 
-Tuple(v::Diffed{<:Any, NoChange}) = Diffed(Tuple(strip_diff(v)), NoChange())
-Tuple(v::Diffed) = Diffed(Tuple(strip_diff(v)), UnknownChange())
+make_tuple(x) = Tuple(x)
+function make_tuple(v::Diffed{<:Any, NoChange}) 
+    Diffed(make_tuple(strip_diff(v)), NoChange())
+end
+function make_tuple(v::Diffed{<:Any, <:VectorDiff})
+    diff = length(get_diff(v).updated) > 0 ? UnknownChange() : NoChange()
+    return Diffed(make_tuple(strip_diff(v)), diff)
+end
+function make_tuple(v::Diffed)
+    Diffed(make_tuple(strip_diff(v)), UnknownChange())
+end
 
 @gen (static, diffs) function tuple_idx_to_id_lookup_or_generate(mgf_call)
     tup = key(mgf_call)
     wrld = world(mgf_call)
-    abstract_lst ~ map_lookup_or_generate(wrld[:abstract], tup)
-    abstract_tup = Tuple(abstract_lst)
+    abstract_lst ~ map_lookup_or_generate(wrld[_get_abstract_addr], tup)
+    # b = println("abstract lst: ", abstract_lst)
+    abstract_tup = make_tuple(abstract_lst)
+    # a = println("abstract tup: ", abstract_tup)
     val ~ lookup_or_generate(wrld[addr(mgf_call)][abstract_tup])
     return val 
 end

@@ -33,6 +33,7 @@ end
 function Gen.update_with_state(::MgfCallMap, prev_state, (mgf, keys),
     (mgfdiff, keysdiff)::Tuple{WorldUpdateDiff, VectorDiff}
 )
+
     new_keys_to_indices = prev_state.keys_to_indices
     for (i, diff) in keysdiff.updated
         new_keys_to_indices = dissoc(new_keys_to_indices, prev_state.keys[i], i)
@@ -55,6 +56,17 @@ function Gen.update_with_state(::MgfCallMap, prev_state, (mgf, keys),
 
     new_diff = VectorDiff(keysdiff.prev_length, keysdiff.new_length, out_updated)
     new_state = MgfCallMapState(keys, new_keys_to_indices, mgfkeytypes_valid_for_diff_scan)
+
+    # if addr(mgf) == :abstract
+    #     println(); println()
+    #     println("Updating a map_lookup_or_generate for :abstract of $keys")
+    #     println("indices_to_diffs: $indices_to_diffs")
+    #     println("out_updated: $out_updated")
+    #     println("mgfkeytypes_valid_for_diff_scan: $mgfkeytypes_valid_for_diff_scan")
+    #     println("newdiff: $new_diff")
+    #     println()
+    # end
+
     (new_state, lazy_map(key -> mgf[key], keys), new_diff)
 end
 

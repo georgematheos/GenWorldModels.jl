@@ -1,3 +1,4 @@
+println("NOTE: the following test is expected to raise many warnings.  TODO: hide the warning output.")
 @dist size(::World, ::Aircraft) = exponential(100)
 @dist num_aircrafts_small(::World, ::Tuple{}) = poisson(5)
 @gen (static, diffs) function _map_get_sizes(world)
