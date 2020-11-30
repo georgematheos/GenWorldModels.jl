@@ -16,6 +16,11 @@ wts, = gtg_weights(sr, gtg_params);
 scene_length, steps, sr = (2.0, steps, sr)
 args = (scene_length, steps, sr, wts, gtg_params)
 
+function Base.isapprox(a::Tuple, b::Tuple)
+    length(a) == length(b) && all(isapprox(x, y) for (x, y) in zip(a, b))
+end
+Base.isapprox(a::Symbol, b::Symbol) = a == b
+
 using GenWorldModels
 
 include("worldmodel/model.jl")
