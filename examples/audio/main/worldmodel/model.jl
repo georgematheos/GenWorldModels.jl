@@ -8,6 +8,14 @@ include("../shared_model.jl")
     sr ~ lookup_or_generate(world[:args][:sr])
 
     is_noise ~ bernoulli(0.4)
+
+    # if haskey(world.id_table, source)
+    #     conc ~ lookup_or_generate(world[:concrete][source])
+    #     println("Generating $(is_noise ? "noise" : "tone") for source $conc")
+    # else
+    #     println("In a generate for a source $source without an id table entry")
+    # end
+
     if is_noise
         wave = {*} ~ generate_single_noise(scene_length, steps, sr)
     else
