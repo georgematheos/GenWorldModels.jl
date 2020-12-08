@@ -212,7 +212,7 @@ The update may also overwrite current associations for indices in the range
 function move_all_between(table::IDTable, typename::Symbol, origin::Tuple{Vararg{<:AbstractOUPMObject}}, index_changed, abstract_changed; min=1, inc, max=Inf)
     original_c_to_a = table.concrete_to_abstract
     
-    if !haskey(original_c_to_a.map[typename], origin)
+    if !haskey(original_c_to_a.map, typename) || !haskey(original_c_to_a.map[typename], origin)
         return table
     end
 
