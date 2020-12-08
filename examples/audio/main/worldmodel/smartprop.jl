@@ -1,5 +1,5 @@
 using DSP: conv
-include("../folded_normal.jl")
+include("../distributions.jl")
 # get audiograms from traces
 underlying_gram(tr) = AudioInference.get_retval(tr)[1]
 observed_gram(tr) = tr[:kernel => :scene]
@@ -178,35 +178,20 @@ function overlap((a, b), (c, d))
         return 0
     end
     if d < b
-        return (d - c)
+        return (d - c) + 1
     end
-    return c - b
+    return b - c + 1
 end
-
 # ER_AFTER_DEL = nothing
 # ANALYSIS = nothing
 @dist list_categorical(list, probs) = list[categorical(probs)]
 @gen function smart_bd_proposal(tr)
-    birthprior = tr[:kernel => :n_tones] == 4 ? 0. : 0.5
+    birthprior = tr[:kernel => :n_tones] == 4 ? 0. : (tr[:kernel => :n_tones] == 0 ? 1. : 0.5)
     do_birth ~ bernoulli(birthprior)
     if do_birth
         birth_idx ~ uniform_discrete(1, tr[:kernel => :n_tones] + 1)
 
         (noises_to_add, tones_to_add) = analyze_errorgram(tr)
-
-        # if ER_AFTER_DEL !== nothing
-        #     if !isapprox(error_gram(tr), ER_AFTER_DEL)
-        #         display((error_gram(tr) - ER_AFTER_DEL)[30:50, 100:120])
-        #     end
-        #     println("ISAPPROX: ", isapprox(error_gram(tr), ER_AFTER_DEL), "; isequal: ", (error_gram(tr) == ER_AFTER_DEL))
-        #     if ANALYSIS != (noises_to_add, tones_to_add)
-        #         println("death got ", ANALYSIS, "; birth got ", (noises_to_add, tones_to_add))
-        #     end
-        # else
-        #     println("setting err in birth")
-        #     ER_AFTER_DEL = error_gram(tr)
-        #     ANALYSIS = (noises_to_add, tones_to_add)
-        # end
 
         possibilities = [
             ((:noise, params) for params in noises_to_add)...,
@@ -279,20 +264,6 @@ end
         err_after_deletion = observed_gram(tr) - underlying_gram
 
         (detected_noises, detected_tones) = analyze_gram(err_after_deletion)
-
-        # if ER_AFTER_DEL === nothing
-        #     println("setting err on delete")
-        #     global ER_AFTER_DEL = err_after_deletion
-        #     global ANALYSIS = (detected_noises, detected_tones)
-        # else
-        #     if !isapprox(ER_AFTER_DEL, err_after_deletion)
-        #         display((ER_AFTER_DEL - err_after_deletion)[30:40, 90:110])
-        #     end
-        #     if !((detected_noises, detected_tones) == ANALYSIS)
-        #         println("birth got ", ANALYSIS, "; death got ", (detected_noises, detected_tones))
-        #     end
-        # end
-
 
         if (is_noise && length(detected_noises) == 0) || (!is_noise && length(detected_tones) == 0)
             rev_smart_prior = 0
