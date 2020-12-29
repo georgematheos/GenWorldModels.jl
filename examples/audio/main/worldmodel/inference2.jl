@@ -89,9 +89,10 @@ function drift_smartsmbd_iter(tr)
     return tr
 end
 
-function drift_smartsmbd_inference(tr, iters)
+function drift_smartsmbd_inference(tr, iters, record_iter! = identity)
     for _=1:iters
         tr = drift_smartsmbd_iter(tr)
+        record_iter!(tr)
     end
     return tr
 end

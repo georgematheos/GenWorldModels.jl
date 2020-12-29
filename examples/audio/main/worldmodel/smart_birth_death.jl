@@ -45,27 +45,27 @@ end
 ############
 # Proposal #
 ############
-const SMART_BIRTH_PRIOR = 0.9
-# how often to randomly choose between birth/death, without looking at the scores?
-const PROB_RANDOMLY_CHOOSE_BD = 0.1
-const BIRTH_PRIOR = 0.5
+# const SMART_BIRTH_PRIOR = 0.9
+# # how often to randomly choose between birth/death, without looking at the scores?
+# const PROB_RANDOMLY_CHOOSE_BD = 0.1
+# const BIRTH_PRIOR = 0.5
 
-const TONESIZE = 10 # pixel height of tones in the image, approximately
+# const TONESIZE = 10 # pixel height of tones in the image, approximately
 
-const AMP_STD = 1.0
-const ERB_STD = 0.5
-const ONSET_STD = 0.1
-const DURATION_STD = 0.1
+# const AMP_STD = 1.0
+# const ERB_STD = 0.5
+# const ONSET_STD = 0.1
+# const DURATION_STD = 0.1
 
-const MIN_ERB = 0.4
-const MAX_ERB = 24
-const MIN_ONSET = scenelength -> 0.0
-const MAX_ONSET = scenelength -> scenelength
-const MIN_DURATION = scenelength -> 0.1
-const MAX_DURATION = scenelength -> 1.
-const MAX_NUM_SOURCES = 4
-const MIN_NUM_SOURCES = 0
-const NOISE_PRIOR_PROB = 0.4
+# const MIN_ERB = 0.4
+# const MAX_ERB = 24
+# const MIN_ONSET = scenelength -> 0.0
+# const MAX_ONSET = scenelength -> scenelength
+# const MIN_DURATION = scenelength -> 0.1
+# const MAX_DURATION = scenelength -> 1.
+# const MAX_NUM_SOURCES = 4
+# const MIN_NUM_SOURCES = 0
+# const NOISE_PRIOR_PROB = 0.4
 
 @gen function smart_birth_death_proposal(tr)
     # this may involve untraced randomness
@@ -77,7 +77,7 @@ const NOISE_PRIOR_PROB = 0.4
     birthprior = (birthprior + BIRTH_PRIOR * PROB_RANDOMLY_CHOOSE_BD) / (1 + PROB_RANDOMLY_CHOOSE_BD)
 
     # sample whether to do the birth, factoring in the max and min possible number of objects
-    do_birth ~ bernoulli(get_capped_birth_prior(tr, birthprior))
+    do_birth ~ bernoulli(get_capped_birth_prior(tr, birthprior, birth_to_score))
 
     if do_birth
         do_smart_birth ~ bernoulli(SMART_BIRTH_PRIOR)
@@ -88,6 +88,10 @@ const NOISE_PRIOR_PROB = 0.4
         action_to_score = do_birth ? birth_to_score : death_to_score
 
         type_to_score = get_type_to_score(action_to_score)
+        if isempty(type_to_score)
+            println("Doing a $((do_birth ? "birth" : "death")) and have empty type_to_score!")
+            println("birth_to_score was $birth_to_score")
+        end
         objtype ~ unnormalized_categorical(type_to_score)
 
         action_to_score = Dict(a => s for (a, s) in action_to_score if a.type == objtype)
@@ -310,10 +314,10 @@ function get_type_to_score(action_to_score)
     return tts
 end
 
-function get_capped_birth_prior(tr, prior)
-    if num_sources(tr) >= MAX_NUM_SOURCES
+function get_capped_birth_prior(tr, prior, birth_possibilities)
+    if num_sources(tr) >= MAX_NUM_SOURCES || isempty(birth_possibilities)
         0.
-    elseif num_sources(tr) <= MIN_NUM_SOURCES
+    elseif num_sources(tr) <= MIN_NUM_SOURCES 
         1.
     else
         prior
