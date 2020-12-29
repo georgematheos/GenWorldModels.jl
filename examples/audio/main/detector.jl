@@ -3,15 +3,27 @@ using DSP: conv
 using ImageMorphology: label_components, component_boxes
 using Memoize
 
+const MIN_SOURCE_LENGTH = 10
+
 #######################################
 # Sound detection as image processing #
 #######################################
 
 const SOBEL_FILTER = [
-    -0.2 -0.5 0 0.5 0.2;
-    -0.4 -1.0 0 1.0 0.4;
-    -0.2 -0.5 0 0.5 0.2
+    -0.2 -0.2 -0.2 -0.5 0 0.5 0.2 0.2 0.2;
+    -0.2 -0.2 -0.2 -0.5 0 0.5 0.2 0.2 0.2;
+    -0.2 -0.2 -0.2 -0.5 0 0.5 0.2 0.2 0.2;
+    -0.4  -0.4 -0.4 -1.0 0 1.0 0.4 0.4 0.4;
+    -0.2 -0.2 -0.2 -0.5 0 0.5 0.2 0.2 0.2;
+    -0.2 -0.2 -0.2 -0.5 0 0.5 0.2 0.2 0.2;
+    -0.2 -0.2 -0.2 -0.5 0 0.5 0.2 0.2 0.2;
 ]
+
+# [
+#     -0.2 -0.5 0 0.5 0.2;
+#     -0.4 -1.0 0 1.0 0.4;
+#     -0.2 -0.5 0 0.5 0.2
+# ]
 
 """
     VertSegment(x, ymin, ymax)
@@ -24,6 +36,7 @@ struct VertSegment
     ymax::Int
 end
 startseg(((ymin, xmin), (ymax, xmax))) = VertSegment(xmin, ymin, ymax)
+seglength(s::VertSegment) = s.ymax - s.ymin
 
 """
     get_start_end_segs(gram; threshold=0.3)
@@ -36,13 +49,18 @@ in the filtered image which a pixel must pass to be counted as a detection of an
 function get_start_end_segs(gram; threshold=0.3)
     # apply edge-detector filter which produces vertical bars of negative values
     # at sound-intensity increases, and bars of positive values at sound-intensity decreases
-    edge_img = conv(gram, SOBEL_FILTER)
+    edge_img = try
+        conv(gram, SOBEL_FILTER)
+    catch
+        println("gram: $gram")
+        error()
+    end
 
     # println("edge img max: ", maximum(edge_img))
     # println("edge img min: ", minimum(edge_img))
 
     start_img = edge_img .< minimum(edge_img)*threshold
-    end_img = edge_img .> maximum(edge_img)*threshold
+    end_img = edge_img .> maximum(edge_img)*(threshold * 3/5)
 
     # display(start_img)
 
@@ -81,7 +99,8 @@ Returns all segments in `endsegs` which could be the ending of `startseg`.
 """
 possible_endsegs(startseg, endsegs) = (seg for seg in endsegs if could_end(startseg, seg))
 function could_end(startseg, endseg)
-    endseg.x > startseg.x && overlap((startseg.ymin, startseg.ymax), (endseg.ymin, endseg.ymax)) > 0
+    (endseg.x - startseg.x > MIN_SOURCE_LENGTH && 
+    overlap((startseg.ymin, startseg.ymax), (endseg.ymin, endseg.ymax)) > 0)
 end
 
 """

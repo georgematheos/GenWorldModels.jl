@@ -45,26 +45,26 @@ end
 ############
 # Proposal #
 ############
-# const SMART_BIRTH_PRIOR = 0.9
-# # how often to randomly choose between birth/death, without looking at the scores?
-# const PROB_RANDOMLY_CHOOSE_BD = 0.1
-# const BIRTH_PRIOR = 0.5
+const SMART_BIRTH_PRIOR = 0.9
+# how often to randomly choose between birth/death, without looking at the scores?
+const PROB_RANDOMLY_CHOOSE_BD = 0.1
+const BIRTH_PRIOR = 0.5
 
-# TONESIZE = 10 # pixel height of tones in the image, approximately
+const TONESIZE = 10 # pixel height of tones in the image, approximately
 
-# const AMP_STD = 1.0
-# const ERB_STD = 0.5
-# const ONSET_STD = 0.1
-# const DURATION_STD = 0.1
+const AMP_STD = 1.0
+const ERB_STD = 0.5
+const ONSET_STD = 0.1
+const DURATION_STD = 0.1
 
-# const MIN_ERB = 0.4
-# const MAX_ERB = 24
-# const MIN_ONSET = scenelength -> 0.0
-# const MAX_ONSET = scenelength -> scenelength
-# const MIN_DURATION = scenelength -> 0.1
-# const MAX_DURATION = scenelength -> 1.
-# const MAX_NUM_SOURCES = 4
-# const MIN_NUM_SOURCES = 0
+const MIN_ERB = 0.4
+const MAX_ERB = 24
+const MIN_ONSET = scenelength -> 0.0
+const MAX_ONSET = scenelength -> scenelength
+const MIN_DURATION = scenelength -> 0.1
+const MAX_DURATION = scenelength -> 1.
+const MAX_NUM_SOURCES = 4
+const MIN_NUM_SOURCES = 0
 const NOISE_PRIOR_PROB = 0.4
 
 @gen function smart_birth_death_proposal(tr)
@@ -86,9 +86,6 @@ const NOISE_PRIOR_PROB = 0.4
     # except in a dumb birth move, we need to score our possibilities and select one
     if !do_birth || do_smart_birth
         action_to_score = do_birth ? birth_to_score : death_to_score
-        if any((s < 0 for s in values(action_to_score)))
-            println("Found a negative score!  dobirth = $do_birth")
-        end
 
         type_to_score = get_type_to_score(action_to_score)
         objtype ~ unnormalized_categorical(type_to_score)
@@ -218,20 +215,22 @@ end
 end
 function sample_possible_births(tr, source_indices_to_ignore=Set())
     gram = errorgram_for_tr_without_indices(tr, source_indices_to_ignore)
-    detected_sources = Detector.get_detected_sources(gram; scenelength=scene_length(tr))
+    detected_sources = Detector.get_detected_sources(gram; scenelength=scene_length(tr), threshold=0.5)
     [Birth(source) for source in detected_sources]
 end
 function errorgram_for_tr_without_indices(tr, source_indices_to_ignore)
+    observed_gram(tr) - underlying_gram_for_tr_without_indices(tr, source_indices_to_ignore)
+end
+function underlying_gram_for_tr_without_indices(tr, source_indices_to_ignore)
     if isempty(source_indices_to_ignore)
-        return error_gram(tr)
-    else
-        (scene_length, steps, sr, wts, gtg_params) = get_args(tr)
-        n_samples = Int(floor(scene_length * sr))
-        waves = (tr[:world => :waves => AudioSource(i)] for i=1:tr[:kernel => :n_tones] if !(i in source_indices_to_ignore))
-        underlying_waves_without_deletion = reduce(+, waves; init=zeros(n_samples))
-        underlying_gram, = gammatonegram(underlying_waves_without_deletion, wts, sr, gtg_params)
-        return observed_gram(tr) - underlying_gram
+        return underlying_gram(tr)
     end
+    (scene_length, steps, sr, wts, gtg_params) = get_args(tr)
+    n_samples = Int(floor(scene_length * sr))
+    waves = (tr[:world => :waves => AudioSource(i)] for i=1:tr[:kernel => :n_tones] if !(i in source_indices_to_ignore))
+    underlying_waves_without_deletion = reduce(+, waves; init=zeros(n_samples))
+    gram, = gammatonegram(underlying_waves_without_deletion, wts, sr, gtg_params)
+    gram
 end
 
 function score_possible_deaths(tr)
@@ -245,17 +244,31 @@ end
 
 # used for scoring
 const λ = 2
+DEATH_DISCOUNT = 0.000005
 """
     score(tr, d::Death; threshold=0.3)
 
-This is 1/score(tr, as_birthmove) -- the inverse of the score we would get for birthing this object now.
-(Another way to put it--this is the same score as the birth score, but with improvement measured
-as (num_less_than_threshold - num_greater_than_threshold)/area).
+Score death moves based on the change to the predictive likelihood of the current state after deletion.
 """
+# This is 1/score(tr, as_birthmove) -- the inverse of the score we would get for birthing this object now.
+# (Another way to put it--this is the same score as the birth score, but with improvement measured
+# as (num_less_than_threshold - num_greater_than_threshold)/area).
 function score(tr, d::Death; threshold=0.3)
-    sc = 1/score(tr, birth_for_source_at_idx(tr, d.idx), threshold=threshold)
-    @assert sc >= 0
-    return sc
+    gram = underlying_gram_for_tr_without_indices(tr, Set(d.idx))
+    logsc = logpdf(AI.noisy_matrix, observed_gram(tr), gram, 1.0)
+    exp(λ * DEATH_DISCOUNT * logsc)
+
+    # corresponding_birth = birth_for_source_at_idx(tr, d.idx)
+    # sc = 1/score(tr, corresponding_birth, threshold=threshold)
+    # if (
+    #     corresponding_birth.type === noise && corresponding_birth.amp_or_erb < 0
+    #     || scene_length(tr) - corresponding_birth.onset < 0.1 || corresponding_birth.duration < 0.25
+    # )
+    #     sc += exp(λ/2)
+    # end
+
+    # @assert sc >= 0
+    # return sc
 end
 """
     score(tr, b::Birth; threshold=0.3)
@@ -268,13 +281,13 @@ by the rectangle area, to get a measure of "fraction_improvement"
 The score is e^(λ * improvement).
 """
 function score(tr, b::Birth; threshold=0.3)
-    gram = error_gram(tr)
-    ((miny, minx), (maxy, maxx)) = birth_rect(gram, b, scene_length(tr))
-    gram = @view gram[miny:maxy, max(1,minx):maxx]
-    maxval = maximum(gram)
+    ((miny, minx), (maxy, maxx)) = birth_rect(error_gram(tr), b, scene_length(tr))
+    gram = @view observed_gram(tr)[miny:maxy, max(1,minx):maxx] # note: we used to only use the error gram for everything in this function
+    egram = @view error_gram(tr)[miny:maxy, max(1,minx):maxx]
+    maxval = maximum(error_gram(tr))
     greater_than_threshold = gram .> maxval * threshold
     less_than_threshold = gram .< maxval * threshold
-    area = (maxx - minx) * (maxy - miny)
+    area = (maxx - minx + 1) * (maxy - miny + 1)
     improvement = (sum(greater_than_threshold) - sum(less_than_threshold))/area
     score = exp(λ * improvement)
     @assert score >= 0
