@@ -24,20 +24,13 @@ end
 
 @gen function generate_single_tone(scene_length, step_size, sr)
     step_size = step_size["t"]
-    erb ~ uniform(0.4, 37.0)
+    erb ~ uniform(0.4, 24.0)
     onset ~ uniform(0.0, scene_length)
     duration ~ uniform(0.1, 1.0)
     if duration < 0.1
         println("IMPOSSIBLE! duration < .1")
     end
     times = get_element_gp_times([onset, onset + duration], step_size)
-    # try
-        wave = generate_tone(fill(erb, length(times)), fill(50.0, length(times)), duration, step_size, sr, 1.0e-6)
-        return embed_in_scene(scene_length, sr, wave, onset)
-    # catch e
-    #     println("error found while trying to generate tone for")
-    #     display(fill(erb, length(times)))
-    #     display(fill(50.0, length(times)))
-    #     throw(e)
-    # end
+    wave = generate_tone(fill(erb, length(times)), fill(50.0, length(times)), duration, step_size, sr, 1.0e-6)
+    return embed_in_scene(scene_length, sr, wave, onset)
 end
