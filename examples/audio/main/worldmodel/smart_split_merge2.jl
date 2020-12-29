@@ -38,7 +38,7 @@ end
     )
     splitprob = merge_possible ? (n_tones == 4 ? 0. : 0.5) : 1.
     do_split ~ bernoulli(splitprob)
-                      
+
     if do_split
         solo_idx ~ uniform_discrete(1, n_tones)
         deuce_idx1 ~ uniform_discrete(1, n_tones + 1)
