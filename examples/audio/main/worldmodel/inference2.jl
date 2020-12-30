@@ -70,9 +70,10 @@ function drift_smartbd_iter(tr)
     return tr
 end
 
-function drift_smartbd_inference(tr, iters)
+function drift_smartbd_inference(tr, iters, record_iter! = identity)
     for _=1:iters
         tr = drift_smartbd_iter(tr)
+        record_iter!(tr)
     end
     return tr
 end

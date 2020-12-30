@@ -28,7 +28,9 @@ end
 
 ### BIRTH/DEATH ###
 @gen function birth_death_proposal(tr)
-    do_birth ~ bernoulli(0.5)
+    ntones = tr[:kernel => :n_tones]
+    birthprior = ntones == 0 ? 1. : (ntones == 4 ? 0. : 0.5)
+    do_birth ~ bernoulli(birthprior)
     if do_birth
         idx ~ uniform_discrete(1, tr[:kernel => :n_tones] + 1)
     else
@@ -85,7 +87,7 @@ end
       (length([idx for idx = 1:n_tones if tr[:world => :waves => AudioSource(idx) => :is_noise]]) > 1 ||
         length([idx for idx = 1:n_tones if !tr[:world => :waves => AudioSource(idx) => :is_noise]]) > 1)
     )
-    param = merge_possible ? 0.5 : 1.
+    param = merge_possible ? (n_tones == 4 ? 0. : 0.5) : 1.
     do_split ~ bernoulli(param)
                       
     if do_split
