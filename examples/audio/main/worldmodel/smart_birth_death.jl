@@ -45,27 +45,26 @@ end
 ############
 # Proposal #
 ############
-# const SMART_BIRTH_PRIOR = 0.9
-# # how often to randomly choose between birth/death, without looking at the scores?
-# const PROB_RANDOMLY_CHOOSE_BD = 0.1
-# const BIRTH_PRIOR = 0.5
+ SMART_BIRTH_PRIOR = 0.9
+# how often to randomly choose between birth/death, without looking at the scores?
+ PROB_RANDOMLY_CHOOSE_BD = 0.1
+ BIRTH_PRIOR = 0.5
 
-# const TONESIZE = 10 # pixel height of tones in the image, approximately
 
-# const AMP_STD = 1.0
-# const ERB_STD = 0.5
-# const ONSET_STD = 0.1
-# const DURATION_STD = 0.1
+ AMP_STD = 1.0
+ ERB_STD = 0.5
+ ONSET_STD = 0.1
+ DURATION_STD = 0.1
 
-# const MIN_ERB = 0.4
-# const MAX_ERB = 24
-# const MIN_ONSET = scenelength -> 0.0
-# const MAX_ONSET = scenelength -> scenelength
-# const MIN_DURATION = scenelength -> 0.1
-# const MAX_DURATION = scenelength -> 1.
-# const MAX_NUM_SOURCES = 4
-# const MIN_NUM_SOURCES = 0
-# const NOISE_PRIOR_PROB = 0.4
+ MIN_ERB = 0.4
+ MAX_ERB = 24
+ MIN_ONSET = scenelength -> 0.0
+ MAX_ONSET = scenelength -> scenelength
+ MIN_DURATION = scenelength -> 0.1
+ MAX_DURATION = scenelength -> 1.
+ MAX_NUM_SOURCES = 4
+ MIN_NUM_SOURCES = 0
+ NOISE_PRIOR_PROB = 0.4
 
 @gen function smart_birth_death_proposal(tr)
     # this may involve untraced randomness
