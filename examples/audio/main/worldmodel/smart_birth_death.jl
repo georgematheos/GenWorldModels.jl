@@ -49,7 +49,7 @@ end
 # how often to randomly choose between birth/death, without looking at the scores?
  PROB_RANDOMLY_CHOOSE_BD = 0.1
  BIRTH_PRIOR = 0.5
-
+ TONESIZE = 10
 
  AMP_STD = 1.0
  ERB_STD = 0.5
@@ -130,7 +130,8 @@ end
         b => prob_of_sampling(birth_for_source_at_idx(tr, action.idx), b, scene_length(tr))
         for b in possible_births if b.type == objtype
     )
-    reverse_smart_prior = length(birth_to_score) == 0 ? 0. : SMART_BIRTH_PRIOR
+    
+    reverse_smart_prior = reduce(+, values(birth_to_score), init=0.) == 0 ? 0. : SMART_BIRTH_PRIOR
     reverse_is_smart ~ bernoulli(reverse_smart_prior)
     
     if reverse_is_smart
