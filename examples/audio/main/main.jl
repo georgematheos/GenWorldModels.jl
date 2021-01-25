@@ -16,6 +16,11 @@ wts, = gtg_weights(sr, gtg_params);
 scene_length, steps, sr = (2.0, steps, sr)
 args = (scene_length, steps, sr, wts, gtg_params)
 
+function Base.isapprox(a::Tuple, b::Tuple)
+    length(a) == length(b) && all(isapprox(x, y) for (x, y) in zip(a, b))
+end
+Base.isapprox(a::Symbol, b::Symbol) = a == b
+
 using GenWorldModels
 
 include("worldmodel/model.jl")
@@ -27,6 +32,13 @@ function vis_and_write_wave(tr, title)
     wavwrite(scene_wave/maximum(abs.(scene_wave)), title, Fs=sr)
     plot_gtg(gram, duration, sr, 0, 100)
 end
+function vis_wave(tr)
+    duration, _, sr, = get_args(tr)
+    gram, scene_wave, = get_retval(tr)
+    plot_gtg(gram, duration, sr, 0, 100)
+end
+plot_gtg(gram) = plot_gtg(gram, scene_length, sr, 0, 100)
+
 
 function tones_with_noise(amp)
     cm = choicemap((:kernel => :n_tones) => 3,
@@ -68,7 +80,13 @@ function get_worldmodel_likelihood_time_tracker_and_recorder()
     return (likelihoods, times, record_worldmodel_iter!)
 end
 
-generate_initial_tr(tr) = generate(generate_scene, args, choicemap((:kernel => :scene, tr[:kernel => :scene])))
+function generate_initial_tr(tr; num_sources=nothing)
+    constraints = choicemap((:kernel => :scene, tr[:kernel => :scene]))
+    if num_sources !== nothing
+        constraints[:kernel => :n_tones] = num_sources
+    end
+    generate(generate_scene, args, constraints)
+end
 
 export tones_with_noise, vis_and_write_wave
 export get_worldmodel_likelihood_tracker_and_recorder, generate_initial_tr

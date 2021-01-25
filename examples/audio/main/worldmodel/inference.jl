@@ -28,7 +28,9 @@ end
 
 ### BIRTH/DEATH ###
 @gen function birth_death_proposal(tr)
-    do_birth ~ bernoulli(0.5)
+    ntones = tr[:kernel => :n_tones]
+    birthprior = ntones == 0 ? 1. : (ntones == 4 ? 0. : 0.5)
+    do_birth ~ bernoulli(birthprior)
     if do_birth
         idx ~ uniform_discrete(1, tr[:kernel => :n_tones] + 1)
     else
@@ -56,7 +58,9 @@ end
   
 function birth_death_inference_iter(tr)
     tr = generic_no_num_change_inference_iter(tr)
-    tr, _ = mh(tr, birth_death_mh_kern)
+    # println("bd kernel:")
+    tr, _ = mh(tr, birth_death_mh_kern; check=false)
+    # println("bd kernel done")
     return tr
 end
 function do_birth_death_inference(tr, iters, record_iter!)
@@ -83,7 +87,7 @@ end
       (length([idx for idx = 1:n_tones if tr[:world => :waves => AudioSource(idx) => :is_noise]]) > 1 ||
         length([idx for idx = 1:n_tones if !tr[:world => :waves => AudioSource(idx) => :is_noise]]) > 1)
     )
-    param = merge_possible ? 0.5 : 1.
+    param = merge_possible ? (n_tones == 4 ? 0. : 0.5) : 1.
     do_split ~ bernoulli(param)
                       
     if do_split
@@ -221,10 +225,10 @@ function split_merge_inference_iter(tr; num_sm_per_iter=4)
     tr = generic_no_num_change_inference_iter(tr)
     for _ = 1:num_sm_per_iter
         new_tr, sm_acc = mh(tr, splitmerge_mh_kern; check=false)
-        # if sm_acc && tr[:kernel => :n_tones] != new_tr[:kernel => :n_tones]
-        #     is_split = tr[:kernel => :n_tones] < new_tr[:kernel => :n_tones]
-        #     println("SUCCESSFUL SM MOVE: $(is_split ? "split" : "merge")")
-        # end
+        if sm_acc && tr[:kernel => :n_tones] != new_tr[:kernel => :n_tones]
+            is_split = tr[:kernel => :n_tones] < new_tr[:kernel => :n_tones]
+            # println("SUCCESSFUL SM MOVE: $(is_split ? "split" : "merge")")
+        end
         tr = new_tr
     end
     return tr
@@ -232,6 +236,21 @@ end
 function do_split_merge_inference(tr, iters, record_iter!; num_sm_per_iter=4)
     for i = 1:iters
         tr = split_merge_inference_iter(tr; num_sm_per_iter)
+        record_iter!(tr)
+    end
+    return tr
+end
+
+include("smartprop.jl")
+
+function dumb_birthdeath_drift_inference_iter(tr)
+    tr = drift_inference_iter(tr)
+    tr, _ = mh(tr, birth_death_mh_kern, check=false)
+    return tr
+end
+function do_dumb_birthdeath_drift_inference(tr, iters, record_iter!)
+    for i = 1:iters
+        tr = dumb_birthdeath_drift_inference_iter(tr)
         record_iter!(tr)
     end
     return tr

@@ -172,7 +172,7 @@ end
     events ~ get_sibling_set(:Event, :num_events, world, ())
     stations ~ get_sibling_set_from_num(:Station, world, (), NUM_STATIONS)
     detections ~ get_detections(world, events, stations)
-    observations ~ SetMap(lookup_or_generate)(mgfcall_setmap(world[:get_observation], detections))
+    observations ~ setmap_lookup_or_generate(world[:get_observation], detections)
     return observations
 end
 

@@ -16,8 +16,8 @@ include("core/randomized_dependency_updates.jl")
 include("examples/factorial.jl")
 include("examples/scene_decoration.jl")
 
-# # OUPM functionality testing
-# # a few types used in several test files:
+# OUPM functionality testing
+# a few types used in several test files:
 @type Aircraft
 @type Timestep
 @type Blip
@@ -31,6 +31,9 @@ include("oupms/oupm_involution_dsl.jl")
 include("oupms/object_sets/sibling_set_specs.jl")
 include("oupms/object_sets/origin_iterated_set.jl")
 
-# include("macros.jl)
+include("lookup_or_generate_mapping.jl")
+
+# include("dsl_internals.jl")
+# include("dsl_integration.jl")
 
 end # module

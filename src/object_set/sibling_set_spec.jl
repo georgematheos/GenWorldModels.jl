@@ -65,7 +65,11 @@ GetOriginsToSiblingSetSpecs(tn::Diffed{Symbol, NoChange}, na::Diffed{<:CallAddr,
 function (s::GetOriginsToSiblingSetSpecs)(world::World, origins::AbstractSet)
     # we do the check here instead of during updates since we have to call this
     # to ever perform an update, but we don't want to waste time on the check on every update
-    @assert(cannot_change_retval_due_to_diffs(world, s.num_address, typeof(first(origins))), DIFF_MAY_CAUSE_CHANGE_ERROR_MSG(s))
+    # @assert(cannot_change_retval_due_to_diffs(world, s.num_address, typeof(first(origins))), DIFF_MAY_CAUSE_CHANGE_ERROR_MSG(s))
+    if !cannot_change_retval_due_to_diffs(world, s.num_address, typeof(first(origins)))
+        @warn DIFF_MAY_CAUSE_CHANGE_ERROR_MSG(s)
+        println("WE ARE NOT ERRORING, BUT WE WILL ASSUME THE ABOVE PROPERTY HOLDS.  IF IT DOES NOT, SILENT ERRORS MAY OCCUR.")
+    end
     # TODO: we should use the type from the origins set rather than the type of just one element...
     # unfortunately, types are not being tracked well right now, so this doesn't currently work
 
@@ -73,7 +77,7 @@ function (s::GetOriginsToSiblingSetSpecs)(world::World, origins::AbstractSet)
     lazy_set_to_dict_map(get_spec, origins)
 end
 function (s::GetOriginsToSiblingSetSpecs)(a::Diffed, b::Diffed)
-    error("Not implemented")
+    Diffed(s(strip_diff(a), strip_diff(b)), UnknownChange())
 end
 function (s::GetOriginsToSiblingSetSpecs)(world::Diffed{<:World, WorldUpdateDiff}, origins::Diffed{<:PersistentSet, <:Union{NoChange, SetDiff}})
     origins, origins_diff = strip_diff(origins), get_diff(origins)

@@ -8,6 +8,7 @@ include("../shared_model.jl")
     sr ~ lookup_or_generate(world[:args][:sr])
 
     is_noise ~ bernoulli(0.4)
+
     if is_noise
         wave = {*} ~ generate_single_noise(scene_length, steps, sr)
     else
@@ -17,7 +18,7 @@ include("../shared_model.jl")
 end
 
 @gen (static) function _generate_scene(world, wts, gtg_params)
-    n_tones ~ uniform_discrete(1, 4)
+    n_tones ~ uniform_discrete(0, 4)
     
     scene_duration ~ lookup_or_generate(world[:args][:scene_length])
     audio_sr ~ lookup_or_generate(world[:args][:sr])

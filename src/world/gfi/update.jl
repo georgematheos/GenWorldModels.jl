@@ -67,6 +67,17 @@ function _get_origins_with_id_table_updates(world, typename)
     get(world.state.origins_with_id_table_updates, typename, ())
 end
 
+# returns true iff the current variable being updated came from the queue
+# (rather than being from a recursive call)
+function _current_update_came_from_queue(world)
+    if isempty(world.state.call_stack)
+        # In this case, we are updating the kernel, so it is not a recursive call
+        return true
+    end
+    currently_updated_variable = first(world.state.call_stack)
+    return world.call_sort[currently_updated_variable] == world.state.fringe_bottom
+end
+
 #################################
 # Count and dependency tracking #
 #################################
@@ -499,21 +510,23 @@ is still instantiated in the world after this update.
 function end_update!(world::World, kernel_discard::ChoiceMap, check_constrained_calls_not_deleted)
     update_lookup_counts_according_to_world_discard!(world, world.state.discard)
     update_lookup_counts_according_to_kernel_discard!(world, kernel_discard)
-    retval = (world.state.weight, world.state.discard)
 
     if check_constrained_calls_not_deleted
         check_no_constrained_calls_deleted(world)
     end
 
     if !isempty(world.state.calls_updated_to_unsupported_trace)
-        invalid_calls = collect(world.state.calls_updated_to_unsupported_trace)
-        for call in invalid_calls
-            @error("Choicemap for invalid $call : ", choicemap=get_choices(get_trace(world, invalid_calls[1])))
-        end
-        error("""This update appears to have caused the world to have score -Inf!
-        In particular, the update caused the scores for the traces for calls $invalid_calls
-        to have score -Inf, and these calls were not deleted from the world.
-        """)
+        world.total_score = -Inf
+        world.state.weight = -Inf
+        # invalid_calls = collect(world.state.calls_updated_to_unsupported_trace)
+        # for call in invalid_calls
+        #     @error("Choicemap for invalid $call : ")
+        #     display(get_choices(get_trace(world, invalid_calls[1])))
+        # end
+        # error("""This update appears to have caused the world to have score -Inf!
+        # In particular, the update caused the scores for the traces for calls $invalid_calls
+        # to have score -Inf, and these calls were not deleted from the world.
+        # """)
     end
 
     # I thought about running a check that there are no cycles in the world after the update,
@@ -523,7 +536,8 @@ function end_update!(world::World, kernel_discard::ChoiceMap, check_constrained_
     # but the check during `generate` should already ensure that all `lookup_or_generate`
     # calls are traced, and I think we should assume all generative functions' `update` methods
     # work properly, so I think we don't need this check here
-
+    
+    retval = (world.state.weight, world.state.discard)
     world.state = NoChangeWorldState()
 
     return retval

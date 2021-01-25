@@ -74,12 +74,12 @@ broken_get_total_size3 = UsingWorld(broken_kernel3, :sizes => generate_size)
     @test_throws Exception UsingWorld(kernel, :kernel => generate_size)
     # we should throw an error if we don't use all the constraints we provide to generate
     # TODO: mabe we should change this behavior
-    @test_throws Exception generate(get_total_size, (), choicemap((:kernel => :idx1, 1), (:kernel => :idx2, 2), (:world => :sizes => 3 => :size, 3.05)))
+    @test_throws Exception generate(get_total_size, (), choicemap((:kernel => :idx1, 1), (:kernel => :idx2, 2), (:world => :sizes => 3 => :size, 3.05)), check_all_constraints_used=true)
     
     # test error throwing behavior when we don't trace world accesses properly
-    @test_throws Exception generate(broken_get_total_size1, ())
-    @test_throws Exception generate(broken_get_total_size2, ())
-    @test_throws Exception generate(broken_get_total_size3, ())
+    @test_throws Exception generate(broken_get_total_size1, (), check_proper_usage=true)
+    @test_throws Exception generate(broken_get_total_size2, (), check_proper_usage=true)
+    @test_throws Exception generate(broken_get_total_size3, (), check_proper_usage=true)
 end
 
 @gen (static, diffs) function static_gen_size(world, idx)

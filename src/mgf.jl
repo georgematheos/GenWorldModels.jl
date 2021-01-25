@@ -60,6 +60,8 @@ Base.getindex(mgf::MemoizedGenerativeFunction, key) = MemoizedGenerativeFunction
 # Argdiff propagation for MGF and MGFCall #
 ###########################################
 
+world(mgf::Diffed{<:MemoizedGenerativeFunction, <:Union{NoChange, UnknownChange, WorldUpdateDiff}}) = Diffed(world(strip_diff(mgf)), get_diff(mgf))
+
 struct KeyChangedDiff <: Gen.Diff
     diff::Gen.Diff
 end
@@ -70,10 +72,9 @@ struct ToBeUpdatedDiff <: Gen.Diff end
 
 ### world[addr] diffs ###
 
-no_addr_change_error() = error("Changing the address of a `lookup_or_generate` in updates is not supported.")
-Base.getindex(world::World, addr::Diffed) = no_addr_change_error()
+Base.getindex(world::World, addr::Diffed) = Diffed(world[strip_diff(addr)], UnknownChange())
 Base.getindex(world::World, addr::Diffed{<:Any, NoChange}) = Diffed(world[strip_diff(addr)], NoChange())
-Base.getindex(world::Diffed{<:World}, addr::Diffed) = no_addr_change_error()
+Base.getindex(world::Diffed{<:World}, addr::Diffed) = Diffed(strip_diff(world)[strip_diff(addr)], UnknownChange())
 Base.getindex(world::Diffed{<:World}, addr::Diffed{<:Any, NoChange}) = world[strip_diff(addr)]
 Base.getindex(world::Diffed{<:World, UnknownChange}, addr::CallAddr) = Diffed(strip_diff(world)[addr], UnknownChange())
 Base.getindex(world::Diffed{<:World, NoChange}, addr::CallAddr) = Diffed(strip_diff(world)[addr], NoChange())

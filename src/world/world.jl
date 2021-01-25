@@ -93,6 +93,9 @@ function World(addrs::NTuple{n, Symbol}, gen_fns::NTuple{n, Gen.GenerativeFuncti
     World{addrs, typeof(gen_fns), Names}(gen_fns, world_args)
 end
 
+# for testing:
+blank_world() = World((), (), NamedTuple())
+
 # TODO: Could make this more informative by showing what calls it has in it
 function Base.show(io::IO, ::Type{<:World{addrs}}) where {addrs}
     print(io, "World{")
@@ -149,7 +152,6 @@ function cannot_change_retval_due_to_diffs(world::W, addr::CallAddr, argtype) wh
     gen_fn = get_gen_fn(world, addr)
     # return needs_nonempty_spec_for_output_change(tracetype)
     # return can_statically_guarantee_nochange_on_update(tracetype, Tuple{WorldUpdateDiff, NoChange}, EmptyAddressTree)
-    println("Argtype: $argtype")
     rettype = Core.Compiler.return_type(
         Gen.update,
         Tuple{Gen.get_trace_type(gen_fn), Tuple{W, argtype}, Tuple{WorldUpdateDiff, NoChange}, EmptyAddressTree, AllSelection}

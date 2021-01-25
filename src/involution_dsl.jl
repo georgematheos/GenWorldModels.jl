@@ -781,13 +781,6 @@ function (translator::OUPMMHKernel)(prev_model_trace::Trace; check=false, observ
     # println("  bwd         / fwd   : $backward_proposal_score / $forward_proposal_score")
     # println("  overall weight : $log_weight")
 
-    # if prev_model_trace[:world => :num_relations => ()] == 1
-    #     forward_proposal_choices = get_choices(forward_proposal_trace)
-    #     @assert forward_proposal_choices[:do_split]
-    #     println("split proposal:")
-    #     display(forward_proposal_choices)
-    # end
-
     if check
         Gen.check_observations(get_choices(new_model_trace), observations)
         forward_proposal_choices = get_choices(forward_proposal_trace)

@@ -23,6 +23,7 @@ for the `UsingWorld` trace to remain valid.
 Gen.get_score(tr::LookupOrGenerateTrace) = 0.
 Gen.get_gen_fn(tr::LookupOrGenerateTrace) = lookup_or_generate
 Gen.project(::LookupOrGenerateTrace, ::EmptySelection) = 0.
+Gen.project(::LookupOrGenerateTrace, ::AllSelection) = 0.
 Gen.project(::LookupOrGenerateTrace, ::Selection) = 0.
 
 """
@@ -47,6 +48,62 @@ with name `address` in the world, or generate a value for it if none currently e
 struct LookupOrGenerate <: GenerativeFunction{Any, LookupOrGenerateTrace} end
 const lookup_or_generate = LookupOrGenerate()
 
+
+###########################################
+# mapped variants of `lookup_or_generate` #
+###########################################
+
+"""
+    map_lookup_or_generate(world[address], keys::AbstractVector)
+
+Get the (persistent) vector `[~lookup_or_generate(world[address][key]) for key in keys]`. 
+"""
+@gen (static, diffs) function map_lookup_or_generate(mgf, keys)
+    mgfcalls ~ mgfcall_map(mgf, keys)
+    vals ~ Map(lookup_or_generate)(mgfcalls)
+    return vals
+end
+
+# """
+# #     setmap_lookup_or_generate(world[address], keys::AbstractSet)
+
+# # Get the multiset `MultiSet(~lookup_or_generate(world[address][key]) for key in keys)`. 
+# # """
+# @gen (static, diffs) function setmap_lookup_or_generate(mgf, keys)
+#     mgfcalls ~ mgfcall_setmap(mgf, keys)
+#     vals ~ SetMap(lookup_or_generate)(mgfcalls)
+#     return vals
+# end
+
+"""
+    dictmap_lookup_or_generate(world[address], keys::AbstractDict)
+
+Get the (persistent) dictionary `PersistentHashMap(k => ~lookup_or_generate(world[address][v]) for (k, v) in keys)`,
+where it the value of looking up each key is guaranteed to be unique.
+"""
+@gen (static, diffs) function dictmap_lookup_or_generate(mgf, keys)
+    mgfcalls ~ mgfcall_dictmap(mgf, keys)
+    vals ~ DictMap(lookup_or_generate)(mgfcalls)
+    return vals
+end
+
+"""
+    nocollision_setmap_lookup_or_generate(world[address], keys::AbstractSet)
+
+Get the (persistent) set `PersistentSet(~lookup_or_generate(world[address][key]) for key in keys)`,
+where it the value of looking up each key is guaranteed to be unique.
+"""
+@gen (static, diffs) function nocollision_setmap_lookup_or_generate(mgf, keys)
+    keydict = lazy_set_to_dict_map(identity, keys)
+    key_to_val ~ dictmap_lookup_or_generate(mgf, keydict)
+    vals ~ unique_value_set(key_to_val)
+    return vals
+end
+
+#####################################
+# lookup_or_generate implementation #
+#####################################
+
 @inline (gen_fn::LookupOrGenerate)(args...) = get_retval(simulate(gen_fn, args))
 
 # since this is a "delta dirac" to just lookup the value in the world, the simulate and generate
@@ -61,6 +118,10 @@ function Gen.generate(gen_fn::LookupOrGenerate, args::Tuple, constraints::Choice
     else
         error("generate(lookup_or_generate, ...) should only be called with empty constraints")
     end
+end
+
+function Gen.generate(gen_fn::LookupOrGenerate, args::Tuple, ::EmptyAddressTree)
+    error("Unrecognized type of argument to `generate(lookup_or_generate)`: ", typeof(args))
 end
 
 function Gen.update(tr::LookupOrGenerateTrace, args::Tuple, argdiffs::Tuple, constraints::ChoiceMap, ::Selection)
@@ -149,6 +210,9 @@ end
 function _simple_valchange_update(tr, args, argdiffs)
     valdiff = argdiffs[1].diff
     new_call = args[1]
+    if !has_val(new_call.world, call(new_call))
+        println("ERROR!  World does not have call ", call(new_call))
+    end
     new_val = get_val(new_call.world, call(new_call))
     new_tr = SimpleLookupOrGenerateTrace(new_call, new_val)
     (new_tr, 0., valdiff, EmptyChoiceMap())
@@ -208,7 +272,7 @@ get_concrete_objs_and_indices(obj::Diffed) = error("not implemented")
 
     # convert origin to abstract
     (concrete_objs, concrete_indices) = get_concrete_objs_and_indices(obj)
-    newly_abstract_objs ~ Map(lookup_or_generate)(mgfcall_map(wrld[:abstract], concrete_objs))
+    newly_abstract_objs ~ map_lookup_or_generate(wrld[:abstract], concrete_objs)
     abstract_origin = substitute_indices(obj.origin, concrete_indices, newly_abstract_objs)
 
     to_lookup_obj::ConcreteIndexAbstractOriginOUPMObject = concrete_index_oupm_object(oupm_type_name(obj), abstract_origin, obj.idx)
@@ -224,14 +288,25 @@ end
     return val 
 end
 
-Tuple(v::Diffed{<:Any, NoChange}) = Diffed(Tuple(strip_diff(v)), NoChange())
-Tuple(v::Diffed) = Diffed(Tuple(strip_diff(v)), UnknownChange())
+make_tuple(x) = Tuple(x)
+function make_tuple(v::Diffed{<:Any, NoChange}) 
+    Diffed(make_tuple(strip_diff(v)), NoChange())
+end
+function make_tuple(v::Diffed{<:Any, <:VectorDiff})
+    diff = length(get_diff(v).updated) > 0 ? UnknownChange() : NoChange()
+    return Diffed(make_tuple(strip_diff(v)), diff)
+end
+function make_tuple(v::Diffed)
+    Diffed(make_tuple(strip_diff(v)), UnknownChange())
+end
 
 @gen (static, diffs) function tuple_idx_to_id_lookup_or_generate(mgf_call)
     tup = key(mgf_call)
     wrld = world(mgf_call)
-    abstract_lst ~ Map(lookup_or_generate)(mgfcall_map(wrld[:abstract], tup))
-    abstract_tup = Tuple(abstract_lst)
+    abstract_lst ~ map_lookup_or_generate(wrld[_get_abstract_addr], tup)
+    # b = println("abstract lst: ", abstract_lst)
+    abstract_tup = make_tuple(abstract_lst)
+    # a = println("abstract tup: ", abstract_tup)
     val ~ lookup_or_generate(wrld[addr(mgf_call)][abstract_tup])
     return val 
 end
@@ -380,13 +455,18 @@ end
 # UnknownChange `update` dispatching #
 ######################################
 
+no_addr_change_error(a1, a2) = error("Changing the address of a `lookup_or_generate` in updates is not supported. (Attempt to change from $a1 to $a2.)")
 # If this `lookup_or_generate` call is made from a generative function which doesn't propagate diffs, we'll get an `UnknownChange`.
 # In this case, we should manually propagate the diff information so we can dispatch to the correct update behavior.
 function Gen.update(tr::LookupOrGenerateTrace, args::Tuple{<:MemoizedGenerativeFunctionCall}, ::Tuple{UnknownChange}, ::EmptyAddressTree, s::Selection)
     old_call = get_args(tr)[1]
+    new_call = args[1]
+
+    if addr(old_call) != addr(new_call)
+        no_addr_change_error(addr(old_call), addr(new_call))
+    end
 
     old_key = key(old_call)
-    new_call = args[1]
     new_key = key(new_call)
     keydiff = old_key == new_key ? NoChange() : UnknownChange()
     diffed_key = Diffed(new_key, keydiff)

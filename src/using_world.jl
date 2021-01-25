@@ -74,6 +74,7 @@ function Base.getindex(tr::UsingWorldTrace, addr::Pair)
             if e isa KeyError
                 error("No lookup for $(mgf_addr => key) found in the world.")
             else
+                @error "Error occurred while attempting to look up $(mgf_addr => key) in the world:"
                 stacktrace(catch_backtrace())
                 throw(e)
             end
@@ -154,7 +155,7 @@ function (gen_fn::UsingWorld)(args...)
     retval
 end
 
-function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; check_proper_usage=true, check_all_constraints_used=true)
+function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; check_proper_usage=false, check_all_constraints_used=false)
     world_args, kernel_args = extract_world_args(gen_fn, args)
 
     world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
@@ -174,7 +175,7 @@ function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; c
     (tr, weight)
 end
 
-function Gen.simulate(gen_fn::UsingWorld, args::Tuple; check_proper_usage=true, check_all_constraints_used=true)
+function Gen.simulate(gen_fn::UsingWorld, args::Tuple; check_proper_usage=false, check_all_constraints_used=false)
     world_args, kernel_args = extract_world_args(gen_fn, args)
 
     world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)
@@ -274,13 +275,13 @@ end
 # TODO: these kwargs won't usually propagate through multiple update calls as is
 @inline function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
     spec::Gen.UpdateSpec, externally_constrained_addrs::Selection;
-    check_no_constrained_calls_deleted=true
+    check_no_constrained_calls_deleted=false
 )
     _update(tr, args, argdiffs, spec, (), externally_constrained_addrs, check_no_constrained_calls_deleted)
 end
 @inline function Gen.update(tr::UsingWorldTrace, args::Tuple, argdiffs::Tuple,
     spec::UpdateWithOUPMMovesSpec, externally_constrained_addrs::Selection;
-    check_no_constrained_calls_deleted=true
+    check_no_constrained_calls_deleted=false
 )
     (new_tr, weight, retdiff, discard) = _update(tr, args, argdiffs, spec.subspec, spec.moves, externally_constrained_addrs, check_no_constrained_calls_deleted)
     reverse_update_spec = UpdateWithOUPMMovesSpec(reverse_moves(spec.moves), discard)
