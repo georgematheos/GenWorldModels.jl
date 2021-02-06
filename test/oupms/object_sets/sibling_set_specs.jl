@@ -36,8 +36,8 @@ get_blip_sib_specs = UsingWorld(_get_blip_sib_specs,
     @test all(origin isa Tuple{AbstractOUPMObject{:Aircraft}} for origin in origins)
     @test all(get_retval(tr)[origin] == GenWorldModels.SiblingSetSpec(:Blip, :num_blips, tr.world, origin) for origin in origins)
 
-    spec = GenWorldModels.UpdateWithOUPMMovesSpec(
-        (SplitMove(Aircraft(3), 1, 2, (
+    spec = GenWorldModels.WorldUpdate(
+        (Split(Aircraft(3), 1, 2, (
             # Blip((Aircraft(3),), 1) => Blip((Aircraft(1),), 1),
             # Blip((Aircraft(3),), 2) => Blip((Aircraft(2),), 2),
             # Blip((Aircraft(3),), 3) => Blip((Aircraft(2),), 1)

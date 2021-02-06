@@ -48,9 +48,9 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
 
     @testset "movemove" begin
         tr, _ = generate(get_blip_sizes_at_times, ([1, 2],), constraints)
-        spec = UpdateWithOUPMMovesSpec(
+        spec = WorldUpdate(
             (
-                MoveMove(
+                Move(
                     Blip((Aircraft(2), Timestep(1)), 1),
                     Blip((Aircraft(2), Timestep(2)), 1)
                 ),
@@ -84,8 +84,8 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
         @test isapprox(weight, expected_score_diff)
         @test isapprox(get_score(new_tr) - get_score(tr), expected_score_diff)
 
-        @test rev isa UpdateWithOUPMMovesSpec
-        @test rev.moves == (MoveMove(Blip((Aircraft(2), Timestep(2)), 1), Blip((Aircraft(2), Timestep(1)), 1)),)
+        @test rev isa WorldUpdate
+        @test rev.moves == (Move(Blip((Aircraft(2), Timestep(2)), 1), Blip((Aircraft(2), Timestep(1)), 1)),)
         @test rev.subspec == choicemap(
             (:world => :num_blips => (Aircraft(2), Timestep(1)) => :num, 1),
             (:world => :num_blips => (Aircraft(2), Timestep(2)) => :num, 1)
@@ -96,9 +96,9 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
         tr, _ = generate(get_blip_sizes_at_times, ([1, 2],), constraints)
 
         # birth of object with no origins
-        spec = UpdateWithOUPMMovesSpec(
+        spec = WorldUpdate(
             (
-                BirthMove(Blip((Aircraft(2), Timestep(1)), 1),),
+                Create(Blip((Aircraft(2), Timestep(1)), 1),),
             ),
             choicemap(
                 (:world => :num_blips => (Aircraft(2), Timestep(1)) => :num, 2),
@@ -122,14 +122,14 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
 
         @test isapprox(weight, expected_weight)
         @test isapprox(get_score(new_tr) - get_score(tr), expected_score_diff)
-        @test rev isa UpdateWithOUPMMovesSpec
-        @test rev.moves == (DeathMove(Blip((Aircraft(2), Timestep(1)), 1)),)
+        @test rev isa WorldUpdate
+        @test rev.moves == (Delete(Blip((Aircraft(2), Timestep(1)), 1)),)
         @test rev.subspec == choicemap((:world => :num_blips => (Aircraft(2), Timestep(1)) => :num, 1),)
 
         # birth of object with origins
-        spec = UpdateWithOUPMMovesSpec(
+        spec = WorldUpdate(
             (
-                BirthMove(Aircraft(1),),
+                Create(Aircraft(1),),
             ),
             choicemap(
                 (:world => :num_aircrafts => () => :num, 3),
@@ -175,8 +175,8 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
         @test isapprox(get_score(new_tr) - get_score(tr), expected_score_diff)
         @test isapprox(weight, expected_weight)
         
-        @test rev isa UpdateWithOUPMMovesSpec
-        @test rev.moves == (DeathMove(Aircraft(1)),)
+        @test rev isa WorldUpdate
+        @test rev.moves == (Delete(Aircraft(1)),)
         @test rev.subspec == choicemap((:world => :num_aircrafts => () => :num, 2))
     end
 
@@ -184,9 +184,9 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
         tr, _ = generate(get_blip_sizes_at_times, ([1, 2],), constraints)
 
         # death of object with no origins
-        spec = UpdateWithOUPMMovesSpec(
+        spec = WorldUpdate(
             (
-                DeathMove(Blip((Aircraft(2), Timestep(1)), 1),),
+                Delete(Blip((Aircraft(2), Timestep(1)), 1),),
             ),
             choicemap(
                 (:world => :num_blips => (Aircraft(2), Timestep(1)) => :num, 0),
@@ -202,8 +202,8 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
 
         @test isapprox(weight, expected_weight)
         @test isapprox(get_score(new_tr) - get_score(tr), expected_weight)
-        @test rev isa UpdateWithOUPMMovesSpec
-        @test rev.moves == (BirthMove(Blip((Aircraft(2), Timestep(1)), 1)),)
+        @test rev isa WorldUpdate
+        @test rev.moves == (Create(Blip((Aircraft(2), Timestep(1)), 1)),)
         @test rev.subspec == choicemap(
             (:world => :blip_size => Blip((Aircraft(2), Timestep(1)), 1) => :blip_size, size),
             (:world => :num_blips => (Aircraft(2), Timestep(1)) => :num, 1)
@@ -211,9 +211,9 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
 
         # this should delete Aircraft(1) and all blips it is an origin for; it should move down Aircraft(2) to Aircraft(1)
         # and have all the blips with Aircraft(1) as origin adjust down
-        spec = UpdateWithOUPMMovesSpec(
+        spec = WorldUpdate(
             (
-                DeathMove(Aircraft(1)),
+                Delete(Aircraft(1)),
             ),
             choicemap(
                 (:world => :num_aircrafts => () => :num, 1),
@@ -260,8 +260,8 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
         @test get_choices(new_tr2) == get_choices(new_tr)
 
         @test rev == rev2
-        @test rev isa UpdateWithOUPMMovesSpec
-        @test rev.moves == (BirthMove(Aircraft(1)),)
+        @test rev isa WorldUpdate
+        @test rev.moves == (Create(Aircraft(1)),)
 
         @test rev.subspec == discarded_vals
     end
@@ -281,9 +281,9 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
         tr, _ = generate(get_blip_sizes_at_times, ([1, 2],), sm_constraints)
 
         # birth of object with no origins
-        spec = UpdateWithOUPMMovesSpec(
+        spec = WorldUpdate(
             (
-                SplitMove(
+                Split(
                     Blip((Aircraft(2), Timestep(1)), 2),
                     1, 2
                 ),
@@ -310,8 +310,8 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
         @test isapprox(get_score(new_tr) - get_score(tr), expected_score_diff)
         @test isapprox(weight, logpdf(poisson, 4, 1) - logpdf(poisson, 3, 1))
 
-        @test rev isa UpdateWithOUPMMovesSpec
-        @test rev.moves == (MergeMove(Blip((Aircraft(2), Timestep(1)), 2), 1, 2),)
+        @test rev isa WorldUpdate
+        @test rev.moves == (Merge(Blip((Aircraft(2), Timestep(1)), 2), 1, 2),)
         @test rev.subspec == choicemap(
             (:world => :blip_size => Blip((Aircraft(2), Timestep(1)), 2) => :blip_size, tr[:world => :blip_size => Blip((Aircraft(2), Timestep(1)), 2)]),
             (:world => :num_blips => AT(2, 1) => :num, 3)
@@ -323,9 +323,9 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
             Blp(2, 1, 3) => Blp(3, 1, 1),
             Blp(2, 2, 1) => Blp(3, 2, 1)
         )
-        spec = UpdateWithOUPMMovesSpec(
+        spec = WorldUpdate(
             (
-                SplitMove(
+                Split(
                     Aircraft(2),
                     1, 3;
                     moves=moves
@@ -409,9 +409,9 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
         meanbsize = (oldbsize1 + oldbsize3)/2.
 
         # merge of object with no origins
-        spec = UpdateWithOUPMMovesSpec(
+        spec = WorldUpdate(
             (
-                MergeMove(
+                Merge(
                     Blip((Aircraft(2), Timestep(1)), 2),
                     1, 3
                 ),
@@ -440,7 +440,7 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
         @test isapprox(get_score(new_tr) - get_score(tr), expected_weight)
 
         @test rev.moves == (
-            SplitMove(Blp(2, 1, 2), 1, 3),
+            Split(Blp(2, 1, 2), 1, 3),
         )
 
         @test rev.subspec == choicemap(
@@ -461,9 +461,9 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
             Blp(1, 2, 1) => Blp(1, 2, 2),
             Blp(2, 2, 1) => Blp(1, 2, 1)
         )
-        spec = UpdateWithOUPMMovesSpec(
+        spec = WorldUpdate(
             (
-                MergeMove(
+                Merge(
                     Aircraft(1),
                     1, 2;
                     moves=moves
@@ -513,7 +513,7 @@ get_blip_sizes_at_times = UsingWorld(_get_blip_sizes_at_times,
         @test isapprox(weight, expected_score_diff)
 
         @test rev.moves == (
-            SplitMove(
+            Split(
                 Aircraft(1),
                 1, 2;
                 moves=map(x -> (x.second => x.first), moves)

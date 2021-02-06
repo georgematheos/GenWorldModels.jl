@@ -1,6 +1,7 @@
 module GenWorldModels
 
 using Gen
+using GenTraceKernelDSL
 using FunctionalCollections
 using DataStructures
 
@@ -27,17 +28,12 @@ export to_abstract_repr, to_abstract_repr!, to_concrete_repr
 export convert_to_abstract, concert_to_abstract!, concert_to_concrete
 export values_to_abstract, values_to_abstract!, values_to_concrete
 
-include("involution_dsl.jl")
-
 include("object_set/object_set.jl")
 include("dict_map.jl")
 
-include("dsl/modeling_dsl.jl")
+# include("dsl/modeling_dsl.jl")
 export @oupm
+export @kernel, MHProposal # from GenTraceKernelDSL
 
 @load_generated_functions()
-
-# # don't export the macros; users can import them if needed
-# include("macros.jl")
-
 end

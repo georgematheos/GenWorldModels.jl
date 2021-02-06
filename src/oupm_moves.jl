@@ -1,54 +1,122 @@
 abstract type OUPMMove end
 
-struct MoveMove{T} <: OUPMMove
+"""
+    Move(from::ConcreteIndexOUPMObject, to::ConcreteIndexOUPMObject)
+
+An object manipulation move from `from` to `to`.
+"""
+struct Move{T} <: OUPMMove
     from::ConcreteIndexOUPMObject{T}
     to::ConcreteIndexOUPMObject{T}
 end
 
-struct BirthMove{T} <: OUPMMove
-    obj::ConcreteIndexOUPMObject{T}
-end
-struct DeathMove{T} <: OUPMMove
+"""
+    Create(object::ConcreteIndexOUPMObject)
+
+An object manipulation move to create a new object with the given type, index, and origin.
+"""
+struct Create{T} <: OUPMMove
     obj::ConcreteIndexOUPMObject{T}
 end
 
-struct SplitMove{T} <: OUPMMove
+"""
+    Delete(object::ConcreteIndexOUPMObject)
+
+An object manipulation move to create a new object with the given type, index, and origin.
+"""
+struct Delete{T} <: OUPMMove
+    obj::ConcreteIndexOUPMObject{T}
+end
+
+"""
+    Split(from::ConcreteIndexOUPMObject, to_idx_1::Integer, to_idx_2::Integer; moves=())
+
+An object manipulation move to split `from` into 2 objects with indices `to_idx_1` and `to_idx_2`.
+`moves` is a tuple of pairs `prev => new`, where `prev` is an object which had `from` as an origin,
+and `new` is a new object of the same type of `prev` with the new origin and index `prev` should be given.
+`new` may also be `nothing` if `prev` should be deleted.
+"""
+struct Split{T} <: OUPMMove
     from::ConcreteIndexOUPMObject{T}
     to_idx_1::Int
     to_idx_2::Int
     moves::Tuple{Vararg{<:Pair{<:ConcreteIndexOUPMObject, <:Union{Nothing, <:ConcreteIndexOUPMObject}}}}
 end
-SplitMove(from, to_idx_1, to_idx_2; moves=()) = SplitMove(from, to_idx_1, to_idx_2, moves)
-struct MergeMove{T} <: OUPMMove
+Split(from, to_idx_1, to_idx_2; moves=()) = Split(from, to_idx_1, to_idx_2, moves)
+
+"""
+    Merge(to::ConcreteIndexOUPMObject, from_idx_1, from_idx_2; moves=())
+
+An object manipulation move to merge the objects with the type and origin of `to` at indices
+`from_idx_1` and `from_idx_2` to the index of `to`.
+
+`moves` is a tuple of pairs `prev => new`, where `prev` is an object which had one of the objects being merged
+ as an origin, and `new` is a new object of the same type of `prev` with the new origin and index `prev`
+ should be given.
+`new` may also be `nothing` if `prev` should be deleted.
+"""
+struct Merge{T} <: OUPMMove
     to::ConcreteIndexOUPMObject{T}
     from_idx_1::Int
     from_idx_2::Int
     moves::Tuple{Vararg{<:Pair{<:ConcreteIndexOUPMObject, <:Union{Nothing, <:ConcreteIndexOUPMObject}}}}
 end
-MergeMove(to, from_idx_1, from_idx_2; moves=()) = MergeMove(to, from_idx_1, from_idx_2, moves)
+Merge(to, from1, from2; moves=()) = Merge(to, from1, from2, moves)
 
-struct UpdateWithOUPMMovesSpec <: Gen.CustomUpdateSpec
+"""
+    WorldUpdate(object_moves::Tuple{Vararg{<:OUPMMove}}, subspec)
+    WorldUpdate(object_moves..., subspec)
+    WorldUpdate(object_moves...)
+
+An update specification for a `UsingWorld` trace which applies the given
+`object_moves` in order, then updates the trace via the given `subspec`.
+If no `subspec` is provided, the update only performs the given object manipulation moves.
+"""
+struct WorldUpdate <: Gen.CustomUpdateSpec
     moves::Tuple{Vararg{<:OUPMMove}}
     subspec::Gen.UpdateSpec
+    WorldUpdate(moves::Tuple{Vararg{<:OUPMMove}}, subspec) = new(moves, subspec)
+end
+function WorldUpdate(args...)
+    if args[end] isa Gen.AddressTree
+        WorldUpdate(args[1:end-1], args[end])
+    else
+        WorldUpdate(args, EmptyAddressTree())
+    end
 end
 
-export MoveMove, BirthMove, DeathMove, SplitMove, MergeMove
-export UpdateWithOUPMMovesSpec
+function GenTraceKernelDSL.undualize(spec::WorldUpdate)
+    WorldUpdate(spec.moves, GenTraceKernelDSL.undualize(spec.subspec))
+end
+function GenTraceKernelDSL.incorporate_regenerate_constraints!(
+    spec::WorldUpdate, trace_choices::ChoiceMap, reverse_regenerated::Selection
+)
+    WorldUpdate(
+        spec.moves,
+        GenTraceKernelDSL.incorporate_regenerate_constraints!(spec.subspec, trace_choices, reverse_regenerated)
+    )
+end
+function GenTraceKernelDSL.dualized_values(spec::WorldUpdate)
+    GenTraceKernelDSL.dualized_values(spec.subspec)
+end
+
+export Create, Delete, Split, Merge, Move
+export WorldUpdate
 
 function reverse_moves(moves::Tuple{Vararg{<:OUPMMove}})
     Tuple(reverse_move(moves[j]) for j=length(moves):-1:1)
 end
 
-reverse_move(m::MoveMove) = MoveMove(m.to, m.from)
-reverse_move(m::BirthMove) = DeathMove(m.obj)
-reverse_move(m::DeathMove) = BirthMove(m.obj)
-function reverse_move(m::SplitMove)
+reverse_move(m::Move) = Move(m.to, m.from)
+reverse_move(m::Create) = Delete(m.obj)
+reverse_move(m::Delete) = Create(m.obj)
+function reverse_move(m::Split)
     revmoves = map(swappair, filter(x -> x[2] !== nothing, m.moves))
-    MergeMove(m.from, m.to_idx_1, m.to_idx_2, revmoves)
+    Merge(m.from, m.to_idx_1, m.to_idx_2, revmoves)
 end
-function reverse_move(m::MergeMove)
+function reverse_move(m::Merge)
     revmoves = map(swappair, filter(x -> x[2] !== nothing, m.moves))
-    SplitMove(m.to, m.from_idx_1, m.from_idx_2, revmoves)
+    Split(m.to, m.from_idx_1, m.from_idx_2, revmoves)
 end
 
 swappair((x, y)) = y => x

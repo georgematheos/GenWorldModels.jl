@@ -34,9 +34,9 @@ get_all_blips = UsingWorld(_get_all_blips,
     @test length(get_retval(tr)) == 1+1+2+2+3+3+1
 
     Blp(a, t, i) = Blip((Aircraft(a), Timestep(t)), i)
-    spec = UpdateWithOUPMMovesSpec(
+    spec = WorldUpdate(
         (
-            MergeMove(Aircraft(1), 1, 2,
+            Merge(Aircraft(1), 1, 2,
             (
                 Blp(1, 1, 1) => Blp(1, 1, 1),
                 Blp(1, 2, 1) => Blp(1, 2, 1),

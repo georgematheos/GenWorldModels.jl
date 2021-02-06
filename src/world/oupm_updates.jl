@@ -129,7 +129,7 @@ Returns an iterator over pairs `(typename, origins_for_type_with_changes)`,
 where `origins_for_type_with_changes` is a set containing all origins for this typename
 for which the ID associations have been updated.
 """
-function perform_oupm_move!(world::World, spec::MoveMove, origin_changed, index_changed, abstract_changed)
+function perform_oupm_move!(world::World, spec::Move, origin_changed, index_changed, abstract_changed)
     from = get_with_abstract_origin(world, spec.from)
     to = get_or_generate_with_abstract_origin!(world, spec.to)
     
@@ -167,19 +167,19 @@ function perform_oupm_move!(world::World, spec::MoveMove, origin_changed, index_
     return (oupm_type_name(from) => Set([from.origin, to.origin]),)
 end
 
-function perform_oupm_move!(world::World, spec::BirthMove{T}, _, index_changed, abstract_changed) where {T}
+function perform_oupm_move!(world::World, spec::Create{T}, _, index_changed, abstract_changed) where {T}
     obj = get_or_generate_with_abstract_origin!(world, spec.obj)
     move_all_between!(world, T, obj.origin, index_changed, abstract_changed; min=obj.idx, inc=+1)
     return (oupm_type_name(obj) => Set(obj.origin),)
 end
 
-function perform_oupm_move!(world::World, spec::DeathMove{T}, _, index_changed, abstract_changed) where {T}
+function perform_oupm_move!(world::World, spec::Delete{T}, _, index_changed, abstract_changed) where {T}
     obj = get_or_generate_with_abstract_origin!(world, spec.obj)
     move_all_between!(world, T, obj.origin, index_changed, abstract_changed; min=obj.idx+1, inc=-1)
     return (oupm_type_name(obj) => Set(obj.origin),)
 end
 
-function perform_oupm_move!(world, spec::SplitMove{T}, origin_changed, index_changed, abstract_changed) where {T}
+function perform_oupm_move!(world, spec::Split{T}, origin_changed, index_changed, abstract_changed) where {T}
     from = get_with_abstract_origin(world, spec.from)
     from_idx = from.idx
     to_idx1 = min(spec.to_idx_1, spec.to_idx_2)
@@ -221,7 +221,7 @@ function perform_oupm_move!(world, spec::SplitMove{T}, origin_changed, index_cha
     return changed_origins
 end
 
-function perform_oupm_move!(world, spec::MergeMove{T}, origin_changed, index_changed, abstract_changed) where {T}
+function perform_oupm_move!(world, spec::Merge{T}, origin_changed, index_changed, abstract_changed) where {T}
     to = get_or_generate_with_abstract_origin!(world, spec.to)
     to_idx = to.idx
     from_idx1 = min(spec.from_idx_1, spec.from_idx_2)

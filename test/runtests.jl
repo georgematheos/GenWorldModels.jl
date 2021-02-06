@@ -26,7 +26,7 @@ include("oupms/oupm_types.jl")
 include("oupms/simple_oupmtype_usage.jl")
 include("oupms/simple_oupm_moves.jl")
 include("oupms/origin_oupm_moves.jl")
-include("oupms/oupm_involution_dsl.jl")
+include("oupms/kernel_dsl.jl")
 
 include("oupms/object_sets/sibling_set_specs.jl")
 include("oupms/object_sets/origin_iterated_set.jl")

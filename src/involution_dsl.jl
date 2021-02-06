@@ -165,13 +165,13 @@ end
 
 macro birth(obj)
     quote
-        move = BirthMove($(esc(obj)))
+        move = Create($(esc(obj)))
         apply_oupm_move($(esc(bij_state)), move)
     end
 end
 macro death(obj)
     quote
-        move = DeathMove($(esc(obj)))
+        move = Delete($(esc(obj)))
         apply_oupm_move($(esc(bij_state)), move)
     end
 end
@@ -183,7 +183,7 @@ macro split(from_obj, to_idx1, to_idx2, moves_...)
     end
 
     quote
-        move = SplitMove($(esc(from_obj)), $(esc(to_idx1)), $(esc(to_idx2)), $(esc(moves)))
+        move = Split($(esc(from_obj)), $(esc(to_idx1)), $(esc(to_idx2)), $(esc(moves)))
         apply_oupm_move($(esc(bij_state)), move)
     end
 end
@@ -194,13 +194,13 @@ macro merge(to_obj, from_idx1, from_idx2, moves_...)
         moves = moves_[1]
     end
     quote
-        move = MergeMove($(esc(to_obj)), $(esc(from_idx1)), $(esc(from_idx2)), $(esc(moves)))
+        move = Merge($(esc(to_obj)), $(esc(from_idx1)), $(esc(from_idx2)), $(esc(moves)))
         apply_oupm_move($(esc(bij_state)), move)
     end
 end
 macro move(from, to)
     quote
-        move = MoveMove($(esc(from)), $(esc(to)))
+        move = Move($(esc(from)), $(esc(to)))
         apply_oupm_move($(esc(bij_state)), move)
     end
 end
@@ -232,7 +232,7 @@ end
 ################################
 
 mutable struct FirstPassResults
-    update_spec::UpdateWithOUPMMovesSpec
+    update_spec::WorldUpdate
     reverse_regenerated_subtrees::DynamicChoiceMap
     reverse_regenerated::DynamicSelection
 
@@ -249,7 +249,7 @@ end
 
 function FirstPassResults()
     return FirstPassResults(
-        UpdateWithOUPMMovesSpec((), DynamicAddressTree{Union{Value, SelectionLeaf}}()),
+        WorldUpdate((), DynamicAddressTree{Union{Value, SelectionLeaf}}()),
         choicemap(), DynamicSelection(), choicemap(),
         Dict(), Dict(), Dict(), Dict(),
         DynamicSelection(), DynamicSelection())
@@ -356,7 +356,7 @@ function copy(state::FirstPassState, src::ModelInputAddress, dest::ModelOutputAd
 end
 
 function apply_oupm_move(state::FirstPassState, move::OUPMMove)
-    state.results.update_spec = UpdateWithOUPMMovesSpec((state.results.update_spec.moves..., move), state.results.update_spec.subspec)
+    state.results.update_spec = WorldUpdate((state.results.update_spec.moves..., move), state.results.update_spec.subspec)
 end
 
 function copy(state::FirstPassState, src::ModelInputAddress, dest::AuxOutputAddress)
@@ -523,7 +523,7 @@ function store_addr_info!(dict::Dict, addr, value::AbstractArray{<:Real}, next_i
 end
 
 function assemble_input_array_and_maps(
-        t_cont_reads, t_copy_reads, u_cont_reads, u_copy_reads, rev_update_spec::UpdateWithOUPMMovesSpec)
+        t_cont_reads, t_copy_reads, u_cont_reads, u_copy_reads, rev_update_spec::WorldUpdate)
     assemble_input_array_and_maps(t_cont_reads, t_copy_reads, u_cont_reads, u_copy_reads, rev_update_spec.subspec)
 end
 
@@ -745,7 +745,7 @@ function symmetric_trace_translator_run_transform(
 
     if !isempty(regeneration_constraints)
         subspec = merge(UnderlyingChoices(spec.subspec), regeneration_constraints)
-        spec = UpdateWithOUPMMovesSpec(spec.moves, subspec)
+        spec = WorldUpdate(spec.moves, subspec)
     end
 
     (new_model_trace, log_model_weight, _, discard) = update(
