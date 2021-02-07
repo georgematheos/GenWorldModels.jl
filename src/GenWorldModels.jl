@@ -35,5 +35,8 @@ include("dsl/modeling_dsl.jl")
 export @oupm
 export @kernel, MHProposal # from GenTraceKernelDSL
 
+include("modeling_library/uniform_choice.jl")
+export uniform_choice
+
 @load_generated_functions()
 end

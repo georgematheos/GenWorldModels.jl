@@ -111,4 +111,43 @@ end)
     end
 end
 
-# TODO: more careful tests for the different types of `@map`, ..., syntax
+@oupm generate_values() begin
+    @number Station() ~ poisson(5)
+    @property val(::Station) ~ normal(0, 1)
+    @observation_model function get_vals()
+        stations = @objects Station
+        station1 ~ uniform_choice(stations)
+        station2 ~ uniform_choice(stations)
+
+        return [
+            (@map (@get val[stat] for stat in [station1, station2])),
+            (@map [@get val[stat] for (stat,) in [(station1,), (station2,)]]),
+            (@nocollision_setmap (@get val[stat] for stat in stations)),
+            (@nocollision_setmap [@get val[stat] for (stat,) in lazy_bijection_set_map(s -> (s,), (s,) -> s, stations)]),
+            (@dictmap (k => @get val[stat] for (k, stat) in lazy_set_to_dict_map(identity, stations))),
+            (@dictmap [(k => (@get val[stat])) for (k, stat) in lazy_set_to_dict_map(identity, stations)])
+        ]
+    end
+end
+@load_generated_functions()
+@testset "map syntaxes" begin
+    tr, _ = generate(generate_values, (), choicemap((:world => Symbol("#Station()") => () => :num, 5)))
+    new_tr, _, _, _ = update(tr, (), (), choicemap((:world => Symbol("#Station()") => () => :num, 6)))
+    
+    for (r, size) in ((get_retval(tr), 5), (get_retval(new_tr), 6))
+        @test length(r) == 6
+        for v in (r[1], r[2])
+            @test v isa AbstractVector && all(e isa Real for e in v)
+            @test length(v) == 2
+        end
+        for s in (r[3], r[4])
+            @test s isa AbstractSet && all(e isa Real for e in s)
+            @test length(s) == size
+        end
+        for d in (r[5], r[6])
+            @test d isa AbstractDict && all(k isa Station && v isa Real for (k, v) in d)
+            @test length(d) == size
+        end
+
+    end
+end
