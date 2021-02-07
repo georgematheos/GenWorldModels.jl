@@ -31,7 +31,7 @@ export values_to_abstract, values_to_abstract!, values_to_concrete
 include("object_set/object_set.jl")
 include("dict_map.jl")
 
-# include("dsl/modeling_dsl.jl")
+include("dsl/modeling_dsl.jl")
 export @oupm
 export @kernel, MHProposal # from GenTraceKernelDSL
 

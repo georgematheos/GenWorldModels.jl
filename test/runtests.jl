@@ -33,7 +33,7 @@ include("oupms/object_sets/origin_iterated_set.jl")
 
 include("lookup_or_generate_mapping.jl")
 
-# include("dsl_internals.jl")
-# include("dsl_integration.jl")
+include("dsl_internals.jl")
+include("dsl_integration.jl")
 
 end # module

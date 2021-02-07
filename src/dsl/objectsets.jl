@@ -91,7 +91,7 @@ function get_object_set_getter_expressions(origin_sig_table_name)
         @gen (static, diffs) function _type_objects(world, spec::$(@__MODULE__).TypeObjectSetSpec)
             sigs = $origin_sig_table_name[spec.typename]
             sig_to_spec = lazy_set_to_dict_map($(@__MODULE__).get_origin_sig_spec, sigs)
-            sig_to_set ~ DictMap(lookup_or_generate)(mgfcall_dictmap(world[:_objects], sig_to_spec))
+            sig_to_set ~ dictmap_lookup_or_generate(world[:_objects], sig_to_spec)
             set ~ tracked_union(sig_to_set)
 
             return set
@@ -132,7 +132,7 @@ num_statement_name(s::Diffed{<:Any, NoChange}) = Diffed(num_statement_name(strip
 num_statement_name(s::Diffed{<:Any}) = Diffed(num_statement_name(strip_diff(s)), UnknownChange())
 
 @gen (static, diffs) function _constrained_objects(world, spec::OriginConstrainedObjectSetSepc)
-    origin_sets ~ Map(lookup_or_generate)(mgfcall_map(world[:_objects], spec.constraints))
+    origin_sets ~ map_lookup_or_generate(world[:_objects], spec.constraints)
     
     all_origins ~ tracked_product_set(origin_sets)
     origins_to_specs = GetOriginsToSiblingSetSpecs(spec.typename, num_statement_name(spec))(world, all_origins)

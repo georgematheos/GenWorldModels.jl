@@ -49,7 +49,7 @@ function Gen.update_with_state(::MgfCallMap, prev_state, (mgf, keys),
     mgfkeytypes_valid_for_diff_scan = prev_state.mgfkeytypes_valid_for_diff_scan && all(
         key_allows_diff_scan(addr(mgf), mgfkey)
         for mgfkey in Iterators.flatten((
-            (keys[i] for i=keysdiff.prev_length:keysdiff.new_length),
+            (keys[i] for i=max(1, keysdiff.prev_length):keysdiff.new_length),
             (keys[i] for (i, _) in keysdiff.updated),
         ))
     )

@@ -1,7 +1,7 @@
 #=
 Commands for interacting with the world in the OUPM DSL.
 
-"Root" Commands:
+"Core" Commands:
 - `@get(world, propertyname[obj1, obj2, ..., objn])`
 - `@arg(world, argname)`
 - `@origin(world, obj)` or `@index(world, obj)`
@@ -11,22 +11,24 @@ should be traced.
 
 These may be mapped:
 - `@map({...} ~ $(GlobalRef(GenWorldModels, lookup_or_generate))(world[...][...]) for ... in ...)`
-- Likewise for `@setmap` and `@nocollision_setmap`
+- Likewise for `@nocollision_setmap`
+- For `@dictmap`, the syntax should be `@dictmap({} ~ ...)(k => world[...][...] for (k, ...) in ...)`
 
 The idea is that macroexpansion should occur via a depth-first traversal, which will first convert
 `@get`, `@origin`, and `@index` commands to `{...} ~ GenWorldModels.lookup_or_generate(world[...][...])`,
-and then an outer `@map`, `@setmap`, or `@nocollision_setmap` can transform a comprehension containing this
-into the proper `Map(lookup_or_generate)...`, etc., command.
+and then an outer `@map`, `@dictmap`, or `@nocollision_setmap` can transform a comprehension containing this
+into the proper `map_lookup_or_generate`, etc., command.
 
 Examples of valid map expressions:
 ```
 reading_list = @map [@get(reading[detector]) for detector in detector_sample_list]
-reading_set = @setmap [@get(reading[detector]) for detector in detector_set]
+reading_set = @dictmap [d => @get(reading[detector]) for (d, detector) in lazy_set_to_dict_map(identity, detector_set])
 origins = @map (@origin(obj) for obj in objects)
 is_parent_matrix = @map [@get(is_parent[obj1, obj2]) for (obj1, obj2) in collect(Iterators.product(objects_list, objects_list))]
+@dictmap (k => @get(property[foo]) for (k, foo) in dict)
 ```
 =#
-function _map(log_expr, MapCombinator, arg_mapper, lazymapper)
+function _map(log_expr, mapped_lookup_or_generate, lazymap)
     log = GlobalRef(@__MODULE__, :lookup_or_generate)
     if ( # for some reason, using the macrotools | union is not working here.
         MacroTools.@capture(log_expr, [addr_ ~ $log(world_[name_][key_]) for item_ in list_]) ||
@@ -36,27 +38,47 @@ function _map(log_expr, MapCombinator, arg_mapper, lazymapper)
         # also note that we don't put `name` in a QuoteNode, since the @get or @origin or @index (etc.)
         # will have already done this
         if name == item
-            :($(MapCombinator)(lookup_or_generate)($(arg_mapper)($(esc(world))[$name], $(esc(list)))))
+            :($(mapped_lookup_or_generate)($(esc(world))[$name], $(esc(list))))
         else
-            :($(MapCombinator)(lookup_or_generate)($(arg_mapper)($(esc(world))[$name], $(lazymapper)($item -> $key , $(esc(list))))))
+            :($(mapped_lookup_or_generate)($(esc(world))[$name], $(lazymap(item, key, list))))
         end
     else
-        error("Unexpected @map expression after partial parsing: $log_expr")
+        error("Unexpected @map/@nocollision_setmap expression after partial parsing: $log_expr")
     end
 end
+
+map_transform(item, key, list) = :(lazy_map($item -> $key, $(esc(list))))
+
+# TODO: this setmap_transform is restrictive since it means the user's syntax has to be invertible...
+# we may be able to support a more broad class of syntaxes
+setmap_transform(item, key, list) = :(lazy_bijection_set_map($item -> $key, $key -> $item, $(esc(list))))
 
 # the first arg will be the world's name, which we don't use, since it should be in the
 # already-parsed lookup_or_generate
 macro _map(_, log_expr)
-    _map(log_expr, :Map, :mgfcall_map, :lazy_map)
+    _map(log_expr, :map_lookup_or_generate, map_transform)
 end
-macro _setmap(_, log_expr)
-    _map(log_expr, :SetMap, :mgfcall_setmap, :lazy_no_collision_set_map)
-end
+# macro _setmap(_, log_expr)
+#     _map(log_expr, :setmap_lookup_or_generate, setmap_transform)
+# end
 macro _nocollision_setmap(_, log_expr)
-    _map(log_expr, :NoCollisionSetMap, :mgfcall_setmap, :lazy_no_collision_set_map)
+    _map(log_expr, :nocollision_setmap_lookup_or_generate, setmap_transform)
 end
-# TODO: dictmap
+
+macro _dictmap(_, log_expr)
+    if (
+        MacroTools.@capture(log_expr, [k_ => (addr_ ~ $log(world_[name_][key_]) for (k_, item_) in list_)]) ||
+        MacroTools.@capture(log_expr, (k_ => (addr_ ~ $log(world_[name_][key_]) for (k_, item_) in list_)))
+    )
+        if name == item
+            :(dictmap_lookup_or_generate($(esc(world))[$name], $(esc(list))))
+        else
+            :(dictmap_lookup_or_generate($(esc(world))[$name], lazy_val_map($item -> $key, $(esc(list)))))
+        end
+    else
+        error("Unexpected @dictmap expression after partial parsing: $log_expr")
+    end
+end
 
 macro _origin(world, obj)
     :(lookup_or_generate($(esc(world))[:origin][$(esc(obj))]))
@@ -81,5 +103,5 @@ end
 
 const DSL_COMMANDS = Dict(
     Symbol("@$name") => Symbol("@_$name") for name in
-    (:origin, :index, :arg, :get, :map, :setmap, :nocollision_setmap, :objects)
+    (:origin, :index, :arg, :get, :map, :nocollision_setmap, :dictmap, :objects)
 )

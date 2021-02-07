@@ -42,6 +42,7 @@ containing those values.
 """
 item_to_indices(vect::AbstractVector{T}) where {T} = item_to_indices(T, vect)
 item_to_indices(vect::Tuple{Vararg{T}}) where {T} = item_to_indices(T, vect)
+item_to_indices(vect::Tuple{}) = item_to_indices(Any, vect)
 item_to_indices(vect::Tuple) = item_to_indices(Any, vect)
 function item_to_indices(T, vect)
     sm = SetDict{T, Int}()

@@ -127,7 +127,7 @@ end
 where we have
 ```julia
 abstract type OUPMMove end
-struct BirthMove <: OUPMMove
+struct Create <: OUPMMove
     type::Type{<:OUPMType}
     idx::Int
 end

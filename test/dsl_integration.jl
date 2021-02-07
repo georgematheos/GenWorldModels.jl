@@ -32,7 +32,7 @@ expr = :(@oupm generate_detections(num_stations) begin
         #     detections = @objects Detection(Station, evt)
         end
 
-        return @setmap (@get(reading[det]) for det in detections)
+        return @nocollision_setmap (@get(reading[det]) for det in detections)
     end
 end)
 # println(macroexpand(@__MODULE__, expr))
@@ -110,3 +110,5 @@ end)
         )
     end
 end
+
+# TODO: more careful tests for the different types of `@map`, ..., syntax
