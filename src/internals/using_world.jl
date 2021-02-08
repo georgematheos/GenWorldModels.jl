@@ -31,21 +31,22 @@ function Gen.get_choices(tr::UsingWorldTrace)
     )
 end
 
-struct UsingWorld{num_world_args, num_mgfs, V, Tr} <: Gen.GenerativeFunction{V, UsingWorldTrace{V, Tr}}
+struct UsingWorld{num_world_args, num_mgfs, V, Tr, meta_names, meta_valtypes} <: Gen.GenerativeFunction{V, UsingWorldTrace{V, Tr}}
     kernel::Gen.GenerativeFunction{V, Tr}
     mgf_addrs::NTuple{num_mgfs, Symbol}
     memoized_gen_fns::NTuple{num_mgfs, GenerativeFunction}
     world_arg_addrs::NTuple{num_world_args, Symbol}
+    meta::NamedTuple{meta_names, meta_valtypes}
 end
 function UsingWorld(
     kernel::GenerativeFunction,
     addr_to_gen_fn::Vararg{Pair{Symbol, <:GenerativeFunction}};
-    world_args=()
+    world_args=(), meta=NamedTuple()
 )
     mgf_addrs = Tuple([addr for (addr, gen_fn) in addr_to_gen_fn])
     @assert all(mgf_addrs .!= :kernel) ":kernel may not be a memoized generative function address"
     gen_fns = Tuple([gen_fn for (addr, gen_fn) in addr_to_gen_fn])
-    UsingWorld(kernel, mgf_addrs, gen_fns, world_args)
+    UsingWorld(kernel, mgf_addrs, gen_fns, world_args, meta)
 end
 
 function Base.getindex(tr::UsingWorldTrace, addr::Pair)

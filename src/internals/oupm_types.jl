@@ -75,6 +75,3 @@ function concrete_origin_error(concrete::ConcreteIndexOUPMObject)
 end
 
 Base.isapprox(x::OUPMObject, y::OUPMObject) = isequal(x, y)
-
-export @type
-export OUPMObject, AbstractOUPMObject, ConcreteIndexOUPMObject, ConcreteIndexAbstractOriginOUPMObject

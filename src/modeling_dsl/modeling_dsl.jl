@@ -45,7 +45,9 @@ function expand_oupm(body, name, args, __module__)
     meta = OUPMDSLMetaData(name, Tuple(args))
     stmts = Union{LineNumberNode, Expr}[] 
     parse_oupm_dsl_body!(stmts, meta, body, __module__)
-    (obj_getter_addr, obj_getter_fn_name) = add_objectset_getters_to_expansion!(stmts, meta)
+
+    origin_sig_table_name = add_origin_sig_table!(stmts, meta)
+    (obj_getter_addr, obj_getter_fn_name) = add_objectset_getters_to_expansion!(stmts, origin_sig_table_name)
 
     # due to https://github.com/JuliaLang/julia/issues/37691, we cannot escape names within the
     # shallow macroexpansion provided by this DSL, and then return that expression and trust
@@ -74,7 +76,8 @@ function expand_oupm(body, name, args, __module__)
             $((:($(QuoteNode(addr)) => $(esc(name))) for (addr, name) in meta.properties)...),
             $((:($(QuoteNode(num_statement_name(sig))) => $(esc(name))) for (sig, name) in meta.number_stmts)...),
             $(QuoteNode(obj_getter_addr)) => $(esc(obj_getter_fn_name));
-            world_args=$(meta.model_args)
+            world_args=$(meta.model_args),
+            meta=(origin_sig_table=$origin_sig_table_name)
         )
     end
 end

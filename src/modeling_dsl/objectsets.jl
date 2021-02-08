@@ -26,7 +26,7 @@ end
 struct TypeObjectSetSpec <: ObjectSetSpec
     typename::Symbol
 end
-struct OriginConstrainedObjectSetSepc <: ObjectSetSpec
+struct OriginConstrainedObjectSetSpec <: ObjectSetSpec
     typename::Symbol
     constraints::Tuple{Vararg{ObjectSetSpec}}
 end
@@ -58,7 +58,7 @@ end
 function get_spec(expr::Expr, __module__)
     if MacroTools.@capture(expr, name_(subspecs__))
         :(
-            OriginConstrainedObjectSetSepc(
+            OriginConstrainedObjectSetSpec(
                 $(QuoteNode(name)),
                 $(Expr(:tuple, (get_spec(subspec, __module__) for subspec in subspecs)...))
             )
@@ -111,15 +111,15 @@ end
 end
 
 function get_origin_sig_spec(sig)
-    OriginConstrainedObjectSetSepc(
+    OriginConstrainedObjectSetSpec(
         sig.typename,
         Tuple(TypeObjectSetSpec(origintypename) for origintypename in sig.origin_typenames)
     )
 end
 
-function num_statement_name(spec::OriginConstrainedObjectSetSepc)
+function num_statement_name(spec::OriginConstrainedObjectSetSpec)
     origin_names = Tuple(
-        if c isa TypeObjectSetSpec || c isa OriginConstrainedObjectSetSepc
+        if c isa TypeObjectSetSpec || c isa OriginConstrainedObjectSetSpec
             c.typename
         else
             oupm_type_name(c.obj)
@@ -131,7 +131,7 @@ end
 num_statement_name(s::Diffed{<:Any, NoChange}) = Diffed(num_statement_name(strip_diff(s)), NoChange())
 num_statement_name(s::Diffed{<:Any}) = Diffed(num_statement_name(strip_diff(s)), UnknownChange())
 
-@gen (static, diffs) function _constrained_objects(world, spec::OriginConstrainedObjectSetSepc)
+@gen (static, diffs) function _constrained_objects(world, spec::OriginConstrainedObjectSetSpec)
     origin_sets ~ map_lookup_or_generate(world[:_objects], spec.constraints)
     
     all_origins ~ tracked_product_set(origin_sets)
@@ -142,16 +142,8 @@ num_statement_name(s::Diffed{<:Any}) = Diffed(num_statement_name(strip_diff(s)),
     return set
 end
 
-### add objectset getters to an OUPM DSL expansion ###
-"""
-    add_objectset_getters_to_expansion!(stmts, meta)
-
-Adds expressions to `stmts` needed for object set getting (`@objects`)
-syntax.  Returns the tuple (addr, fnname),
-where `fnname` is the name of a generative function for object set getting,
-which should be memoized at address `addr` in the `UsingWorld` combinator.
-"""
-function add_objectset_getters_to_expansion!(stmts, meta)
+### construct a table of origin signatures per type ###
+function add_origin_sig_table!(stmts, meta)
     originsig_name = gensym("origin_signatures")
 
     type_to_sig = Dict()
@@ -176,7 +168,22 @@ function add_objectset_getters_to_expansion!(stmts, meta)
     )
 
     push!(stmts, :($originsig_name = $originsig_list_expr))
-    (expr, fn_name) = get_object_set_getter_expressions(originsig_name)
+
+    return originsig_name
+end
+
+### add objectset getters to an OUPM DSL expansion ###
+"""
+    add_objectset_getters_to_expansion!(stmts, meta)
+
+Adds expressions to `stmts` needed for object set getting (`@objects`)
+syntax.  Returns the tuple (addr, fnname, originsig_lookup_name),
+where `fnname` is the name of a generative function for object set getting,
+which should be memoized at address `addr` in the `UsingWorld` combinator,
+and `originsig_table_name`
+"""
+function add_objectset_getters_to_expansion!(stmts, origin_sig_table_name)
+    (expr, fn_name) = get_object_set_getter_expressions(origin_sig_table_name)
     push!(stmts, expr)
-    return (:_objects, fn_name)
+    return (:_objects, fn_name, originsig_name)
 end

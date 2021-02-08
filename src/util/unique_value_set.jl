@@ -43,5 +43,3 @@ function Gen.update_with_state(::UniqueValueSet, st, (dict,), (diff,)::Tuple{Dic
 
     (UniqueValueSetState(set, dict), set, SetDiff(added, deleted))
 end
-
-export unique_value_set

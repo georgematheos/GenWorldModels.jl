@@ -1,10 +1,11 @@
 @type Sample
+@dist poisson_plus_1(l) = poisson(l) + 1
 @gen (static) function get_val(world::World, sample::Sample)
     val ~ normal(1, 0.5)
     return val
 end
 @gen (static) function observe_samples_sum_kernel(world::World)
-    num_samples ~ poisson(5)
+    num_samples ~ poisson_plus_1(5)
     samples ~ Map(lookup_or_generate)([world[:val][Sample(i)] for i=1:num_samples])
     total = reduce(+, samples, init=0.)
     observation ~ normal(total, 1)

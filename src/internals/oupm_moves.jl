@@ -100,9 +100,6 @@ function GenTraceKernelDSL.dualized_values(spec::WorldUpdate)
     GenTraceKernelDSL.dualized_values(spec.subspec)
 end
 
-export Create, Delete, Split, Merge, Move
-export WorldUpdate
-
 function reverse_moves(moves::Tuple{Vararg{<:OUPMMove}})
     Tuple(reverse_move(moves[j]) for j=length(moves):-1:1)
 end

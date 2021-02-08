@@ -76,26 +76,6 @@ macro _dictmap(_, log_expr)
         else
             :(dictmap_lookup_or_generate($(esc(world))[$name], lazy_val_map($item -> $key, $(esc(list)))))
         end
-    # elseif MacroTools.@capture(log_expr, [k_ => foo_ for (k_, item_) in list_])
-    #     if MacroTools.@capture(foo, (addr_ ~ bar_))
-    #         Meta.show_sexpr(bar)
-    #         if MacroTools.@capture(bar, yo_(doodle_))
-    #             if MacroTools.@capture(yo, $log)
-    #                 println("successfully captured LOG")
-    #             else
-    #                 println("Wanted: $(:($log))")
-    #                 println("Got: $(yo)")
-    #             end
-    #             if MacroTools.@capture(doodle, world_[name_][key_])
-    #                 println("got doodle right")
-    #             end
-    #             error("ifif!  yo = $yo doodle = $doodle")
-    #         else
-    #             println("the ifif failed!")
-    #         end
-    #         error("inner if! bar = $bar")
-    #     end
-    #     error("elseif! foo = $foo")
     else
         error("Unexpected @dictmap expression after partial parsing: $log_expr")
     end
@@ -122,7 +102,12 @@ macro _arg(world, argname)
     :(lookup_or_generate($(esc(world))[:args][$(QuoteNode(argname))]))
 end
 
+# to give "advanced users" access to the world object
+macro _world(world)
+    :($world)
+end
+
 const DSL_COMMANDS = Dict(
     Symbol("@$name") => Symbol("@_$name") for name in
-    (:origin, :index, :arg, :get, :map, :nocollision_setmap, :dictmap, :objects)
+    (:origin, :index, :arg, :get, :map, :nocollision_setmap, :dictmap, :objects, :world)
 )
