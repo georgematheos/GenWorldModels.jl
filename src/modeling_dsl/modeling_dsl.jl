@@ -68,7 +68,6 @@ function expand_oupm(body, name, args, __module__)
     ]
     
     # TODO: check that the number statements are acyclic!
-
     return quote
         $(stmts...)
         $(esc(meta.model_name)) = UsingWorld(
@@ -77,7 +76,7 @@ function expand_oupm(body, name, args, __module__)
             $((:($(QuoteNode(num_statement_name(sig))) => $(esc(name))) for (sig, name) in meta.number_stmts)...),
             $(QuoteNode(obj_getter_addr)) => $(esc(obj_getter_fn_name));
             world_args=$(meta.model_args),
-            meta=(origin_sig_table=$origin_sig_table_name)
+            meta=($(esc(:origin_sig_table))=$(esc(origin_sig_table_name)),)
         )
     end
 end
@@ -288,6 +287,9 @@ function expand_and_trace_commands(body::Expr, worldname::Symbol, __module__)
             end
             expanded = macroexpand(__module__, new_expr)
             :({$(QuoteNode(name))} ~ $expanded)
+        elseif MacroTools.isexpr(e, :macrocall) && e.args[1] == Symbol("@world")
+            # special `@world()` syntax accesses the world object
+            worldname
         else
             e
         end

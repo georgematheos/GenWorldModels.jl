@@ -27,16 +27,16 @@ using Test
 # include("oupms/simple_oupm_moves.jl")
 # include("oupms/origin_oupm_moves.jl")
 
-include("oupms/object_sets/sibling_set_specs.jl")
-include("oupms/object_sets/origin_iterated_set.jl")
+# include("oupms/object_sets/sibling_set_specs.jl")
+# include("oupms/object_sets/origin_iterated_set.jl")
 
-include("lookup_or_generate_mapping.jl")
+# include("lookup_or_generate_mapping.jl")
 
-include("oupms/gentracekerneldsl.jl")
+# include("oupms/gentracekerneldsl.jl")
 
-include("dsls/modeling_dsl_units.jl")
-include("dsls/modeling_dsl_integration-seismic.jl")
-include("dsls/kernel_dsl_units.jl")
+# include("dsls/modeling_dsl_unit_tests.jl")
+# include("dsls/modeling_dsl_integration-seismic.jl")
+include("dsls/kernel_dsl_unit_tests.jl")
 include("dsls/integration-gmm.jl")
 
 end # module

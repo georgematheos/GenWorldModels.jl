@@ -20,6 +20,18 @@ macro get_number(tr, sig)
     :($tr[:world => $num_stmt_name => :num])
 end
 
+# @set_number Typename(origin_1, ..., origin_n) = new_num
+macro set_number(expr)
+    if MacroTools.@capture(expr, sig = newnum_)
+        typename, types = get_types(sig)
+        if MacroTools.@capture(sig, t_(origins__))
+            n_stmt = :(num_statement_name(OriginSignature($(esc(typename)), (esc(types)))))
+            return :((:world => $n_stmt => $(esc(origins)), $(esc(newnum))))
+        end
+    end
+    error("Invalid @set_number expression: $expr")
+end
+
 key(objs) = Expr(:tuple, [esc(obj) for obj in objs]...)
 macro get(tr, exprs...)
     getexprs = Expr[]
@@ -37,6 +49,7 @@ macro get(tr, exprs...)
     Expr(:tuple, getexprs...)
 end
 
+# @set foo[]
 macro set(expr)
     if MacroTools.@capture(expr, prop_[objs__] = val_)
         :((:world => $(QuoteNode(prop)) => $(key(objs)), $(esc(val))))

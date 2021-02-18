@@ -102,12 +102,7 @@ macro _arg(world, argname)
     :(lookup_or_generate($(esc(world))[:args][$(QuoteNode(argname))]))
 end
 
-# to give "advanced users" access to the world object
-macro _world(world)
-    :($world)
-end
-
 const DSL_COMMANDS = Dict(
     Symbol("@$name") => Symbol("@_$name") for name in
-    (:origin, :index, :arg, :get, :map, :nocollision_setmap, :dictmap, :objects, :world)
+    (:origin, :index, :arg, :get, :map, :nocollision_setmap, :dictmap, :objects)
 )

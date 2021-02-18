@@ -1,15 +1,15 @@
 @type Cluster
 @dist poisson_plus_1(λ) = poisson(λ) + 1
 @oupm gaussian_mixture_model(λ, ξ, κ, α_v, β_v, α_w, β_w) begin
-    @number Cluster() = (return :num ~ poisson_plus_1(@arg λ))
+    @number Cluster() = (return num ~ poisson_plus_1(@arg λ))
     @property (static, diffs) function mean(::Cluster)
-        return :mean ~ normal(@arg ξ, 1/(@arg κ))
+        return mean ~ normal(@arg ξ, 1/(@arg κ))
     end
     @property (static, diffs) function var(::Cluster)
-        return :var ~ normal(@arg α_v, @arg β_v)
+        return var ~ normal(@arg α_v, @arg β_v)
     end
     @property (static, diffs) function unnormalized_weight(::Cluster)
-        return :wt ~ gamma(@arg α_w, @arg β_w)
+        return wt ~ gamma(@arg α_w, @arg β_w)
     end
 
     @property (static, diffs) function cluster_to_weight()
@@ -21,9 +21,9 @@
     end
     @observation_model (static, diffs) function get_values(num_datapoints)
         cluster_samples ~ unnormalized_categorical(@world(), num_datapoints, @get(cluster_to_weight[]))
-        means = @map [mean(c) for c in cluster_samples]
-        vars = @map [var(c) for c in cluster_samples]
-        return :vals ~ Map(normal)(means, vars)
+        means = @map [@get(mean[c]) for c in cluster_samples]
+        vars = @map [@get(var[c]) for c in cluster_samples]
+        return vals ~ Map(normal)(means, vars)
     end
 end
 
@@ -45,7 +45,7 @@ end
     new_cluster = Cluster(new_idx)
 
     mean1, var1, w1 = @get(tr, mean[to_merge1] => :mean, var[to_merge1] => :var, unnormalized_weight[to_merge1] => :wt)
-    mean2, var2, w2 = @get(tr, mean[to_merge2] => :mean, var[to_merge1] = :var, unnormalized_weight[to_merge2] => :wt)
+    mean2, var2, w2 = @get(tr, mean[to_merge2] => :mean, var[to_merge2] => :var, unnormalized_weight[to_merge2] => :wt)
 
     wt, mean, var = merged_component_params(mean1, var1, w1, mean2, var2, w2)
     u1, u2, u3 = reverse_split_params(mean, var, wt, mean1, var1, w1, mean2, var2, w2)
@@ -90,9 +90,9 @@ end
 
     for i in tr[@obsmodel() => :cluster_samples => :indices_for_cluster][@abstract(tr, to_split)]
         y = tr[@obsmodel() => :vals => i]
-        p = u1 * exp(logpdf(normal, y, mean1, var1)),
+        p = u1 * exp(logpdf(normal, y, mean1, var1))
         q = (1 - u1) * exp(logpdf(normal, y, mean2, var2))
-        if {:to_first => i} ~ bernoulli(p/(p+q))
+        if ({:to_first => i} ~ bernoulli(p/(p+q)))
             constraints[@obsmodel() => :cluster_samples => i] = new1
         else
             constraints[@obsmodel() => :cluster_samples => i] = new2
