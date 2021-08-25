@@ -15,6 +15,11 @@ struct ConcreteIndexOUPMObject{T, OriginType} <: OUPMObject{T}
     end
 end
 (OUPMObject{T})(origin::Tuple, idx::Int) where {T} = ConcreteIndexOUPMObject{T}(origin, idx)
+(OUPMObject{T})(args...) where {T} =
+    let origin = Tuple(args[1:end-1]), idx::Int = args[end]
+        (OUPMObject{T})(origin, idx)
+    end
+
 (OUPMObject{T})(idx::Int) where {T} = ConcreteIndexOUPMObject{T}((), idx)
 function ConcreteIndexOUPMObject{T}(origin::OT, idx::Int) where {T, OT}
     error("Tried to create a $T with origin $origin which is not a tuple of OUPMObjects.")

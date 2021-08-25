@@ -8,40 +8,43 @@ struct SibSetSpec{O} <: ObjectSetSpec
 end
 
 function _construct_object_set(tr, spec::SingletonObjectSetSpec)
+    println("SingSet $(spec.typename)")
     return Set([spec.obj])
 end
 function _construct_object_set(tr, spec::TypeObjectSetSpec)
-    origin_sig_table = get_gen_fn(tr).meta.origin_sig_table
+    println("TypeSet $(spec.typename)")
+    origin_sig_table = (Gen.get_gen_fn(tr)).meta.origin_sig_table
     sigs = origin_sig_table[spec.typename]
-    return union((_get_object_set(tr, get_origin_sig_spec(s)) for s in sigs)...)
+    union((_get_object_set(tr, get_origin_sig_spec(s)) for s in sigs)...)
 end
 function _construct_object_set(tr, spec::OriginConstrainedObjectSetSpec)
+    println("OgSet $(spec.typename)")
     origin_sets = (_get_object_set(tr, constraint) for constraint in spec.constraints)
-    all_origins = Iterators.product(origin_sets)
+    all_origins = Iterators.product(origin_sets...)
+    println("all_origins: ", collect(all_origins))
     return union((
         _get_object_set(tr, SibSetSpec(spec.typename, origin)) for origin in all_origins
     )...)
 end
 function _construct_object_set(tr, spec::SibSetSpec)
+    println("SibSet $(spec.typename)")
+    @assert (spec.typename isa Symbol) "spec: $spec"
     num_stmt_name = num_statement_name(OriginSignature(
         spec.typename,
-        Tuple(typeof(obj) for obj in spec.origin)
+        Tuple(oupm_type_name(obj) for obj in spec.origin)
     ))
     num = tr[:world => num_stmt_name => spec.origin]
-    return Set((OUPMObject{spec.typename}(i) for i=1:num))
+    println("num: $num")
+    println("obj origin: $(spec.origin)")
+    return Set((OUPMObject{spec.typename}(spec.origin, i) for i=1:num))
 end
 
-# to get an object set, check if we already constructed it while running the model,
-# otherwise, construct it here (using a memoization cache to turn this into DP)
 @memoize function _get_object_set(tr, spec::ObjectSetSpec)
-    if !isa(spec, SibSetSpec) && has_val(tr.world, Call(:_objects, spec))
-        get_val(tr.world, Call(:_objects, spec))
-    else
-        _construct_object_set(tr, spec)
-    end
+    _construct_object_set(tr, spec)
 end
 
+# TODO: docstring
 macro objects(tr, spec_expr)
     objset_spec = get_spec(spec_expr, __module__)
-    :(_get_object_set($(tr, objset_spec)))
+    :(_get_object_set($(esc(tr)), $(objset_spec)))
 end

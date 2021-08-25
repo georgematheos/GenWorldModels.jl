@@ -48,25 +48,30 @@ macro _objects(world, expr)
 end
 
 # get the ObjectSetSpec corresponding to the given expression or symbol
-function get_spec(name::Symbol, __module__)
+get_spec(name::Symbol, __module__) =
     if isdefined(__module__, name) && Base.eval(__module__, name) <: OUPMObject
         :(TypeObjectSetSpec($(QuoteNode(name))))
     else
         :(SingletonObjectSetSpec($(esc(name))))
     end
-end
-function get_spec(expr::Expr, __module__)
+get_spec(expr::Expr, __module__) =
     if MacroTools.@capture(expr, name_(subspecs__))
-        :(
-            OriginConstrainedObjectSetSpec(
-                $(QuoteNode(name)),
-                $(Expr(:tuple, (get_spec(subspec, __module__) for subspec in subspecs)...))
+        if !isempty(subspecs) && subspecs[end] isa Integer
+            # in this case, this is a constructor for a concrete object, eg.
+            # Airplane(1) or Child(Parent(1), 3)
+            :(SingletonObjectSetSpec($(esc(expr))))
+        else
+            :(
+                OriginConstrainedObjectSetSpec(
+                    $(QuoteNode(name)),
+                    $(Expr(:tuple, (get_spec(subspec, __module__) for subspec in subspecs)...))
+                )
             )
-        )
+        end
     else
         error("Unrecognized @objects spec: $expr")
     end
-end
+
 
 ### getters ###
 # `_objects` should be a MGF in every world using this, with address :_objects
@@ -177,13 +182,12 @@ end
     add_objectset_getters_to_expansion!(stmts, meta)
 
 Adds expressions to `stmts` needed for object set getting (`@objects`)
-syntax.  Returns the tuple (addr, fnname, originsig_lookup_name),
+syntax.  Returns the tuple (addr, fnname),
 where `fnname` is the name of a generative function for object set getting,
-which should be memoized at address `addr` in the `UsingWorld` combinator,
-and `originsig_table_name`
+which should be memoized at address `addr` in the `UsingWorld` combinato.
 """
 function add_objectset_getters_to_expansion!(stmts, origin_sig_table_name)
     (expr, fn_name) = get_object_set_getter_expressions(origin_sig_table_name)
     push!(stmts, expr)
-    return (:_objects, fn_name, originsig_name)
+    return (:_objects, fn_name)
 end

@@ -156,7 +156,7 @@ function (gen_fn::UsingWorld)(args...)
     retval
 end
 
-function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; check_proper_usage=false, check_all_constraints_used=false)
+function Gen.generate(gen_fn::UsingWorld, args::Tuple, constraints::ChoiceMap; check_proper_usage=true, check_all_constraints_used=true)
     world_args, kernel_args = extract_world_args(gen_fn, args)
 
     world = World(gen_fn.mgf_addrs, gen_fn.memoized_gen_fns, world_args)

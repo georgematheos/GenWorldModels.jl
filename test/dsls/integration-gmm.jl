@@ -54,9 +54,9 @@ end
         WorldUpdate!(tr,
             Merge(new_cluster, merge1, merge2),
             choicemap(
-                @set mean[new_cluster] = mean,
-                @set var[new_cluster] = var,
-                @set unnormalized_weight[new_cluster] = wt
+                @set(mean[new_cluster], mean),
+                @set(var[new_cluster], var),
+                @set(unnormalized_weight[new_cluster], wt)
             )
         ),
         choicemap(
@@ -84,8 +84,8 @@ end
     old_wt = @get(tr, unnormalized_weight[to_split])
 
     constraints = choicemap(
-        @set mean[new1] = mean1, @set var[new1] = var1, @set unnormalized_weight[new1] = u1*old_wt,
-        @set mean[new2] = mean2, @set var[new2] = var2, @set unnormalized_weight[new2] = (1-u1)*old_wt
+       @set(mean[new1], mean1), @set(var[new1], var1), @set(unnormalized_weight[new1], u1*old_wt),
+        @set(mean[new2], mean2), @set(var[new2], var2), @set(unnormalized_weight[new2], (1-u1)*old_wt)
     )
 
     for i in tr[@obsmodel() => :cluster_samples => :indices_for_cluster][@abstract(tr, to_split)]

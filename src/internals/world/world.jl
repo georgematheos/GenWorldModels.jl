@@ -168,11 +168,29 @@ end
     if call_addr == _world_args_addr
         quote world.world_args[key(call)] end
     elseif call_addr == _get_index_addr
-        quote world.id_table[key(call)].idx end
+        quote
+            if key(call) isa ConcreteIndexOUPMObject
+                key(call).idx
+            else
+                world.id_table[key(call)].idx
+            end
+        end
     elseif call_addr == _get_origin_addr
-        quote world.id_table[key(call)].origin end
-    elseif call_addr in (_get_abstract_addr, _get_concrete_addr)
-        quote world.id_table[key(call)] end
+        quote
+            if key(call) isa ConcreteIndexOUPMObject
+                key(call).origin
+            else
+                world.id_table[key(call)].origin
+            end
+        end
+    elseif call_addr === _get_abstract_addr
+        quote
+            key(call) isa AbstractOUPMObject ? key(call) : world.id_table[key(call)]  
+        end
+    elseif call_addr === _get_concrete_addr
+        quote
+            key(call) isa ConcreteIndexOUPMObject ? key(call) : world.id_table[key(call)]
+        end
     else # is mgf call
         quote get_retval(get_trace(world, call)) end
     end
