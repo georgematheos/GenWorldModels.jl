@@ -14,6 +14,7 @@ Gen.get_args(tr::UsingWorldTrace) = (_world_args(tr.world)..., tr.kernel_args...
 Gen.get_retval(tr::UsingWorldTrace) = get_retval(tr.kernel_tr)
 Gen.get_score(tr::UsingWorldTrace) = tr.score
 Gen.get_gen_fn(tr::UsingWorldTrace) = tr.gen_fn
+get_world_args(tr::UsingWorldTrace) = _world_args(tr.world)
 
 function Gen.get_choices(tr::UsingWorldTrace)
     full_choices = StaticChoiceMap(
@@ -65,19 +66,25 @@ function Base.getindex(tr::UsingWorldTrace, addr::Pair)
             if rest isa Pair
                 key, remaining = rest
                 key = convert_to_abstract(tr.world, key)
-                return get_trace(tr.world, Call(mgf_addr, key))[remaining]
+                return try
+                    get_trace(tr.world, Call(mgf_addr, key))[remaining]
+                catch e
+                    @error("Failed to get trace for $mgf_addr => $key ", exception=(e, catch_backtrace()))
+                    display(tr.world.traces.traces[:mean])
+                    error()
+                end
             else
                 key = convert_to_abstract(tr.world, rest)
                 return get_trace(tr.world, Call(mgf_addr, key))[]
             end
         catch e
             key = rest isa Pair ? rest[1] : rest
+            display(tr.world.id_table)
+            println("key we tried getting trace for is $key1")
             if e isa KeyError
                 error("No lookup for $(mgf_addr => key) found in the world.")
             else
-                @error "Error occurred while attempting to look up $(mgf_addr => key) in the world:"
-                stacktrace(catch_backtrace())
-                throw(e)
+                @error "Error occurred while attempting to look up $(mgf_addr => key) in the world:" exception=(e, catch_backtrace())
             end
         end
     else

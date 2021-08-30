@@ -577,6 +577,9 @@ This should be called if, while updating the `UsingWorld` kernel,
 there is either a call to `generate` on `lookup_or_generate` for `call`,
 or there is an `update` for a `lookup_or_generate` subtrace which changes
 the key value so that the new call is `call`.
+
+If this is called and there was an old lookup at the same address,
+that old lookup _must_ appear in the discard for the kernel.
 """
 function lookup_or_generate_during_kernel_update!(world, call)
     if !has_val(world, call)

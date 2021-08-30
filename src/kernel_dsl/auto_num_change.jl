@@ -1,5 +1,5 @@
 function WorldUpdate!(tr, objmoves::Tuple, spec::Gen.AddressTree)
-    error("AutoNumWorldUpdate currently doesn't support non-dynamic constraints!  (Though this would be easy to add via a conversion to a dynamic tree.)")
+    error("WorldUpdate! currently doesn't support non-dynamic constraints!  (Though this would be easy to add via a conversion to a dynamic tree.)")
 end
 
 """
@@ -20,26 +20,21 @@ function WorldUpdate!(tr, objmoves::Tuple, spec::Gen.DynamicAddressTree)
             num_deltas[sibset] = get(num_deltas, sibset, 0) + delta
         end
     end
-    for ((typename, origin), delta) in objmoves
+    for ((typename, origin), delta) in num_deltas
         num_stmt_name = num_statement_name(OriginSignature(
-            spec.typename,
-            Tuple(typeof(obj) for obj in origin)
+            typename, Tuple(typeof(obj) for obj in origin)
         ))
         # if this is not empty, ie. the user already provided a constraint, we will NOT override it
         if isempty(get_subtree(spec, :world => num_stmt_name => origin))
-            current_num = tr[:world => num_stmt_name => origin]
+            current_num = tr[:world => num_stmt_name => origin => :num]
             set_subtree!(spec, :world => num_stmt_name => origin => :num, Value(current_num + delta))
         end
     end
-    WorldUpdate(objmoves, spec)
+    return WorldUpdate(objmoves, spec)
 end
-function WorldUpdate!(args...)
-    if args[end] isa Gen.AddressTree
-        AutoNumWorldUpdate!(args[1:end-1], args[end])
-    else
-        AutoNumWorldUpdate!(args, DynamicChoiceMap())
-    end
-end
+WorldUpdate!(tr, args...) =
+    args[end] isa Gen.AddressTree ? WorldUpdate!(tr, args[1:end-1], args[end]) :
+                                WorldUpdate!(tr, args, DynamicChoiceMap())
 
 name_origin(obj::ConcreteIndexOUPMObject{T}) where {T} = (T, obj.origin)
 function num_changes_for_move(move::Move)
@@ -67,11 +62,11 @@ function num_changes_for_move(move::Split)
 end
 function num_changes_for_move(move::Merge)
     if isempty(move.moves)
-        return (name_origin(move.from) => -1,)
+        return (name_origin(move.to) => -1,)
     else
         Iterators.flatten((
             num_changes_for_sm_moves(move.moves),
-            (name_origin(move.from) => -1,)
+            (name_origin(move.to) => -1,)
         ))
     end
 end 

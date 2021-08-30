@@ -58,10 +58,21 @@ Gen.get_gen_fn(::UnnormalizedCategoricalTrace) = unnormalized_categorical
 Gen.get_args(tr::UnnormalizedCategoricalTrace) = tr.args
 Gen.get_retval(tr::UnnormalizedCategoricalTrace) = tr.samples
 Gen.get_score(tr::UnnormalizedCategoricalTrace) = tr.score
-Gen.get_choices(tr::UnnormalizedCategoricalTrace) = values_to_concrete(tr.args[1], UnnormalizedCategoricalChoiceMap(tr.samples))
+function Gen.get_choices(tr::UnnormalizedCategoricalTrace)
+    v = values_to_concrete(tr.args[1], UnnormalizedCategoricalChoiceMap(tr.samples))
+    try collect(get_subtrees_shallow(v))
+    catch e
+        display(tr.samples)
+        display(tr.args[1].id_table)
+        error()
+    end
+    return v
+end
 Gen.project(::UnnormalizedCategoricalTrace, ::EmptyAddressTree) = 0.
 
-# TODO: Base.getindex
+Base.getindex(tr::UnnormalizedCategoricalTrace, addr) =
+    addr == :obj_to_indices ? tr.obj_to_indices :
+    get_choices(tr)[addr]
 
 struct UnnormalizedCategorical <: Gen.GenerativeFunction{
     PersistentVector,
@@ -234,8 +245,9 @@ function Gen.update(
     new_tr = UnnormalizedCategoricalTrace(args, samples, total_weight, obj_to_indices, total_logprob)
     diff = VectorDiff(num_samples, length(tr.samples), updated)
     weight = total_logprob - get_score(tr) - log_q_ratio
-    
-    return (new_tr, weight, diff, values_to_concrete(world, discard))
+
+    old_world = get_args(tr)[1]
+    return (new_tr, weight, diff, values_to_concrete(old_world, discard))
 end
 
 # TODO: other update signatures!

@@ -43,7 +43,7 @@ function Gen.update_with_state(::MgfCallMap, prev_state, (mgf, keys),
     indices_to_diffs = get_indices_to_diff_vect(mgf, mgfdiff, keysdiff, prev_state)
 
     out_updated = Dict(
-        indices_to_diffs..., (i => KeyChangedDiff(diff) for (i, diff) in keysdiff.updated)...
+        indices_to_diffs..., (i => KeyChangedDiff(diff) for (i, diff) in keysdiff.updated if diff != NoChange())...
     )
 
     mgfkeytypes_valid_for_diff_scan = prev_state.mgfkeytypes_valid_for_diff_scan && all(
@@ -56,16 +56,6 @@ function Gen.update_with_state(::MgfCallMap, prev_state, (mgf, keys),
 
     new_diff = VectorDiff(keysdiff.prev_length, keysdiff.new_length, out_updated)
     new_state = MgfCallMapState(keys, new_keys_to_indices, mgfkeytypes_valid_for_diff_scan)
-
-    # if addr(mgf) == :abstract
-    #     println(); println()
-    #     println("Updating a map_lookup_or_generate for :abstract of $keys")
-    #     println("indices_to_diffs: $indices_to_diffs")
-    #     println("out_updated: $out_updated")
-    #     println("mgfkeytypes_valid_for_diff_scan: $mgfkeytypes_valid_for_diff_scan")
-    #     println("newdiff: $new_diff")
-    #     println()
-    # end
 
     (new_state, lazy_map(key -> mgf[key], keys), new_diff)
 end

@@ -61,6 +61,13 @@ struct Merge{T} <: OUPMMove
     from_idx_2::Int
     moves::Tuple{Vararg{<:Pair{<:ConcreteIndexOUPMObject, <:Union{Nothing, <:ConcreteIndexOUPMObject}}}}
 end
+function _get_idx(obj::ConcreteIndexOUPMObject, check_origin_type_matches)
+    @assert obj.origin == check_origin_type_matches.origin
+    @assert oupm_type_name(obj) == oupm_type_name(check_origin_type_matches)
+    return obj.idx
+end
+Merge(to, from1::Integer, from2::ConcreteIndexOUPMObject, moves) = Merge(to, from1, _get_idx(from2, to), moves)
+Merge(to, from1::ConcreteIndexOUPMObject, from2, moves) = Merge(to, _get_idx(from1, to), from2, moves)
 Merge(to, from1, from2; moves=()) = Merge(to, from1, from2, moves)
 
 """

@@ -47,11 +47,18 @@ function _map(log_expr, mapped_lookup_or_generate, lazymap)
     end
 end
 
-map_transform(item, key, list) = :(lazy_map($item -> $key, $(esc(list))))
+function map_transform(item, key, list)
+    f = eval(:($item -> $key)) 
+    return :(lazy_map($f, $(esc(list))))
+end
 
 # TODO: this setmap_transform is restrictive since it means the user's syntax has to be invertible...
 # we may be able to support a more broad class of syntaxes
-setmap_transform(item, key, list) = :(lazy_bijection_set_map($item -> $key, $key -> $item, $(esc(list))))
+function setmap_transform(item, key, list)
+    f1 = eval(:($item -> $key))
+    f2 = eval(:($key -> item))
+    return :(lazy_bijection_set_map($f1, $f2, $(esc(list))))
+end
 
 # the first arg will be the world's name, which we don't use, since it should be in the
 # already-parsed lookup_or_generate
@@ -74,7 +81,8 @@ macro _dictmap(_, log_expr)
         if name == item
             :(dictmap_lookup_or_generate($(esc(world))[$name], $(esc(list))))
         else
-            :(dictmap_lookup_or_generate($(esc(world))[$name], lazy_val_map($item -> $key, $(esc(list)))))
+            f = eval(:($item -> $key))
+            :(dictmap_lookup_or_generate($(esc(world))[$name], lazy_val_map($f, $(esc(list)))))
         end
     else
         error("Unexpected @dictmap expression after partial parsing: $log_expr")

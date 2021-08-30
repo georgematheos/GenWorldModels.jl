@@ -8,34 +8,27 @@ struct SibSetSpec{O} <: ObjectSetSpec
 end
 
 function _construct_object_set(tr, spec::SingletonObjectSetSpec)
-    println("SingSet $(spec.typename)")
     return Set([spec.obj])
 end
 function _construct_object_set(tr, spec::TypeObjectSetSpec)
-    println("TypeSet $(spec.typename)")
     origin_sig_table = (Gen.get_gen_fn(tr)).meta.origin_sig_table
     sigs = origin_sig_table[spec.typename]
     union((_get_object_set(tr, get_origin_sig_spec(s)) for s in sigs)...)
 end
 function _construct_object_set(tr, spec::OriginConstrainedObjectSetSpec)
-    println("OgSet $(spec.typename)")
     origin_sets = (_get_object_set(tr, constraint) for constraint in spec.constraints)
     all_origins = Iterators.product(origin_sets...)
-    println("all_origins: ", collect(all_origins))
     return union((
         _get_object_set(tr, SibSetSpec(spec.typename, origin)) for origin in all_origins
     )...)
 end
 function _construct_object_set(tr, spec::SibSetSpec)
-    println("SibSet $(spec.typename)")
     @assert (spec.typename isa Symbol) "spec: $spec"
     num_stmt_name = num_statement_name(OriginSignature(
         spec.typename,
         Tuple(oupm_type_name(obj) for obj in spec.origin)
     ))
-    num = tr[:world => num_stmt_name => spec.origin]
-    println("num: $num")
-    println("obj origin: $(spec.origin)")
+    num = tr[:world => num_stmt_name => spec.origin => :num]
     return Set((OUPMObject{spec.typename}(spec.origin, i) for i=1:num))
 end
 

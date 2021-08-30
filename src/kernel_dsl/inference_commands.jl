@@ -111,6 +111,32 @@ macro set(sig, val)
 end
 
 """
+    @addr(prop_sig)
+
+Where prop_sig is either
+- prop[objs...] => addr
+or
+- prop[objs...]
+
+Get the Gen address of the given property, or the address of the given choice within a property trace.
+
+### Examples
+```julia
+value = tr[@addr(prop1[obj1] => addr)]
+# equivalent to `value = @get(tr, prop1[obj1] => addr)`
+```
+"""
+macro addr(expr)
+    if MacroTools.@capture(expr, propname_[objs__] => addr_)
+        return :(:world => $(QuoteNode(propname)) => $(key(objs)) => $(esc(addr)))
+    elseif MacroTools.@capture(expr, propname_[objs__])
+        return :(:world => $(QuoteNode(propname)) => $(key(objs)))
+    else
+        error("Invalid addr statement: @addr($expr)")
+    end
+end
+
+"""
     @obsmodel()
 
 The address of the a world model's observation model.
@@ -126,20 +152,36 @@ end
 
 # TODO: docstrings
 macro abstract(tr, objexpr)
-    :(convert_to_abstract($(esc(tr)).world, $(esc(objexpr))))
+    :(convert_to_abstract(get_world($(esc(tr))), $(esc(objexpr))))
 end
 macro concrete(tr, objexpr)
-    :(convert_to_concrete($(esc(tr)).world, $(esc(objexpr))))
+    :(convert_to_concrete(get_world($(esc(tr))), $(esc(objexpr))))
 end
 macro index(tr, objexpr)
-    :(get_val($(esc(tr)).world, Call(_get_index_addr, $(esc(objexpr)))))
+    :(get_val(get_world($(esc(tr))), Call(_get_index_addr, $(esc(objexpr)))))
 end
 macro origin(tr, objexpr)
-    let origin = :(get_val($(esc(tr)).world, Call(_get_origin_addr, $(esc(objexpr)))))
+    let origin = :(get_val(get_world($(esc(tr))), Call(_get_origin_addr, $(esc(objexpr)))))
             :(Tuple(
-                convert_to_concrete($(esc(tr)).world, obj) for obj in $origin
+                convert_to_concrete(get_world($(esc(tr))), obj) for obj in $origin
             ))
     end
+end
+
+"""
+    @arg(tr, arg_name_symbol)
+
+Get the world argument named `arg_name_symbol` in the world trace.
+
+### Example
+```julia
+@arg(tr, ξ)
+```
+"""
+macro arg(tr, sym)
+    :(
+        get_world_args($(esc(tr)))[$(QuoteNode(sym))]
+    )
 end
 
 include("objectsets.jl")
