@@ -246,6 +246,7 @@ function update_or_generate!(world, call; called_from_top=false)
     if call in world.state.call_stack
         error("This update will induce a cycle in the topological ordering of the calls in the world!  Call $call will need to have been generated in order to generate itself.")
     end
+    @assert is_mgf_call(call)
 
     call_topological_position = world.call_sort[call]
     spec = get_subtree(world.state.spec, addr(call) => key(call))
@@ -560,7 +561,16 @@ function lookup_or_generate_during_world_update!(world, call, is_new_lookup)
     # if this is a new lookup with a value, but we haven't updated this position yet,
     # we still have to run an update just in case
     if no_val || !is_new_lookup || !already_updated(world, call)
-        update_or_generate!(world, call)
+        if is_mgf_call(call)
+            update_or_generate!(world, call)
+        else
+            # I have this assertion since I have in mind that this is the only place
+            # where this could happen, but am not 100% sure, and I want to be alerted if
+            # this turns out to be false.
+            @assert no_val && addr(call) == _get_abstract_addr
+
+            generate_value!(world, call, EmptyChoiceMap())
+        end
     end
 
     if is_new_lookup

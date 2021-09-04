@@ -100,11 +100,21 @@ function enqueue_downstream_from_oupm_moves!(world::World, original_id_table, or
     end
     for concrete in abstract_changed
         c = Call(_get_abstract_addr, concrete)
-        if !haskey(original_id_table, concrete)
-            note_new_call!(world, c)
+        if has_val(world, c)
+            # If this call to `abstract` did not exist before,
+            # but it exists now [probably because an abstract object was shifted up
+            # in the indexing scheme by a creation below it],
+            # generate an entry in the dependency tracker for it here
+            # to maintain the invariant that if `has_val(world, c)`, then
+            # there is a tracker entry for `c` in the world.
+            note_new_call_if_none_exists!(world, c)
         end
-        world.state.diffs[c] = UnknownChange()
-        enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, c)
+        if haskey(original_id_table, concrete)
+            # If there were an `abstract` for this object before,
+            # it is possible that calls looked it up; enqueue these calls for processing
+            world.state.diffs[c] = UnknownChange()
+            enqueue_all_downstream_calls_and_note_dependency_has_diff!(world, c)
+        end
     end
 end
 

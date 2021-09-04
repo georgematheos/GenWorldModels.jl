@@ -8,10 +8,16 @@ All calls to generating an abstract object should pass through this method.
 """
 function generate_abstract_object!(world::World, obj::ConcreteIndexAbstractOriginOUPMObject)
     (world.id_table, abstract) = generate_abstract_for(world.id_table, obj)
+
+    # Create table entries for the calls which couldn't have existed yet:
     note_new_call!(world, Call(_get_index_addr, abstract))
     note_new_call!(world, Call(_get_origin_addr, abstract))
     note_new_call!(world, Call(_get_concrete_addr, abstract))
-    note_new_call!(world, Call(_get_abstract_addr, obj))
+
+    # If there isn't an entry for the `abstract` call, create one (but don't
+    # overwrite the current tracking if there is already an abstract call)
+    note_new_call_if_none_exists!(world, Call(_get_abstract_addr, obj))
+
     return abstract
 end
 

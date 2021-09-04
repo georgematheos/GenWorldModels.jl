@@ -113,8 +113,28 @@ metadata_addr(world::World) = world.metadata_addr
 _world_args(world::World) = world.world_args
 
 # functions for tracking counts and dependency structure
+"""
+    note_new_call!(world, call)
+
+Tells the dependency tracker to create table entries for a new call `call`.
+
+Upon `has_val(world, call)` becoming true, this function (or `note_new_call_if_none_exists!`)
+must be called immediately to maintain the invariant that if `has_val(world, call)`, then
+the dependency tracker has table entries for it.
+
+This will throw an error if there is already a dependency tracker entry for `call`.
+"""
 function note_new_call!(world, args...)
     world.lookup_counts = note_new_call(world.lookup_counts, args...)
+end
+"""
+    note_new_call_if_none_exists!(world, call)
+
+Like `note_new_call!`, but has no effect if the dependency tracker already has an entry for `call`
+(whereas `note_new_call!` will throw an error in this case).
+"""
+function note_new_call_if_none_exists!(world, args...)
+    world.lookup_counts = note_new_call_if_none_exists(world.lookup_counts, args...)
 end
 function note_new_lookup!(world, args...)
     world.lookup_counts = note_new_lookup(world.lookup_counts, args...)

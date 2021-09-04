@@ -12,9 +12,19 @@ end
 LookupCounts() = LookupCounts(PersistentHashMap{Call, Int}(), PersistentHashMap{Call, PersistentHashMap{Call, Int}}())
 
 function note_new_call(lc::LookupCounts, call::Call)
+    @assert !haskey(lc.lookup_counts, call) && !haskey(lc.dependency_counts, call)
     new_lookup_counts = assoc(lc.lookup_counts, call, 0)
     new_dependency_counts = assoc(lc.dependency_counts, call, PersistentHashMap{Call, Int}())
     LookupCounts(new_lookup_counts, new_dependency_counts)
+end
+function note_new_call_if_none_exists(lc::LookupCounts, call::Call)
+    if haskey(lc.lookup_counts, call)
+        @assert haskey(lc.dependency_counts, call)
+        return lc
+    else
+        @assert !haskey(lc.dependency_counts, call)
+        return note_new_call(lc, call)
+    end
 end
 
 function note_new_lookup(lc::LookupCounts, call::Call, call_stack::Stack{Call})
@@ -31,6 +41,8 @@ function note_new_lookup(lc::LookupCounts, call::Call, call_stack::Stack{Call})
         new_dependency_counts = assoc(lc.dependency_counts, call,
             assoc(lc.dependency_counts[call], looked_up_in, new_count)
         )
+
+        @assert haskey(new_dependency_counts[call], looked_up_in)
     else
         new_dependency_counts = lc.dependency_counts
     end
@@ -38,6 +50,10 @@ function note_new_lookup(lc::LookupCounts, call::Call, call_stack::Stack{Call})
 end
 # note lookup removal from another call (ie. not from kernel)
 function note_lookup_removed(lc::LookupCounts, call::Call, called_from::Call)
+    if !haskey(lc.dependency_counts[call], called_from)
+        @error "Dependency counts for $call did not have key for $called_from"
+    end
+    
     new_count = lc.dependency_counts[call][called_from] - 1
     if new_count == 0
         new_dependency_counts = assoc(lc.dependency_counts, call,
