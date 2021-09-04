@@ -58,33 +58,27 @@ function Base.getindex(tr::UsingWorldTrace, addr::Pair)
         # TODO: if there is only one call for a MGF, we should be able to just look up that address
 
         mgf_addr, rest = second
-        try
-            if mgf_addr == _world_args_addr
-                return tr.world.world_args[rest]
-            end
 
-            if rest isa Pair
-                key, remaining = rest
-                key = convert_to_abstract(tr.world, key)
-                return try
-                    get_trace(tr.world, Call(mgf_addr, key))[remaining]
-                catch e
-                    @error("Failed to get trace for $mgf_addr => $key ", exception=(e, catch_backtrace()))
-                    display(tr.world.traces.traces[:mean])
-                    error()
-                end
-            else
-                key = convert_to_abstract(tr.world, rest)
-                return get_trace(tr.world, Call(mgf_addr, key))[]
+        if mgf_addr == _world_args_addr
+            return tr.world.world_args[rest]
+        end
+
+        if rest isa Pair
+            key, remaining = rest
+            key = convert_to_abstract(tr.world, key)
+            return try
+                get_trace(tr.world, Call(mgf_addr, key))[remaining]
+            catch e
+                @error("Failed to get trace for $mgf_addr => $key [$remaining]", exception=(e, catch_backtrace()))
+                error()
             end
-        catch e
-            key = rest isa Pair ? rest[1] : rest
-            display(tr.world.id_table)
-            println("key we tried getting trace for is $key1")
-            if e isa KeyError
-                error("No lookup for $(mgf_addr => key) found in the world.")
-            else
-                @error "Error occurred while attempting to look up $(mgf_addr => key) in the world:" exception=(e, catch_backtrace())
+        else
+            key = convert_to_abstract(tr.world, rest)
+            return try
+                get_trace(tr.world, Call(mgf_addr, key))[]
+            catch e
+                @error("Failed to get trace for $mgf_addr => $key", exception=(e, catch_backtrace()))
+                error()
             end
         end
     else
