@@ -1,3 +1,5 @@
+global has_warned = false
+
 DIFF_MAY_CAUSE_CHANGE_ERROR_MSG(s) = """
 Sibling set sets can only be updated efficiently for num statements which cannot change without an update spec,
 and the gen fn at $(s.num_address) cannot be statically confirmed to satisfy this property.
@@ -67,8 +69,12 @@ function (s::GetOriginsToSiblingSetSpecs)(world::World, origins::AbstractSet)
     # to ever perform an update, but we don't want to waste time on the check on every update
     # @assert(cannot_change_retval_due_to_diffs(world, s.num_address, typeof(first(origins))), DIFF_MAY_CAUSE_CHANGE_ERROR_MSG(s))
     if !cannot_change_retval_due_to_diffs(world, s.num_address, typeof(first(origins)))
-        @warn DIFF_MAY_CAUSE_CHANGE_ERROR_MSG(s)
-        println("WE ARE NOT ERRORING, BUT WE WILL ASSUME THE ABOVE PROPERTY HOLDS.  IF IT DOES NOT, SILENT ERRORS MAY OCCUR.")
+        if !has_warned
+            @warn DIFF_MAY_CAUSE_CHANGE_ERROR_MSG(s)
+            @warn "WE ARE NOT ERRORING, BUT WE WILL ASSUME THE ABOVE PROPERTY HOLDS.  IF IT DOES NOT, SILENT ERRORS MAY OCCUR."
+            @warn "We will not give this warning again."
+            global has_warned = true
+        end
     end
     # TODO: we should use the type from the origins set rather than the type of just one element...
     # unfortunately, types are not being tracked well right now, so this doesn't currently work
