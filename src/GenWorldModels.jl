@@ -49,7 +49,7 @@ export @kernel, MHProposal # from GenTraceKernelDSL
 
 ### Kernel DSL ###
 include("kernel_dsl/kernel_dsl.jl")
-export @get_number, @get, @set_number, @set, @obsmodel, @index, @abstract, @concrete, @origin, @objects, @arg, @addr
+export @get_number, @get, @set_number, @set, @obsmodel, @index, @abstract, @concrete, @origin, @objects, @arg, @addr, @regenerate
 export WorldUpdate!
 
 ### Modeling Library ###

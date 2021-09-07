@@ -72,14 +72,7 @@ val = @get(tr, prop[obj1, obj2] => addr)
 macro get(tr, exprs...)
     getexprs = Expr[]
     for expr in exprs
-        if MacroTools.@capture(expr, propname_[objs__] => addr_)
-            getexpr = :($(esc(tr))[:world => $(QuoteNode(propname)) => $(key(objs)) => $(esc(addr))])
-        elseif MacroTools.@capture(expr, propname_[objs__])
-            getexpr = :($(esc(tr))[:world => $(QuoteNode(propname)) => $(key(objs))])
-        else
-            error("Invalid get statement: @get(tr, ..., $expr, ...)")
-        end
-        push!(getexprs, getexpr)
+        push!(getexprs, :($(esc(tr))[$(_addr(expr, "@get"))]))
     end
 
     length(exprs) > 1 ? Expr(:tuple, getexprs...) : getexprs[1]
@@ -101,13 +94,7 @@ generate(world_model, args, choicemap(
 ```
 """
 macro set(sig, val)
-    if MacroTools.@capture(sig, prop_[objs__])
-        :((:world => $(QuoteNode(prop)) => $(key(objs)), $(esc(val))))
-    elseif MacroTools.@capture(sig, prop_[objs__] => addr_)
-        :((:world => $(QuoteNode(prop)) => $(key(objs)) => $(esc(addr)), $(esc(val))))
-    else
-        error("Invalid property signature within set expression: $sig")
-    end
+    :(($(_addr(sig, "@set")), $(esc(val))))
 end
 
 """
@@ -127,12 +114,16 @@ value = tr[@addr(prop1[obj1] => addr)]
 ```
 """
 macro addr(expr)
+    _addr(expr, "@addr")
+end
+
+function _addr(expr, command)
     if MacroTools.@capture(expr, propname_[objs__] => addr_)
         return :(:world => $(QuoteNode(propname)) => $(key(objs)) => $(esc(addr)))
     elseif MacroTools.@capture(expr, propname_[objs__])
         return :(:world => $(QuoteNode(propname)) => $(key(objs)))
     else
-        error("Invalid addr statement: @addr($expr)")
+        error("Invalid property spec in $command command: $expr")
     end
 end
 
@@ -182,6 +173,10 @@ macro arg(tr, sym)
     :(
         get_world_args($(esc(tr)))[$(QuoteNode(sym))]
     )
+end
+
+macro regenerate(expr)
+    :(($(_addr(expr, "@regenerate")), $(GlobalRef(Gen, :AllSelection)())))
 end
 
 include("objectsets.jl")
