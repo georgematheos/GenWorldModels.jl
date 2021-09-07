@@ -28,7 +28,7 @@ function _construct_object_set(tr, spec::SibSetSpec)
         spec.typename,
         Tuple(oupm_type_name(obj) for obj in spec.origin)
     ))
-    num = tr[:world => num_stmt_name => spec.origin => :num]
+    num = tr[:world => num_stmt_name => spec.origin]
     return Set((OUPMObject{spec.typename}(spec.origin, i) for i=1:num))
 end
 
