@@ -4,7 +4,7 @@
 Returns `(:Typename, :(origin_1, ..., origin_n), :(type_1, ..., type_n))`
 where `type_i` evaluates to the type of `origin_i`.
 """
-parse_siblingset_sig(sig) =
+parse_siblingset_sig(sig, command) =
     if MacroTools.@capture(sig, Typename_(origins__))
         (
             Typename,
@@ -14,8 +14,27 @@ parse_siblingset_sig(sig) =
                 for obj in origins)...)
         )
     else
-        @error("Invalid `@get_number(sig) signature: $sig")
+        @error("Invalid `$command(sig) signature: $sig")
     end
+
+
+function _addr(expr, command)
+    if MacroTools.@capture(expr, propname_[objs__] => addr_)
+        return :(:world => $(QuoteNode(propname)) => $(key(objs)) => $(esc(addr)))
+    elseif MacroTools.@capture(expr, propname_[objs__])
+        return :(:world => $(QuoteNode(propname)) => $(key(objs)))
+    else
+        error("Invalid property spec in $command command: $expr")
+    end
+end
+
+function _num_addr(sig, commandname)
+    (typename, origins, types) = parse_siblingset_sig(sig, commandname)
+    num_stmt_name = :(
+        num_statement_name(OriginSignature($(QuoteNode(typename)), $(esc(types))))
+    )
+    return :(:world => $num_stmt_name => $(esc(origins)) => :num)
+end
 
 """
     @get_number(tr, Typename(origin_1, ..., origin_n))
@@ -24,11 +43,7 @@ Get the number of objects under the world trace of type `Typename` with
 the given origin.
 """
 macro get_number(tr, sig)
-    (typename, origins, types) = parse_siblingset_sig(sig)
-    num_stmt_name = :(
-        num_statement_name(OriginSignature($(QuoteNode(typename)), $(esc(types))))
-    )
-    :($(esc(tr))[:world => $num_stmt_name => $(esc(origins)) => :num])
+    :($(esc(tr))[$(_num_addr(sig, "@get_number"))])
 end
 
 """
@@ -47,9 +62,7 @@ generate(world_model, args, choicemap(
 ```
 """
 macro set_number(sig, newnum)
-    typename, origins, types = parse_siblingset_sig(sig)
-    n_stmt = :(num_statement_name(OriginSignature($(QuoteNode(typename)), $(esc(types)))))
-    return :((:world => $n_stmt => $(esc(origins)) => :num, $(esc(newnum))))
+    :(($(_num_addr(sig, "@set_number")), $(esc(newnum))))
 end
 
 key(objs) = Expr(:tuple, [esc(obj) for obj in objs]...)
@@ -117,14 +130,19 @@ macro addr(expr)
     _addr(expr, "@addr")
 end
 
-function _addr(expr, command)
-    if MacroTools.@capture(expr, propname_[objs__] => addr_)
-        return :(:world => $(QuoteNode(propname)) => $(key(objs)) => $(esc(addr)))
-    elseif MacroTools.@capture(expr, propname_[objs__])
-        return :(:world => $(QuoteNode(propname)) => $(key(objs)))
-    else
-        error("Invalid property spec in $command command: $expr")
-    end
+"""
+    @num_addr(Typename(origin_1, ..., origin_n))
+
+Get the Gen address of the random choice containing a given number value.
+
+### Examples
+```julia
+num_detections = tr[@num_addr(Detection(Event(1), Station(3)))]
+num_stations = tr[@num_addr(Event(4))]
+```
+"""
+macro num_addr(expr)
+    _num_addr(expr, "@num_addr")
 end
 
 """
@@ -176,7 +194,7 @@ macro arg(tr, sym)
 end
 
 macro regenerate(expr)
-    :(($(_addr(expr, "@regenerate")), $(GlobalRef(Gen, :AllSelection)())))
+    :(($(_addr(expr, "@regenerate")), $(GlobalRef(Gen, :AllSelection))()))
 end
 
 include("objectsets.jl")
