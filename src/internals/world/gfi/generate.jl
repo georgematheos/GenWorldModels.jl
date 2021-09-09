@@ -85,6 +85,14 @@ end_simulate!(args...) = end_generate!(args...)
 
 function lookup_or_generate_during_generate!(world, call)
     if !has_val(world, call)
+        if !is_mgf_call(call) && addr(call) != _get_abstract_addr
+            # The only non-mgf call which can be valid if !has_val(world, call)
+            # is a "get abstract" call.
+            # In any valid world args lookup or call to get origin/index/concrete of an object,
+            # has_val will be true.
+            @error "Tried to evaluate call $call, but !has_val(world, call)."
+        end
+
         generate_value_during_generate!(world, call)
     end
 
