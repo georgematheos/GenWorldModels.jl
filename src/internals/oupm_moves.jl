@@ -42,7 +42,9 @@ struct Split{T} <: OUPMMove
     to_idx_2::Int
     moves::Tuple{Vararg{<:Pair{<:ConcreteIndexOUPMObject, <:Union{Nothing, <:ConcreteIndexOUPMObject}}}}
 end
-Split(from, to_idx_1, to_idx_2; moves=()) = Split(from, to_idx_1, to_idx_2, moves)
+Split(from, to_idx_1::Integer, to2::ConcreteIndexOUPMObject, moves) = Split(from, to_idx_1, _get_idx(to2, from), moves)
+Split(from, to1::ConcreteIndexOUPMObject, to2, moves) = Split(from, _get_idx(to1, from), to2, moves)
+Split(from, to1, to2; moves=()) = Split(from, to1, to2, moves)
 
 """
     Merge(to::ConcreteIndexOUPMObject, from_idx_1, from_idx_2; moves=())
