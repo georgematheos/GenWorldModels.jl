@@ -32,8 +32,9 @@ function WorldUpdate!(tr, objmoves::Tuple, spec::Gen.DynamicAddressTree)
     end
     return WorldUpdate(objmoves, spec)
 end
+_provided_choicemap(args) = !isempty(args) && args[end] isa Gen.AddressTree
 WorldUpdate!(tr, args...) =
-    args[end] isa Gen.AddressTree ? WorldUpdate!(tr, args[1:end-1], args[end]) :
+    _provided_choicemap(args) ? WorldUpdate!(tr, args[1:end-1], args[end]) :
                                 WorldUpdate!(tr, args, DynamicChoiceMap())
 
 name_origin(obj::ConcreteIndexOUPMObject{T}) where {T} = (T, obj.origin)
