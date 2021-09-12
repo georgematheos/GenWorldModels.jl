@@ -65,11 +65,12 @@ function Base.getindex(tr::UsingWorldTrace, addr::Pair)
 
         if rest isa Pair
             key, remaining = rest
+            concrete_key = key
             key = convert_to_abstract(tr.world, key)
             return try
                 get_trace(tr.world, Call(mgf_addr, key))[remaining]
             catch e
-                @error("Failed to get trace for $mgf_addr => $key [$remaining]", exception=(e, catch_backtrace()))
+                @error("Failed to get trace for ($mgf_addr => $key)[$remaining] {concrete key: $concrete_key}", exception=(e, catch_backtrace()))
                 error()
             end
         else
