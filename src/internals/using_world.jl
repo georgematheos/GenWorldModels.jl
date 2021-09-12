@@ -77,7 +77,7 @@ function Base.getindex(tr::UsingWorldTrace, addr::Pair)
             return try
                 get_trace(tr.world, Call(mgf_addr, key))[]
             catch e
-                @error("Failed to get trace for $mgf_addr => $key", exception=(e, catch_backtrace()))
+                @error("Failed to get trace for $mgf_addr => $key [concrete form: $rest]", exception=(e, catch_backtrace()))
                 error()
             end
         end
