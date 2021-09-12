@@ -1,4 +1,4 @@
-function WorldUpdate!(tr, objmoves::Tuple, spec::Gen.AddressTree)
+function WorldUpdate!(tr::UsingWorldTrace, objmoves::Tuple, spec::Gen.AddressTree)
     error("WorldUpdate! currently doesn't support non-dynamic constraints!  (Though this would be easy to add via a conversion to a dynamic tree.)")
 end
 
@@ -13,7 +13,7 @@ Automatically adds number statement changes to `spec`
 as needed to implement the given objmoves, for every number statement for which there is not
 already a constraint in `spec`.
 """
-function WorldUpdate!(tr, objmoves::Tuple, spec::Gen.DynamicAddressTree)
+function WorldUpdate!(tr::UsingWorldTrace, objmoves::Tuple, spec::Gen.DynamicAddressTree)
     num_deltas = Dict()
     for objmove in objmoves
         for (sibset, delta) in num_changes_for_move(objmove)
@@ -33,7 +33,7 @@ function WorldUpdate!(tr, objmoves::Tuple, spec::Gen.DynamicAddressTree)
     return WorldUpdate(objmoves, spec)
 end
 _provided_choicemap(args) = !isempty(args) && args[end] isa Gen.AddressTree
-WorldUpdate!(tr, args...) =
+WorldUpdate!(tr::UsingWorldTrace, args...) =
     _provided_choicemap(args) ? WorldUpdate!(tr, args[1:end-1], args[end]) :
                                 WorldUpdate!(tr, args, DynamicChoiceMap())
 
