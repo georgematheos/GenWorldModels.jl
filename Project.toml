@@ -1,7 +1,7 @@
 name = "GenWorldModels"
 uuid = "3540416b-6f6e-4f4e-9ce0-d5802f4ca5a4"
 authors = ["George Matheos <georgematheos@gmail.com>"]
-version = "0.1.7"
+version = "0.1.8"
 
 [deps]
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
