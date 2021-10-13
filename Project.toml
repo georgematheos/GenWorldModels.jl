@@ -5,6 +5,7 @@ version = "0.1.8"
 
 [deps]
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
+DynamicForwardDiff = "fe4ab2f8-f6ba-4905-aa0c-1342e36db709"
 FunctionalCollections = "de31a74c-ac4f-5751-b3fd-e18cd04993ca"
 Gen = "ea4f424c-a589-11e8-07c0-fd5c91b9da4a"
 GenTraceKernelDSL = "291bb3ad-7d9c-4053-a5d5-3e3d67792b79"
