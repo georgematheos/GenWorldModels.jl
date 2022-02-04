@@ -30,7 +30,7 @@ function get_ungenerated_constraints(world::World, constraints::ChoiceMap)
         for (key, submap) in get_submaps_shallow(key_to_submap)
             c = Call(address, key)
             if !has_val(world, c)
-                push!(unused_constraints, c)
+                push!(unused_constraints, Call(address, convert_to_concrete(world, key)))
             end
         end
     end
@@ -68,7 +68,7 @@ function end_generate!(world::World, check_all_constraints_used)
     if check_all_constraints_used
         unused_constraints = get_ungenerated_constraints(world, world.state.constraints)
         if length(unused_constraints) != 0
-            throw(error("The following constraints were not used while generating: $unused_constraints !"))
+            throw(error("The following constraints were not used while generating: $unused_constraints"))
         end
     end
         

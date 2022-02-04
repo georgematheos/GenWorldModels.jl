@@ -33,7 +33,7 @@ mutable struct UpdateWorldState <: WorldState
     update_weights::Dict{Call, Float64}
     world_update_complete::Bool # once we have finished updating all the calls and move to update the kernel, this goes from false to true
     ### for object set tracking: ###
-    origins_with_id_table_updates::Dict{Symbol, Set} # stores typename => set_of_origins_with_update
+    origins_with_id_table_updates::Dict{Symbol, Set{AbstractOUPMObject}} # stores typename => set_of_origins_with_update
 end
 function UpdateWorldState(old_world)
     UpdateWorldState(

@@ -97,7 +97,13 @@ macro _index(world, obj)
     :(lookup_or_generate($(esc(world))[:index][$(esc(obj))]))
 end
 
-# TODO: should we include @concrete & @abstract?
+macro _abstract(world, obj)
+    :(lookup_or_generate($(esc(world))[:abstract][$(esc(obj))]))
+end
+
+macro _concrete(world, obj)
+    :(lookup_or_generate($(esc(world))[:concrete][$(esc(obj))]))
+end
 
 macro _get(world, expr::Expr)
     @assert expr.head === :ref "Invalid get statement: @get $expr"
@@ -112,5 +118,5 @@ end
 
 const DSL_COMMANDS = Dict(
     Symbol("@$name") => Symbol("@_$name") for name in
-    (:origin, :index, :arg, :get, :map, :nocollision_setmap, :dictmap, :objects)
+    (:abstract, :concrete, :origin, :index, :arg, :get, :map, :nocollision_setmap, :dictmap, :objects)
 )

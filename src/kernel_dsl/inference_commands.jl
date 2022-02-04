@@ -159,6 +159,26 @@ macro obsmodel()
     :(:kernel)
 end
 
+# TODO: add this!
+# """
+#     @has_property(tr, prop_sig)
+
+# Whether a property is instantiated in the world.
+
+# ### Examples
+# ```julia
+# @has_property(tr, position[Aircraft(2), Timestep(4)])
+# ```
+# """
+# macro has_property(trexpr, propexpr)
+#     :(
+#         $(GlobalRef(@__MODULE__, :has_val))(
+#             $(trexpr).world,
+#             $(_addr(propexpr))
+#         )
+#     )
+# end
+
 # TODO: docstrings
 macro abstract(tr, objexpr)
     :(convert_to_abstract(get_world($(esc(tr))), $(esc(objexpr))))

@@ -70,7 +70,7 @@ function note_new_origin_changes!(origins_with_id_table_updates, updated_typenam
         if !haskey(origins_with_id_table_updates, typename)
             origins_with_id_table_updates[typename] = origins
         else
-            merge!(origins_with_id_table_updates[typename], origins)
+            union!(origins_with_id_table_updates[typename], origins)
         end
     end
 end

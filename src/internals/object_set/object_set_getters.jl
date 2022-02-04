@@ -32,6 +32,7 @@ end
 end
 @gen (static, diffs) function _get_sibling_set(spec::SiblingSetSpec)
     num ~ lookup_or_generate(spec.world[spec.num_address][spec.origin])
+    _a  = (isnothing(num) && @error("Failed to get number for SiblingSetSpec $spec"))
     objs ~ get_sibling_set_from_num(spec.typename, spec.world, spec.origin, num)
     return objs
 end

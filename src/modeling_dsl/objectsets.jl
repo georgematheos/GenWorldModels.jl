@@ -48,12 +48,15 @@ macro _objects(world, expr)
 end
 
 # get the ObjectSetSpec corresponding to the given expression or symbol
-get_spec(name::Symbol, __module__) =
-    if isdefined(__module__, name) && Base.eval(__module__, name) <: OUPMObject
-        :(TypeObjectSetSpec($(QuoteNode(name))))
-    else
-        :(SingletonObjectSetSpec($(esc(name))))
+function get_spec(name::Symbol, __module__)
+    if isdefined(__module__, name)
+        val = Base.eval(__module__, name)
+        if val isa Type && val <: OUPMObject
+            return :(TypeObjectSetSpec($(QuoteNode(name))))
+        end
     end
+    return :(SingletonObjectSetSpec($(esc(name))))
+end
 get_spec(expr::Expr, __module__) =
     if MacroTools.@capture(expr, name_(subspecs__))
         if !isempty(subspecs) && subspecs[end] isa Integer

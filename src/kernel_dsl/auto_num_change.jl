@@ -22,7 +22,7 @@ function WorldUpdate!(tr::UsingWorldTrace, objmoves::Tuple, spec::Gen.DynamicAdd
     end
     for ((typename, origin), delta) in num_deltas
         num_stmt_name = num_statement_name(OriginSignature(
-            typename, Tuple(typeof(obj) for obj in origin)
+            typename, Tuple(oupm_type_name(obj) for obj in origin)
         ))
         # if this is not empty, ie. the user already provided a constraint, we will NOT override it
         if isempty(get_subtree(spec, :world => num_stmt_name => origin))

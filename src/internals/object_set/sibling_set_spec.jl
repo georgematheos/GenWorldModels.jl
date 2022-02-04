@@ -68,7 +68,7 @@ function (s::GetOriginsToSiblingSetSpecs)(world::World, origins::AbstractSet)
     # we do the check here instead of during updates since we have to call this
     # to ever perform an update, but we don't want to waste time on the check on every update
     # @assert(cannot_change_retval_due_to_diffs(world, s.num_address, typeof(first(origins))), DIFF_MAY_CAUSE_CHANGE_ERROR_MSG(s))
-    if !cannot_change_retval_due_to_diffs(world, s.num_address, typeof(first(origins)))
+    if length(origins) > 0 && !cannot_change_retval_due_to_diffs(world, s.num_address, typeof(first(origins)))
         if !has_warned
             @warn DIFF_MAY_CAUSE_CHANGE_ERROR_MSG(s)
             @warn "WE ARE NOT ERRORING, BUT WE WILL ASSUME THE ABOVE PROPERTY HOLDS.  IF IT DOES NOT, SILENT ERRORS MAY OCCUR."
